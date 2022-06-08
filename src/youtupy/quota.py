@@ -12,9 +12,9 @@ class Quota:
     def __init__(self, api_key, units=None,
                  created_utc=None, reset_remaining=None):
         self.units = units
-        self._api_key = api_key
+        self.api_key = api_key
         self._created_utc = created_utc
-        self._reset_remaining = reset_remaining
+        self.reset_remaining = reset_remaining
 
     @property
     def created_utc(self):
@@ -27,22 +27,6 @@ class Quota:
         else:
             raise TypeError("created_utc must be a datetime object.")
 
-    @property
-    def reset_remaining(self):
-        return self._reset_remaining
-
-    @reset_remaining.setter
-    def reset_remaining(self, value):
-        self._reset_remaining = value
-
-    @property
-    def api_key(self):
-        return self._api_key
-
-    @api_key.setter
-    def reset_remaining(self, value):
-        self._api_key = value
-
     def get_quota(self, path='quota.db'):
         full_path = '.quota/{}'.format(path)
 
@@ -54,10 +38,17 @@ class Quota:
         db = sqlite3.connect(full_path)
 
         quota_data = [(row[0], row[1])
-                      for row in db.execute("select quota, timestamp from quota")]
+                      for row in
+                      db.execute("""
+                        select quota, timestamp from quota
+                        where api_key = ?
+                        """,
+                                 (self.api_key,))
+                      ]
 
         if not quota_data:
-            logger.info("No quota data found. Setting quota as 0.")
+            logger.debug("No quota data found. Setting quota as 0.")
+
             self.units = 0
             self.created_utc = None
         else:
@@ -66,16 +57,20 @@ class Quota:
 
             # get midnight Pacific time
             now_pt = datetime.now(tz=tz.gettz('US/Pacific'))
-            midnight_pt = now_pt.replace(hour=0, minute=0, second=0, microsecond=0)
+            midnight_pt = now_pt.replace(hour=0, minute=0, second=0,
+                                         microsecond=0)
 
             if timestamp > midnight_pt:
-                logger.info(f"Quota data found, {quota} units have been used.")
+                logger.debug(
+                    f"Quota data found, {quota} units have been used.")
+
                 self.units = quota
                 self.created_utc = timestamp
                 self.reset_remaining = _get_reset_remaining(timestamp)
 
             else:
-                logger.info("Quota has been reset to 0.")
+                logger.debug("Quota has been reset to 0.")
+
                 self.units = 0
                 self.created_utc = None
 
@@ -84,17 +79,23 @@ class Quota:
         self.created_utc = created_utc
 
         with sqlite3.connect(path) as db:
-            db.execute("replace into quota(id, quota, timestamp) values (?,?,?)",
-                       (0, self.units, created_utc))
+            db.execute(
+                """
+                replace into quota(id, quota, timestamp, api_key) 
+                    values (?,?,?,?)
+                """,
+                (0, self.units, created_utc, self.api_key))
 
     def handle_limit(self, max_quota):
         """
         If max quota has been reached, sleep until reset time.
         """
         if self.units > max_quota:
-            logger.info("Max quota reached.")
+            logger.warning("Max quota reached.")
+
             sleep = _get_reset_remaining(datetime.now(tz=tz.UTC))
-            logger.info(f"Sleeping for {sleep} seconds...")
+            logger.warning(f"Sleeping for {sleep} seconds...")
+
             time.sleep(sleep)
             time.sleep(2)
         else:
@@ -108,24 +109,23 @@ def _init_quotadb(path):
         """
         create table if not exists quota(
             /*
-            This records the running Youtube quota used everyday. There should be only one row.
+            This records the running Youtube quota used everyday.
+            One row matches one API key.
             */
-            id primary key check (id = 0) not null,
-            quota,
+            api_key primary key,
+            quota,          
             timestamp
             );
         """)
 
 
-def _get_reset_remaining(current):
-
+def _get_reset_remaining(current) -> int:
     next_reset = datetime.now(tz=tz.gettz('US/Pacific')) + timedelta(days=1)
     next_reset = next_reset.replace(hour=0, minute=0, second=0, microsecond=0)
 
     reset_remaining = next_reset - current
 
     return reset_remaining.seconds + 1
-
 
 
 print("Done")

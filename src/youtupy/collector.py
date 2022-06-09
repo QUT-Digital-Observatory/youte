@@ -8,8 +8,8 @@ import random
 import json
 import time
 
-from quota import Quota
-import utilities
+from youtupy.quota import Quota
+from youtupy import utilities
 
 logger = logging.getLogger(__name__)
 

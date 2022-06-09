@@ -8,13 +8,19 @@ import random
 import json
 import time
 
-from youtupy.quota import Quota
-from youtupy import utilities
+from quota import Quota
+import utilities
 
 logger = logging.getLogger(__name__)
 
 
 def get_endpoint(endpoint: ['search', 'video', 'channel']) -> dict:
+    """Get all the request details needed to make an API request to
+    specified endpoints.
+
+    Position argument:
+        endpoint -- either 'search', 'video', or 'channel'
+    """
     api_endpoints = {
         'search': {
             'url': r'https://www.googleapis.com/youtube/v3/search',
@@ -24,11 +30,9 @@ def get_endpoint(endpoint: ['search', 'video', 'channel']) -> dict:
                 'maxResults': 50,
                 'q': None,
                 'type': 'video',
-                'fields': """
-                    pageInfo,prevPageToken,nextPageToken,
-                    items(id, snippet(publishedAt, channelId, title,
-                    description, channelTitle))
-                    """,
+                'fields': 'pageInfo,prevPageToken,nextPageToken,'
+                          'items(id, snippet(publishedAt, channelId, title,'
+                          'description, channelTitle))',
                 'order': 'date',
                 'safeSearch': 'none',
                 'key': os.environ['YOUTUBE_API_KEY']
@@ -42,11 +46,11 @@ def get_endpoint(endpoint: ['search', 'video', 'channel']) -> dict:
                 'part': 'snippet,statistics,topicDetails,status',
                 'id': None,
                 'maxResults': 50,
-                'fields': """
-                    nextPageToken,prevPageToken,
-                    items(id,snippet(publishedAt,channelId,title,description,
-                    channelTitle),status(uploadStatus),statistics,topicDetails)
-                    """,
+                'fields': 'nextPageToken,prevPageToken,'
+                          'items(id,'
+                          'snippet(publishedAt,channelId,title,description,'
+                          'channelTitle),'
+                          'status(uploadStatus),statistics,topicDetails)',
                 'key': os.environ['YOUTUBE_API_KEY']
             }
         },
@@ -58,11 +62,9 @@ def get_endpoint(endpoint: ['search', 'video', 'channel']) -> dict:
                 'part': 'snippet,statistics,topicDetails,status',
                 'id': None,
                 'maxResults': 50,
-                'fields': """
-                    nextPageToken,prevPageToken,
-                    items(id,snippet(publishedAt,title,description),
-                    status,statistics,topicDetails)
-                    """,
+                'fields': 'nextPageToken,prevPageToken,'
+                          'items(id,snippet(publishedAt,title,description),'
+                          'status,statistics,topicDetails)',
                 'key': os.environ['YOUTUBE_API_KEY']
             }
         }
@@ -72,7 +74,17 @@ def get_endpoint(endpoint: ['search', 'video', 'channel']) -> dict:
 
 
 def collect(endpoint: ['search', 'video', 'channel'],
-            dbpath, max_quota=10000, **query):
+            dbpath: str, max_quota=10000, **query):
+    """Collect data from Youtube API.
+
+    Keyword arguments:
+        endpoint -- either 'search', 'video', or 'channel'
+        dbpath -- the path of the database (relative or absolute)
+        max_quota -- default 10,000
+        **query: any extra parameters passed to the 'search' request.
+            Name of the parameter corresponds to the accepted fields
+            specified in YouTube API.
+    """
     # Set up request metadata and quota
     endpoint_meta = get_endpoint(endpoint)
     url = endpoint_meta['url']
@@ -80,6 +92,7 @@ def collect(endpoint: ['search', 'video', 'channel'],
     api_cost_unit = endpoint_meta['api_cost_unit']
 
     quota = Quota(api_key=os.environ['YOUTUBE_API_KEY'])
+    quota.get_quota()
 
     db = sqlite3.connect(dbpath)
 
@@ -93,9 +106,9 @@ def collect(endpoint: ['search', 'video', 'channel'],
         # SEARCH ENDPOINT
         params['q'] = query['q']
 
-        if query['publishedAfter']:
+        if 'publishedAfter' in query:
             params['publishedAfter'] = f"{query['publishedAfter']}T00:00:00Z"
-        if query['publishedBefore']:
+        if 'publishedBefore' in query:
             params['publishedBefore'] = f"{query['publishedAfter']}" \
                                         f"T00:00:00Z"
 
@@ -127,8 +140,7 @@ def collect(endpoint: ['search', 'video', 'channel'],
                 logger.info("No more data to query.")
                 break
 
-            quota.get_quota()
-
+            logger.debug("Handling limit...")
             quota.handle_limit(max_quota=max_quota)
 
             for token in to_retrieve:
@@ -195,8 +207,9 @@ def collect(endpoint: ['search', 'video', 'channel'],
         # YouTube API accepts a list of up to 50 ids,
         # so this script makes several requests,
         # each searching for 50 items
+        logger.info(f"Getting {endpoint} data...")
 
-        logger.info("Getting video data...")
+        logger.debug("Running insert ids...")
 
         utilities.insert_ids_to_db(dbpath, source=endpoint)
 
@@ -215,7 +228,11 @@ def collect(endpoint: ['search', 'video', 'channel'],
             if item_ids:
                 params['id'] = ','.join(item_ids)
 
+                logger.debug("Handling limit......")
+                quota.handle_limit(max_quota=max_quota)
+
                 response = requests.get(url, params=params)
+                logger.debug(f"Getting request {response.url}.")
                 response.raise_for_status()
 
                 logging.info(
@@ -250,9 +267,31 @@ def collect(endpoint: ['search', 'video', 'channel'],
                                  datetime.now(tz=tz.UTC))
                             )
                     except KeyError:
-                        logging.info(f"No items found for {response.url}.")
+                        logging.warning(
+                            f"""
+                            ONE OF THESE ITEMS COULD NOT BE FOUND:
+                            {','.join(item_ids)}.
+                            """)
+                        for item_id in item_ids:
+                            db.execute(
+                                f"""
+                                REPLACE INTO 
+                                {endpoint}_api_response({endpoint}_id,
+                                                    retrieval_time)
+                                VALUES (?,?)
+                                """,
+                                (item_id, datetime.now(tz=tz.UTC))
+                            )
 
                 time.sleep(random.uniform(3, 6))
+
+            else:
+                logger.warning("NO MORE ITEMS TO RETRIEVE.")
+                logger.info(f"""
+                    RAW RESPONSES ARE IN {dbpath},
+                    SCHEMA: {endpoint}_api_response.
+                    """)
+                break
 
 
 

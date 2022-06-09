@@ -29,104 +29,111 @@ A YouTube API key needs to be present in the YOUTUBE_API_KEY environment variabl
 """
 
 import os
-import sqlite3
+from dotenv import load_dotenv
 import argparse
 import logging
 
-from youtupy import databases, collector
+import collector
+import databases
+from process import process_to_database
 
 # Logging
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
+console_handler.setLevel(logging.DEBUG)
 
-file_handler = logging.FileHandler('youtube.log')
-file_handler.setLevel(logging.WARNING)
+# file_handler = logging.FileHandler('youtube.log')
+# file_handler.setLevel(logging.WARNING)
 
-formatter = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')
+formatter = logging.Formatter(
+    '%(asctime)s - %(module)s: %(message)s (%(levelname)s)'
+)
+
 console_handler.setFormatter(formatter)
-file_handler.setFormatter(formatter)
+# file_handler.setFormatter(formatter)
 
 logger.addHandler(console_handler)
-logger.addHandler(file_handler)
+# logger.addHandler(file_handler)
 
 # CLI argument set up:
-# if __name__ == "__main__": (put all CLI config under this)
-parser = argparse.ArgumentParser(description="""
-        Collect Youtube videos containing 'critical race theory'
-        through Youtube API and store raw responses in a SQLite database.
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="""
+            Collect Youtube videos containing 'critical race theory'
+            through Youtube API and store raw responses in a SQLite database.
+    
+            Requires a YOUTUBE_API_KEY environment variable.
+    
+            The script also creates one database to keep track of quota usage,
+            so that we avoid exceeding Youtube's limit of 10,000 units.
+            """,
+                                     formatter_class=argparse.RawTextHelpFormatter)
 
-        Requires a YOUTUBE_API_KEY environment variable, which can be put in
-        an ".env" folder. Do in shell:
+    parser.add_argument("dbpath", help="Path to database file. Must end in `.db`.")
+    parser.add_argument("-q", "--query", help="Search query")
+    parser.add_argument("-s", "--start", help="Start date (YYYY-MM-DD)")
+    parser.add_argument("-e", "--end", help="End date (YYYY-MM-DD)")
+    parser.add_argument("--qpath", help="Path to the quota database. Default value: youtube_quota.db",
+                        default="youtube_quota.db")
+    parser.add_argument("-m", "--max",
+                        help="Max quota. Default value: 9000. Must be product of 100. Maximum value allowed is 9500.",
+                        default=9000, type=int)
+    parser.add_argument(
+        "-v", "--video", help="Get enriching video information", action="store_true")
+    parser.add_argument(
+        "-c", "--channel", help="Get enriching channel information", action="store_true")
+    parser.add_argument(
+        "--to-csv", help="Export to a csv file, of the same name as the database", action="store_true")
+    args = parser.parse_args()
 
-            echo YOUTUBE_API_KEY=<insert key here> > .env
+    dbpath = args.dbpath
+    publishedAfter = args.start
+    publishedBefore = args.end
+    quota_dbpath = args.qpath
+    max_quota = args.max
 
-        The script also creates another database to keep track of quota usage so that
-        we avoid exceeding Youtube's limit of 10,000 units.
-        """,
-                                 formatter_class=argparse.RawTextHelpFormatter)
+    search_query = args.query
 
-parser.add_argument("dbpath", help="Path to database file. Must end in `.db`.")
-parser.add_argument("-q", "--query", help="Search query")
-parser.add_argument("-s", "--start", help="Start date (YYYY-MM-DD)")
-parser.add_argument("-e", "--end", help="End date (YYYY-MM-DD)")
-parser.add_argument("--qpath", help="Path to the quota database. Default value: youtube_quota.db",
-                    default="youtube_quota.db")
-parser.add_argument("-m", "--max",
-                    help="Max quota. Default value: 9000. Must be product of 100. Maximum value allowed is 9500.",
-                    default=9000, type=int)
-parser.add_argument(
-    "-v", "--video", help="Get enriching video information", action="store_true")
-parser.add_argument(
-    "-c", "--channel", help="Get enriching channel information", action="store_true")
-parser.add_argument(
-    "--to-csv", help="Export to a csv file, of the same name as the database", action="store_true")
-args = parser.parse_args()
+    # Check if database exists
+    # leave this in here - checking input
+    if os.path.exists(dbpath):
 
-dbpath = args.dbpath
-publishedAfter = args.start
-publishedBefore = args.end
-quota_dbpath = args.qpath
-max_quota = args.max
+        flag = input(
+            """
+            This database already exists. 
+            Continue with this database? [Y/N]
+            """).lower()
 
-search_query = args.query
+        if flag == 'y':
+            logger.info(f"Updating existing database {dbpath}...")
+            pass
 
-# Check if database exists
-# leave this in here - checking input
-if os.path.exists(dbpath):
+        if flag == 'n':
+            dbpath = input("Type the name of the new database to be created: ")
 
-    flag = input(
-        """
-        This database already exists. 
-        Continue with this database? [Y/N]
-        """).lower()
+    # function in database.py
+    databases.initialise_database(path=dbpath)
 
-    if flag == 'y':
-        logger.info(f"Updating existing database {dbpath}...")
-        pass
+    databases.validate_metadata(path=dbpath,
+                                input_query=args.query,
+                                input_start=args.start,
+                                input_end=args.end)
 
-    if flag == 'n':
-        dbpath = input("Type the name of the new database to be created: ")
+    collector.collect(endpoint='search',
+                      dbpath=dbpath,
+                      q=search_query,
+                      publishedAfter=args.start,
+                      publishedBefore=args.end)
+    process_to_database(source='search', dbpath=dbpath)
 
-# function in database.py
-databases.initialise_database(path=dbpath)
+    if args.video:
+        collector.collect(endpoint='video', dbpath=dbpath)
+        process_to_database(source='video', dbpath=dbpath)
 
-db = sqlite3.connect(dbpath)
-
-databases.validate_metadata(path=dbpath,
-                            input_query=args.query,
-                            input_start=args.start,
-                            input_end=args.end)
-
-collector.collect(endpoint=args.search,
-                  dbpath=dbpath,
-                  q=search_query,
-                  publishedAfter=args.start,
-                  publishedBefore=args.end)
-
-
+    if args.channel:
+        collector.collect(endpoint='channel', dbpath=dbpath)
+        process_to_database(source='channel', dbpath=dbpath)
 
 
 # STEP 6. Combine everything together and export to csv

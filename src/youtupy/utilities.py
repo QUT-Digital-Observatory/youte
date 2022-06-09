@@ -1,12 +1,16 @@
 import sqlite3
 import json
+import logging
 
+logger = logging.getLogger(__name__)
 
 def insert_ids_to_db(dbpath, source: ['video', 'channel']):
+
+    logger.debug("Connect to db...")
     db = sqlite3.connect(dbpath)
 
     source = source.lower()
-
+    logger.debug("select response from api table")
     search_api_responses = db.execute(
         """
                 SELECT response FROM search_api_response
@@ -15,6 +19,7 @@ def insert_ids_to_db(dbpath, source: ['video', 'channel']):
 
     item_ids = []
 
+    logger.debug("extracting ids")
     for search_api_response in search_api_responses:
         items = json.loads(search_api_response[0])['items']
         for item in items:
@@ -25,6 +30,7 @@ def insert_ids_to_db(dbpath, source: ['video', 'channel']):
 
             item_ids.append((item_id,))
 
+    logger.debug("inserting ids")
     db.executemany(
         f"""
         INSERT OR IGNORE INTO {source}_api_response({source}_id) values(?) 

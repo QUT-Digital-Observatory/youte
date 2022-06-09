@@ -15,6 +15,7 @@ class Quota:
         self.api_key = api_key
         self._created_utc = created_utc
         self.reset_remaining = reset_remaining
+        _init_quotadb()
 
     @property
     def created_utc(self):
@@ -74,17 +75,17 @@ class Quota:
                 self.units = 0
                 self.created_utc = None
 
-    def add_quota(self, unit_costs, created_utc, path='quota.db'):
+    def add_quota(self, unit_costs, created_utc, path='.quota/quota.db'):
         self.units += unit_costs
         self.created_utc = created_utc
 
         with sqlite3.connect(path) as db:
             db.execute(
                 """
-                replace into quota(id, quota, timestamp, api_key) 
-                    values (?,?,?,?)
+                replace into quota(quota, timestamp, api_key) 
+                    values (?,?,?)
                 """,
-                (0, self.units, created_utc, self.api_key))
+                (self.units, created_utc, self.api_key))
 
     def handle_limit(self, max_quota):
         """
@@ -102,8 +103,9 @@ class Quota:
             pass
 
 
-def _init_quotadb(path):
-    os.mkdir('../.quota')
+def _init_quotadb(path='quota.db'):
+    if not os.path.exists('.quota'):
+        os.mkdir('.quota')
     db = sqlite3.connect(".quota/{}".format(path))
     db.execute(
         """

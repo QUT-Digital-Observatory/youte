@@ -24,7 +24,18 @@ def initialise_database(path, video_schema=True, channel_schema=True):
             total_results,
             retrieval_time
             );
-                
+        
+        CREATE TABLE IF NOT EXISTS search_results(
+             /*
+            This table stores the processed data from Youtube API responses
+            */
+             video_id primary key,
+             published_at,
+             channel_id,
+             title,
+             description,
+             channel_title
+         );
                 
         CREATE TABLE IF NOT EXISTS meta_data(
             /*
@@ -120,7 +131,7 @@ def initialise_database(path, video_schema=True, channel_schema=True):
 
 def validate_metadata(path, input_query, input_start=None, input_end=None):
     with sqlite3.connect(path) as db:
-        existing_data = [(row[0], row[1], row[3])
+        existing_data = [(row[0], row[1], row[2])
                          for row in
                          db.execute("""
                          select query, publishedAfter, publishedBefore 

@@ -35,7 +35,7 @@ def get_endpoint(endpoint: ['search', 'video', 'channel']) -> dict:
                           'description, channelTitle))',
                 'order': 'date',
                 'safeSearch': 'none',
-                'key': os.environ['YOUTUBE_API_KEY']
+                'key': None
             }
         },
 
@@ -51,7 +51,7 @@ def get_endpoint(endpoint: ['search', 'video', 'channel']) -> dict:
                           'snippet(publishedAt,channelId,title,description,'
                           'channelTitle),'
                           'status(uploadStatus),statistics,topicDetails)',
-                'key': os.environ['YOUTUBE_API_KEY']
+                'key': None
             }
         },
 
@@ -65,7 +65,7 @@ def get_endpoint(endpoint: ['search', 'video', 'channel']) -> dict:
                 'fields': 'nextPageToken,prevPageToken,'
                           'items(id,snippet(publishedAt,title,description),'
                           'status,statistics,topicDetails)',
-                'key': os.environ['YOUTUBE_API_KEY']
+                'key': None
             }
         }
     }
@@ -74,7 +74,7 @@ def get_endpoint(endpoint: ['search', 'video', 'channel']) -> dict:
 
 
 def collect(endpoint: ['search', 'video', 'channel'],
-            dbpath: str, max_quota=10000, **query):
+            dbpath: str, key, max_quota=10000, **query):
     """Collect data from Youtube API.
 
     Keyword arguments:
@@ -89,9 +89,10 @@ def collect(endpoint: ['search', 'video', 'channel'],
     endpoint_meta = get_endpoint(endpoint)
     url = endpoint_meta['url']
     params = endpoint_meta['params']
+    params['key'] = key
     api_cost_unit = endpoint_meta['api_cost_unit']
 
-    quota = Quota(api_key=os.environ['YOUTUBE_API_KEY'])
+    quota = Quota(api_key=key)
     quota.get_quota()
 
     db = sqlite3.connect(dbpath)

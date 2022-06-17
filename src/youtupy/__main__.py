@@ -48,10 +48,10 @@ def youtupy():
               help="Get enriching video information")
 @click.option("-c", "--channel", is_flag=True,
               help="Get enriching channel information")
-def collect(dbpath, query, start, end, max_quota, video, channel):
+@click.option("--api-key", envvar='YOUTUBE_API_KEY')
+def collect(dbpath, api_key, query, start, end, max_quota, video, channel):
     """Collect data from Youtube API.
-    Requires a Youtube API key to be put in a YOUTUBE_API_KEY
-    environment variable.
+    Can add key to a YOUTUBE_API_KEY environment variable.
     """
     if os.path.exists(dbpath):
 
@@ -77,15 +77,23 @@ def collect(dbpath, query, start, end, max_quota, video, channel):
 
     collector.collect(endpoint='search',
                       dbpath=dbpath,
+                      key=api_key,
+                      max_quota=max_quota,
                       q=query,
                       publishedAfter=start,
                       publishedBefore=end)
 
     if video:
-        collector.collect(endpoint='video', dbpath=dbpath)
+        collector.collect(endpoint='video',
+                          dbpath=dbpath,
+                          key=api_key,
+                          max_quota=max_quota)
 
     if channel:
-        collector.collect(endpoint='channel', dbpath=dbpath)
+        collector.collect(endpoint='channel',
+                          dbpath=dbpath,
+                          key=api_key,
+                          max_quota=max_quota)
 
 
 @youtupy.command()

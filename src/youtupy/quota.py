@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import logging
 from dateutil import tz
 import time
+import pathlib
 
 logger = logging.getLogger(__name__)
 
@@ -29,11 +30,11 @@ class Quota:
             raise TypeError("created_utc must be a datetime object.")
 
     def get_quota(self, path='quota.db'):
-        full_path = '.quota/{}'.format(path)
+        full_path = pathlib.Path('.quota').joinpath(path)
 
-        logger.debug("Getting quota usage from {}.".format(full_path))
+        logger.debug("Getting quota usage from %s" % full_path)
 
-        if not os.path.exists(full_path):
+        if not full_path.exists():
             _init_quotadb(path)
 
         db = sqlite3.connect(full_path)
@@ -104,9 +105,11 @@ class Quota:
 
 
 def _init_quotadb(path='quota.db'):
-    if not os.path.exists('.quota'):
-        os.mkdir('.quota')
-    db = sqlite3.connect(".quota/{}".format(path))
+    quota_dir = pathlib.Path('.quota')
+    if not quota_dir.exists():
+        quota_dir.mkdir()
+
+    db = sqlite3.connect(quota_dir.joinpath(path))
     db.execute(
         """
         create table if not exists quota(

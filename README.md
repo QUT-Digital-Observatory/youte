@@ -2,7 +2,21 @@
 
 A command line utility to get Youtube video metadata from Youtube API.
 
-Requires Youtube API Key to be put in a YOUTUBE_API_KEY environment variable. For DO, use the staging API key for testing.
+Requires Youtube API Key to be put in a YOUTUBE_API_KEY environment variable. For DO, use the staging API key for testing (stored in 1password).
+
+## Installation
+
+```shell
+git clone git@github.com:QUT-Digital-Observatory/youtupy.git
+cd youtupy
+
+# create a virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# install package
+pip install -e .
+```
 
 ## Run a search
 

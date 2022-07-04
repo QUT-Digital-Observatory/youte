@@ -4,12 +4,11 @@ import configobj
 
 logger = logging.getLogger(__name__)
 
-# might not need this
-
 
 class YoutubeConfig(configobj.ConfigObj):
-    def __init__(self, filename='config'):
+    def __init__(self, filename):
         super(YoutubeConfig, self).__init__(filename)
+        self.file_path = filename
 
     def add_key(self, name, key):
         self[name] = key
@@ -21,5 +20,6 @@ class YoutubeConfig(configobj.ConfigObj):
         self['default'][name] = self[name]
         self.write()
         logger.info(f"Set {name} as the default key...")
+
 
 

@@ -11,16 +11,19 @@ A YouTube API key needs to be present in the YOUTUBE_API_KEY environment variabl
 import os
 import logging
 import click
+from pathlib import Path
 
 from youtupy import collector, databases
 from youtupy.process import process_to_database
+from youtupy.collector_class import SearchCollector
+from youtupy.config import YoutubeConfig
 
 # Logging
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
+console_handler.setLevel(logging.INFO)
 
 formatter = logging.Formatter(
     '%(asctime)s - %(module)s: %(message)s (%(levelname)s)'
@@ -29,6 +32,7 @@ formatter = logging.Formatter(
 console_handler.setFormatter(formatter)
 
 logger.addHandler(console_handler)
+
 
 # CLI argument set up:
 @click.group()
@@ -57,7 +61,7 @@ def collect(dbpath, api_key, query, start, end, max_quota, video, channel):
 
         flag = input(
             """
-            This database already exists. 
+            This database already exists.
             Continue with this database? [Y/N]
             """).lower()
 
@@ -97,13 +101,27 @@ def collect(dbpath, api_key, query, start, end, max_quota, video, channel):
 
 
 @youtupy.command()
-@click.argument("dbpath")
-def process(dbpath):
-    process_to_database(source='search', dbpath=dbpath)
-    process_to_database(source='video', dbpath=dbpath)
-    process_to_database(source='channel', dbpath=dbpath)
+def init():
+    click.secho('Welcome to youtupy!', fg='green', bold=True)
+    click.echo()
+    click.echo('To get started, an API key is required to get data '
+               'from Youtube API.')
+    click.echo()
+    click.echo('To obtain an API key, follow the steps in')
+    click.echo('https://developers.google.com/youtube/v3/getting-started.')
+    click.echo()
+    click.echo('Setting up you Youtube configuration')
+    click.echo()
+    api_key = click.prompt('Enter your API key')
+    username = click.prompt('Enter a name for this key')
+
+    config = YoutubeConfig(filename='config')
+    config_path = Path(config.file_path)
+    click.echo(f'File is at {config_path.resolve()}')
+
+    pass
+
 
 
 if __name__ == "__main__":
     collect()
-    process()

@@ -1,11 +1,14 @@
 import sqlite3
 import json
 import logging
+from pathlib import Path
+
+from youtupy.exceptions import InvalidFileName
 
 logger = logging.getLogger(__name__)
 
-def insert_ids_to_db(dbpath, source: ['video', 'channel']):
 
+def insert_ids_to_db(dbpath, source: ['video', 'channel']):
     logger.debug("Connect to db...")
     db = sqlite3.connect(dbpath)
 
@@ -38,3 +41,32 @@ def insert_ids_to_db(dbpath, source: ['video', 'channel']):
         item_ids)
     db.commit()
     db.close()
+
+
+def validate_file(file_name, suffix=None):
+    path = Path(file_name)
+    if suffix and path.suffix != suffix:
+        raise (InvalidFileName(f"File name must end in {suffix}."))
+    return path
+
+
+def check_file_overwrite(file_path: Path) -> Path:
+    if file_path.exists():
+        flag = input(
+            """
+            This database already exists. 
+            Continue with this database? [Y/N]
+            """).lower()
+
+        if flag == 'y':
+            logger.info(f"Updating existing database {file_path.resolve()}...")
+
+        if flag == 'n':
+            file_name = input("Input new database name: ")
+            file_path = Path(file_name)
+
+    return file_path
+
+
+def create_utc_datetime_string(string: str):
+    return f"{string}T00:00:00Z"

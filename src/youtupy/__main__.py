@@ -15,15 +15,15 @@ from pathlib import Path
 
 from youtupy import collector, databases
 from youtupy.process import process_to_database
-from youtupy.collector_class import SearchCollector
+from youtupy.collector import SearchCollector
 from youtupy.config import YoutubeConfig
 
 # Logging
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 
 console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
+console_handler.setLevel(logging.WARNING)
 
 formatter = logging.Formatter(
     '%(asctime)s - %(module)s: %(message)s (%(levelname)s)'
@@ -103,6 +103,7 @@ def collect(dbpath, api_key, query, start, end, max_quota, video, channel):
 @youtupy.command()
 def init():
     click.secho('Welcome to youtupy!', fg='green', bold=True)
+    click.echo('Configuring your profile...')
     click.echo()
     click.echo('To get started, an API key is required to get data '
                'from Youtube API.')
@@ -110,17 +111,28 @@ def init():
     click.echo('To obtain an API key, follow the steps in')
     click.echo('https://developers.google.com/youtube/v3/getting-started.')
     click.echo()
-    click.echo('Setting up you Youtube configuration')
+    click.secho('Setting up you Youtube configuration...',
+                fg='magenta')
     click.echo()
     api_key = click.prompt('Enter your API key')
     username = click.prompt('Enter a name for this key')
 
     config = YoutubeConfig(filename='config')
     config_path = Path(config.file_path)
-    click.echo(f'File is at {config_path.resolve()}')
+    click.echo()
+    click.echo(f'Config file is stored at {config_path.resolve()}.')
 
+    config.add_profile(name=username, key=api_key)
+
+    if click.confirm('Set this API key as default?'):
+        config.set_default(username)
+    click.echo()
+    click.secho('API key successfully configured!',
+                fg='green',
+                bold=True)
+    click.echo()
+    click.echo('To add more API keys, rerun `youtupy init`.')
     pass
-
 
 
 if __name__ == "__main__":

@@ -33,23 +33,25 @@ class SearchCollector:
             'type': 'video',
             'order': 'date',
             'safeSearch': 'none',
-            'key': None
             }
         self.api_cost = 100
         self.url = 'https://www.googleapis.com/youtube/v3/search'
         self.output_path = None
         self.api_key = api_key
         self.max_quota = max_quota
+        self.quota = None
 
-    def add_param(self, **param: Union[str,float]) -> None:
+    def add_param(self, **param: Union[str, float]) -> None:
         for key, value in param.items():
             if (key == 'publishedAfter' or
                     key == 'publishedBefore'):
                 value = create_utc_datetime_string(value)
             self.params[key] = value
 
-    def run(self, dbpath: str) -> None:
+    def add_quota(self, quota: Quota):
+        self.quota = quota
 
+    def run(self, dbpath: str) -> None:
         # validate and set up database
         dbpath = validate_file(dbpath)
 
@@ -81,8 +83,7 @@ class SearchCollector:
 
         self.params['key'] = self.api_key
 
-        quota = Quota(api_key=self.api_key)
-        quota.get_quota()
+        self.quota.get_quota()
 
         logger.info(
             f"""

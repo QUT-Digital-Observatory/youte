@@ -1,22 +1,24 @@
 import os
-import sqlite3
 from datetime import datetime, timedelta
 import logging
 from dateutil import tz
 import time
-import pathlib
+from pathlib import Path
+
+from youtupy.config import YoutubeConfig
+from youtupy.exceptions import InvalidFileName
 
 logger = logging.getLogger(__name__)
 
 
 class Quota:
-    def __init__(self, api_key, units=None,
+    def __init__(self, api_key, config_path, units=None,
                  created_utc=None, reset_remaining=None):
         self.units = units
         self.api_key = api_key
         self._created_utc = created_utc
         self.reset_remaining = reset_remaining
-        _init_quotadb()
+        self.config_path = config_path
 
     @property
     def created_utc(self):
@@ -29,64 +31,78 @@ class Quota:
         else:
             raise TypeError("created_utc must be a datetime object.")
 
-    def get_quota(self, path='quota.db'):
-        full_path = pathlib.Path('.quota').joinpath(path)
+    def get_quota(self):
+        full_path = Path(self.config_path).resolve()
 
         logger.debug("Getting quota usage from %s" % full_path)
 
         if not full_path.exists():
-            _init_quotadb(path)
+            raise InvalidFileName('Config file not found. '
+                                  'Try `youtupy init` first.')
 
-        db = sqlite3.connect(full_path)
+        config = YoutubeConfig(full_path)
 
-        quota_data = [(row[0], row[1])
-                      for row in
-                      db.execute("""
-                        select quota, timestamp from quota
-                        where api_key = ?
-                        """,
-                                 (self.api_key,))
-                      ]
+        for profile in config:
+            if config[profile]['key'] == self.api_key:
+                name = profile
 
-        if not quota_data:
-            logger.debug("No quota data found. Setting quota as 0.")
+        if 'name' not in locals():
+            raise KeyError('No profile for key %s found.'
+                           'Configure your API key first with `youtupy init`.')
 
+        if 'units' not in config[name]:
             self.units = 0
             self.created_utc = None
         else:
-            quota, timestamp = quota_data[0]
-            timestamp = datetime.fromisoformat(timestamp)
+            quota = config[name]['units']
+            timestamp = datetime.fromisoformat(config[name]['created_utc'])
 
             # get midnight Pacific time
             now_pt = datetime.now(tz=tz.gettz('US/Pacific'))
-            midnight_pt = now_pt.replace(hour=0, minute=0, second=0,
+            midnight_pt = now_pt.replace(hour=0,
+                                         minute=0,
+                                         second=0,
                                          microsecond=0)
 
             if timestamp > midnight_pt:
                 logger.debug(
                     f"Quota data found, {quota} units have been used.")
-
                 self.units = quota
                 self.created_utc = timestamp
                 self.reset_remaining = _get_reset_remaining(timestamp)
 
             else:
                 logger.debug("Quota has been reset to 0.")
-
                 self.units = 0
                 self.created_utc = None
 
-    def add_quota(self, unit_costs, created_utc, path='.quota/quota.db'):
+    def add_quota(self, unit_costs, created_utc):
         self.units += unit_costs
         self.created_utc = created_utc
 
-        with sqlite3.connect(path) as db:
-            db.execute(
-                """
-                replace into quota(quota, timestamp, api_key) 
-                    values (?,?,?)
-                """,
-                (self.units, created_utc, self.api_key))
+        full_path = Path(self.config_path).resolve()
+
+        logger.debug("Getting quota usage from %s" % full_path)
+
+        if not full_path.exists():
+            raise InvalidFileName('Config file not found. '
+                                  'Try `youtupy init` first.')
+
+        else:
+            config = YoutubeConfig(full_path)
+
+            for profile in config:
+                if config[profile]['key'] == self.api_key:
+                    name = profile
+
+            if 'name' not in locals():
+                raise KeyError('No profile for key %s found.'
+                               'Configure your API key first '
+                               'with `youtupy init`.' % self.api_key)
+
+            else:
+                config[name]['units'] = self.units
+                config[name]['created_utc'] = self.created_utc
 
     def handle_limit(self, max_quota):
         """
@@ -104,26 +120,6 @@ class Quota:
             pass
 
 
-def _init_quotadb(path='quota.db'):
-    quota_dir = pathlib.Path('.quota')
-    if not quota_dir.exists():
-        quota_dir.mkdir()
-
-    db = sqlite3.connect(quota_dir.joinpath(path))
-    db.execute(
-        """
-        create table if not exists quota(
-            /*
-            This records the running Youtube quota used everyday.
-            One row matches one API key.
-            */
-            api_key primary key,
-            quota,          
-            timestamp
-            );
-        """)
-
-
 def _get_reset_remaining(current) -> int:
     next_reset = datetime.now(tz=tz.gettz('US/Pacific')) + timedelta(days=1)
     next_reset = next_reset.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -131,6 +127,3 @@ def _get_reset_remaining(current) -> int:
     reset_remaining = next_reset - current
 
     return reset_remaining.seconds + 1
-
-
-print("Done")

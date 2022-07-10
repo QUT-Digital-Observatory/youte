@@ -6,8 +6,9 @@ from dateutil import tz
 import random
 import json
 import time
-from typing import Optional, Union, Any
+from typing import Union
 from pathlib import Path
+import click
 
 from youtupy.quota import Quota
 from youtupy.utilities import (
@@ -33,7 +34,7 @@ class SearchCollector:
             'type': 'video',
             'order': 'date',
             'safeSearch': 'none',
-            }
+        }
         self.api_cost = 100
         self.url = 'https://www.googleapis.com/youtube/v3/search'
         self.output_path = None
@@ -53,9 +54,9 @@ class SearchCollector:
 
     def run(self, dbpath: str) -> None:
         # validate and set up database
-        dbpath = validate_file(dbpath)
+        dbpath = validate_file(dbpath, suffix='.db')
 
-        if dbpath.exists():
+        if not dbpath.exists():
             logger.info(f"Creating {dbpath} at {dbpath.resolve().parent}.")
             databases.initialise_database(path=dbpath)
         else:
@@ -72,13 +73,16 @@ class SearchCollector:
 
         if ('publishedAfter' not in self.params and
                 'publishedBefore' not in self.params):
-            logger.warning("""
-                No start date or end date is specified for this request.
-                This might result in a large amount of data being requested,
-                using up available quota. Do you want to continue [Y/N]?
-                """)
+            logger.warning("No start date or end date is specified "
+                           "for this request. "
+                           "This might result in a large amount of "
+                           "data being requested, "
+                           "using up available quota. "
+                           "Do you want to continue [Y/N]?")
+
             check = input("[Y/N]: ").lower()
             if check == 'n':
+                click.secho("Stopping the collector...", fg="red")
                 raise StopCollector("Stopping the collector...")
 
         self.params['key'] = self.api_key
@@ -103,7 +107,7 @@ class SearchCollector:
                     """)
 
                 # get list of unrecorded page tokens
-                logger.info("Getting data from database.")
+                logger.debug("Getting new page tokens from database.")
 
                 to_retrieve = set(
                     row[0]
@@ -116,11 +120,11 @@ class SearchCollector:
                 )
 
             if not len(to_retrieve):
-                logger.info("END OF RESULT SET HAS BEEN REACHED.")
+                logger.info("No more items to retrieve.")
                 break
 
             logger.debug("Handling limit...")
-            quota.handle_limit(max_quota=self.max_quota)
+            self.quota.handle_limit(max_quota=self.max_quota)
 
             for token in to_retrieve:
                 # if base url has not been requested yet, request base url
@@ -131,14 +135,12 @@ class SearchCollector:
                     self.params['pageToken'] = token
                     r = requests.get(self.url, params=self.params)
 
-                quota.add_quota(unit_costs=self.api_cost,
-                                created_utc=datetime.now(tz=tz.UTC))
+                self.quota.add_quota(unit_costs=self.api_cost,
+                                     created_utc=datetime.now(tz=tz.UTC))
 
-                logger.info(
-                    f"""
-                     Getting requests ... {quota.units}/{self.max_quota} used.
-                     Status: {r.status_code}
-                     """)
+                logger.info(f"Retrieving data...\n"
+                            f"{self.quota.units}/{self.max_quota} used.\n"
+                            f"Status: {r.status_code}")
 
                 logger.debug(
                     f"""
@@ -166,7 +168,7 @@ class SearchCollector:
                         (next_page_token,))
 
                 except KeyError as e:
-                    logger.info(f"NO MORE RESULT PAGE TO PAGINATE...")
+                    logger.info(f"End of results page reached.")
 
                 # update database with response from current request
 
@@ -214,7 +216,7 @@ class SearchCollector:
             item_ids = [row[0]
                         for row in
                         db.execute(
-                        f"""
+                            f"""
                         SELECT {endpoint}_id 
                         FROM {endpoint}_api_response 
                         WHERE retrieval_time IS NULL 
@@ -227,8 +229,7 @@ class SearchCollector:
                     search returned any data.
                     """)
             else:
-                quota = Quota(api_key=self.api_key)
-                quota.get_quota()
+                self.quota.get_quota()
 
                 while True:
                     item_ids = [row[0]
@@ -245,7 +246,7 @@ class SearchCollector:
                         endpoint_params['id'] = ','.join(item_ids)
 
                         logger.debug("Handling limit......")
-                        quota.handle_limit(max_quota=self.max_quota)
+                        self.quota.handle_limit(max_quota=self.max_quota)
 
                         response = requests.get(endpoint_url,
                                                 params=endpoint_params)
@@ -255,11 +256,12 @@ class SearchCollector:
                         logging.info(
                             f"""
                             Getting data from Youtube Video API... 
-                            {quota.units}/{self.max_quota} used...
+                            {self.quota.units}/{self.max_quota} used...
                             """)
 
-                        quota.add_quota(unit_costs=endpoint_api_cost,
-                                        created_utc=datetime.now(tz=tz.UTC))
+                        self.quota.add_quota(unit_costs=endpoint_api_cost,
+                                             created_utc=datetime.now(
+                                                 tz=tz.UTC))
 
                         logger.info(
                             f"Inserting data to {endpoint}_api_response")
@@ -340,9 +342,7 @@ def _get_endpoint(endpoint: ['search', 'video', 'channel']) -> dict:
                 'maxResults': 50,
                 'q': None,
                 'type': 'video',
-                'fields': 'pageInfo,prevPageToken,nextPageToken,'
-                          'items(id, snippet(publishedAt, channelId, title,'
-                          'description, channelTitle))',
+                'fields': 'pageInfo,prevPageToken,nextPageToken,items',
                 'order': 'date',
                 'safeSearch': 'none',
                 'key': None
@@ -356,11 +356,7 @@ def _get_endpoint(endpoint: ['search', 'video', 'channel']) -> dict:
                 'part': 'snippet,statistics,topicDetails,status',
                 'id': None,
                 'maxResults': 50,
-                'fields': 'nextPageToken,prevPageToken,'
-                          'items(id,'
-                          'snippet(publishedAt,channelId,title,description,'
-                          'channelTitle),'
-                          'status(uploadStatus),statistics,topicDetails)',
+                'fields': 'nextPageToken,prevPageToken,items',
                 'key': None
             }
         },
@@ -372,9 +368,7 @@ def _get_endpoint(endpoint: ['search', 'video', 'channel']) -> dict:
                 'part': 'snippet,statistics,topicDetails,status',
                 'id': None,
                 'maxResults': 50,
-                'fields': 'nextPageToken,prevPageToken,'
-                          'items(id,snippet(publishedAt,title,description),'
-                          'status,statistics,topicDetails)',
+                'fields': 'nextPageToken,prevPageToken,items',
                 'key': None
             }
         }

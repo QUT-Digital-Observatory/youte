@@ -46,7 +46,7 @@ def insert_ids_to_db(dbpath, source: ['video', 'channel']):
 def validate_file(file_name, suffix=None):
     path = Path(file_name)
     if suffix and path.suffix != suffix:
-        raise (InvalidFileName(f"File name must end in {suffix}."))
+        raise InvalidFileName("File name must end in `.%s`." % suffix)
     return path
 
 

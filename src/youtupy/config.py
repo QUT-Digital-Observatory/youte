@@ -20,10 +20,16 @@ class YoutubeConfig(configobj.ConfigObj):
         for profile in self:
             if 'default' in self[profile]:
                 del self[profile]['default']
+        try:
+            self[name]['default'] = True
+            self.write()
+        except KeyError:
+            logger.error(
+                """No such name found. 
+                You might not have added this profile or 
+                added it under a different name.
+                Run `youtupy init list-keys` to see the list of registered keys.
+                Run `youtupy init add-key to add a new API key.
+                """)
 
-        self[name]['default'] = True
-        self.write()
         logger.info(f"Set {name} as the default key...")
-
-
-

@@ -40,7 +40,7 @@ class Quota:
             raise InvalidFileName('Config file not found. '
                                   'Try `youtupy init` first.')
 
-        config = YoutubeConfig(full_path)
+        config = YoutubeConfig(str(full_path))
 
         for profile in config:
             if config[profile]['key'] == self.api_key:
@@ -54,7 +54,7 @@ class Quota:
             self.units = 0
             self.created_utc = None
         else:
-            quota = config[name]['units']
+            quota = int(config[name]['units'])
             timestamp = datetime.fromisoformat(config[name]['created_utc'])
 
             # get midnight Pacific time
@@ -89,7 +89,7 @@ class Quota:
                                   'Try `youtupy init` first.')
 
         else:
-            config = YoutubeConfig(full_path)
+            config = YoutubeConfig(str(full_path))
 
             for profile in config:
                 if config[profile]['key'] == self.api_key:
@@ -103,6 +103,7 @@ class Quota:
             else:
                 config[name]['units'] = self.units
                 config[name]['created_utc'] = self.created_utc
+                config.write()
 
     def handle_limit(self, max_quota):
         """

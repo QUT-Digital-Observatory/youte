@@ -12,21 +12,21 @@ from youtupy.quota import Quota
 
 # Logging
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-console_formatter = logging.Formatter('%(message)s')
-console_handler.setFormatter(console_formatter)
+# console_handler = logging.StreamHandler()
+# console_handler.setLevel(logging.INFO)
+# console_formatter = logging.Formatter('%(message)s')
+# console_handler.setFormatter(console_formatter)
 
 file_handler = logging.FileHandler('youtupy.log')
-file_handler.setLevel(logging.INFO)
+file_handler.setLevel(logging.DEBUG)
 file_formatter = logging.Formatter(
     '%(asctime)s - %(module)s: %(message)s (%(levelname)s)'
 )
 file_handler.setFormatter(file_formatter)
 
-logger.addHandler(console_handler)
+# logger.addHandler(console_handler)
 logger.addHandler(file_handler)
 
 
@@ -44,8 +44,9 @@ def youtupy():
 @click.option("--max-quota", default=10000,
               help="Maximum quota allowed",
               show_default=True)
-@click.option("--name")
-def search(output, name, query, from_, to, max_quota):
+@click.option("--name", help="Name of the API key (optional)")
+@click.option("--comments", help="Get video comments", is_flag=True)
+def search(output, name, query, from_, to, max_quota, comments=False):
     """Collect data from Youtube API.
     """
 
@@ -54,18 +55,28 @@ def search(output, name, query, from_, to, max_quota):
     config_file_path = Path(click.get_app_dir('youtupy')).joinpath('config')
     config = YoutubeConfig(filename=str(config_file_path))
 
-    try:
-        api_key = config[name]['key']
-    except KeyError:
-        logger.error(
-            """
-            No API key found for %s.
-            Did you use a different name?
-            Try: 
-            - youtupy init list-keys to get a full list of registered API keys
-            - youtupy init add-key to add a new API key
-            """ % name
-        )
+    if name:
+        try:
+            api_key = config[name]['key']
+        except KeyError:
+            raise KeyError("No API key found for %s. "
+                           "Did you use a different name? "
+                           "Try: "
+                           "`youtupy init list-keys` to get a "
+                           "full list of registered API keys "
+                           "or `youtupy init add-key` to add a new API key"
+                           % name
+            )
+    else:
+        default_check = []
+        for name in config:
+            if 'default' in config[name]:
+                default_check.append(name)
+        if not default_check:
+            raise KeyError("No API key name was specified, and "
+                           "you haven't got a default API key.")
+        else:
+            api_key = config[default_check[0]]['key']
 
     click.secho("Setting up collector...",
                 fg='magenta')
@@ -83,6 +94,20 @@ def search(output, name, query, from_, to, max_quota):
     clt.run(dbpath=output)
     clt.get_enriching_data(endpoint='video')
     clt.get_enriching_data(endpoint='channel')
+
+    if comments:
+        clt.get_comments(replies=True)
+
+    click.echo()
+    click.secho(f'Clean data is in {output}.\n'
+                f'Schema:\n'
+                f'  - search_results\n'
+                f'  - videos\n'
+                f'  - channels\n')
+    if comments:
+        click.secho('  - comment_threads\n'
+                    '  - replies\n',
+                    fg='cyan')
 
 
 @youtupy.group()
@@ -120,7 +145,6 @@ def add_key():
         click.echo('Creating config folder at %s' % config_file_path.parent)
         config_file_path.parent.mkdir(parents=True)
 
-    click.echo('%s' % config_file_path)
     config = YoutubeConfig(filename=str(config_file_path))
     click.echo()
     click.echo(f'Config file is stored at {config_file_path.resolve()}.')
@@ -152,6 +176,7 @@ def set_default(name):
 
 @init.command()
 def list_keys():
+    """Show a list of keys already added"""
     click.echo()
     config_file_path = Path(click.get_app_dir('youtupy')).joinpath('config')
     config = YoutubeConfig(filename=str(config_file_path))
@@ -163,7 +188,3 @@ def list_keys():
                 fg='green',
                 bold=True)
     click.echo()
-
-
-if __name__ == "__main__":
-    collect()

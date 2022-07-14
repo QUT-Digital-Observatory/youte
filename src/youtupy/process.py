@@ -116,4 +116,144 @@ def process_to_database(source: ['search', 'video', 'channel'], dbpath: str):
                      str(ch_topic_categories),
                      ch_view_count, ch_subscriber_count, ch_video_count))
 
+    elif source == 'comment_thread':
+        api_responses = db.execute(
+            """
+            SELECT response
+            FROM comment_threads_api_response
+            WHERE response NOTNULL
+            """
+        )
+
+        for api_response in api_responses:
+            items = json.loads(api_response[0])['items']
+
+            for item in items:
+                thread_id = item['id']
+                video_id = item['snippet']['videoId']
+                can_reply = item['snippet']['canReply']
+                reply_count = item['snippet']['totalReplyCount']
+
+                snippet = item['snippet']['topLevelComment']['snippet']
+                text_display = snippet['textDisplay']
+                text_original = snippet['textOriginal']
+                author_name = snippet['authorDisplayName']
+                author_url = snippet['authorChannelUrl']
+                author_channel_id = snippet['authorChannelId']['value']
+                can_rate = snippet['canRate']
+                viewer_rating = snippet['viewerRating']
+                like_count = snippet['likeCount']
+                published_at = snippet['publishedAt']
+                updated_at = snippet['updatedAt']
+
+                with db:
+                    db.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS comment_threads(
+                            thread_id PRIMARY KEY,
+                            video_id,
+                            can_reply,
+                            reply_count,
+                            text_display,
+                            text_original,
+                            author_name,
+                            author_url,
+                            author_channel_id,
+                            can_rate,
+                            viewer_rating,
+                            like_count,
+                            published_at,
+                            updated_at
+                            )
+                        """
+                    )
+
+                    db.execute(
+                        """
+                        INSERT OR REPLACE INTO comment_threads
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                        """,
+                        (thread_id,
+                         video_id,
+                         can_reply,
+                         reply_count,
+                         html.unescape(text_display),
+                         text_original,
+                         author_name,
+                         author_url,
+                         author_channel_id,
+                         can_rate,
+                         viewer_rating,
+                         like_count,
+                         published_at,
+                         updated_at)
+                    )
+
+    elif source == 'reply':
+        api_responses = db.execute(
+            """
+            SELECT response
+            FROM reply_api_response
+            WHERE response NOTNULL
+            """
+        )
+
+        for api_response in api_responses:
+            items = json.loads(api_response[0])['items']
+
+            for item in items:
+                reply_id = item['id']
+
+                snippet = item['snippet']
+                text_display = snippet['textDisplay']
+                text_original = snippet['textOriginal']
+                parent_id = snippet['parentId']
+                author_name = snippet['authorDisplayName']
+                author_url = snippet['authorChannelUrl']
+                author_channel_id = snippet['authorChannelId']['value']
+                can_rate = snippet['canRate']
+                viewer_rating = snippet['viewerRating']
+                like_count = snippet['likeCount']
+                published_at = snippet['publishedAt']
+                updated_at = snippet['updatedAt']
+
+                with db:
+                    db.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS replies(
+                            reply_id PRIMARY KEY,
+                            reply_text_display,
+                            reply_text_original,
+                            parent_id,
+                            author_name,
+                            author_url,
+                            author_channel_id,
+                            can_rate,
+                            viewer_rating,
+                            like_count,
+                            published_at,
+                            updated_at
+                            )
+                        """
+                    )
+
+                    db.execute(
+                        """
+                        INSERT OR REPLACE INTO replies
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                        """,
+                        (reply_id,
+                         html.unescape(text_display),
+                         text_original,
+                         parent_id,
+                         author_name,
+                         author_url,
+                         author_channel_id,
+                         can_rate,
+                         viewer_rating,
+                         like_count,
+                         published_at,
+                         updated_at)
+                    )
+
 

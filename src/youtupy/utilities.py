@@ -8,7 +8,7 @@ from youtupy.exceptions import InvalidFileName
 logger = logging.getLogger(__name__)
 
 
-def insert_ids_to_db(dbpath, source: ['video', 'channel']):
+def insert_ids_to_db(dbpath, source: ['video', 'channel'], table):
     logger.debug("Connect to db...")
     db = sqlite3.connect(dbpath)
 
@@ -27,7 +27,7 @@ def insert_ids_to_db(dbpath, source: ['video', 'channel']):
         items = json.loads(search_api_response[0])['items']
         for item in items:
             if source == 'video':
-                item_id = item['id'][f'videoId']
+                item_id = item['id']['videoId']
             elif source == 'channel':
                 item_id = item['snippet']['channelId']
 
@@ -36,7 +36,7 @@ def insert_ids_to_db(dbpath, source: ['video', 'channel']):
     logger.debug("inserting ids")
     db.executemany(
         f"""
-        INSERT OR IGNORE INTO {source}_api_response({source}_id) values(?) 
+        INSERT OR IGNORE INTO {table}({source}_id) values(?) 
         """,
         item_ids)
     db.commit()
@@ -46,7 +46,7 @@ def insert_ids_to_db(dbpath, source: ['video', 'channel']):
 def validate_file(file_name, suffix=None):
     path = Path(file_name)
     if suffix and path.suffix != suffix:
-        raise InvalidFileName("File name must end in `.%s`." % suffix)
+        raise InvalidFileName("File name must end in `%s`." % suffix)
     return path
 
 

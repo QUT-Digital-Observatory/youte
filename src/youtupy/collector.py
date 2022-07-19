@@ -9,6 +9,8 @@ import time
 from typing import Union
 from pathlib import Path
 import click
+from tqdm import tqdm
+from math import ceil
 
 from youtupy.quota import Quota
 from youtupy.utilities import (
@@ -52,7 +54,7 @@ class SearchCollector:
     def add_quota(self, quota: Quota):
         self.quota = quota
 
-    def run(self, dbpath: str) -> None:
+    def run(self, dbpath: str, warning=True) -> None:
         # validate and set up database
         dbpath = validate_file(dbpath, suffix='.db')
 
@@ -75,30 +77,35 @@ class SearchCollector:
             raise InvalidRequestParameter("Search query is required for "
                                           "search requests.")
 
-        if ('publishedAfter' not in self.params and
-                'publishedBefore' not in self.params):
-            click.secho("WARNING:",
-                        fg='red',
-                        bold=True)
-            click.echo("No start date or end date is specified "
-                       "for this request. "
-                       "This might result in a large amount of "
-                       "data being requested "
-                       "and use up your available quota. ")
-            click.confirm("Do you want to continue?", abort=True)
+        if warning:
+            if ('publishedAfter' not in self.params and
+                    'publishedBefore' not in self.params):
+                click.secho("WARNING:",
+                            fg='red',
+                            bold=True)
+                click.echo("No start date or end date is specified "
+                           "for this request. "
+                           "This might result in a large amount of "
+                           "data being requested "
+                           "and use up your available quota. ")
+                click.confirm("Do you want to continue?", abort=True)
 
         self.params['key'] = self.api_key
 
         self.quota.get_quota()
 
         click.echo()
-        click.echo('Searching for Youtube videos...')
+        click.echo("What you're looking for sounds interesting 👀! "
+                   "Getting search results... ⏳")
+        click.echo()
 
         logger.info(
             f"""
             Starting querying Youtube search results. 
             Quota unit cost will be {self.api_cost}.
             """)
+
+        page = 1
 
         while True:
 
@@ -131,78 +138,78 @@ class SearchCollector:
             logger.debug("Handling limit...")
             self.quota.handle_limit(max_quota=self.max_quota)
 
-            with click.progressbar(to_retrieve) as bar:
-                for token in bar:
-                    click.echo()
-                    # if base url has not been requested yet, request base url
+            for token in to_retrieve:
+                # if base url has not been requested yet, request base url
 
-                    if token == "":
-                        r = requests.get(self.url, params=self.params)
-                    else:
-                        self.params['pageToken'] = token
-                        r = requests.get(self.url, params=self.params)
+                if token == "":
+                    r = requests.get(self.url, params=self.params)
+                else:
+                    self.params['pageToken'] = token
+                    r = requests.get(self.url, params=self.params)
 
-                    self.quota.add_quota(unit_costs=self.api_cost,
-                                         created_utc=datetime.now(tz=tz.UTC))
+                self.quota.add_quota(unit_costs=self.api_cost,
+                                     created_utc=datetime.now(tz=tz.UTC))
 
-                    logger.info(f"Retrieving data...\n"
-                                f"{self.quota.units}/"
-                                f"{self.max_quota} quota units used.\n"
-                                f"Status: {r.status_code}")
+                logger.info(f"Retrieving data...\n"
+                            f"{self.quota.units}/"
+                            f"{self.max_quota} quota units used.\n"
+                            f"Status: {r.status_code}")
 
-                    click.echo(f'Status: {r.status_code}')
-                    click.echo(f"Quota usage: {self.quota.units}/"
-                               f"{self.max_quota}.")
+                click.echo(f'Collecting page {page}.')
+                # click.echo(f'Status: {r.status_code}')
+                click.echo()
 
-                    logger.debug(
-                        f"""
-                        {r.url}
-                        {r.status_code}
-                        """)
+                logger.debug(
+                    f"""
+                    {r.url}
+                    {r.status_code}
+                    """)
 
-                    r.raise_for_status()
+                r.raise_for_status()
 
-                    if r.status_code == 403:
-                        click.secho(r.json()['error']['message'],
-                                    fg='red',
-                                    bold=True)
-                        continue
+                if r.status_code == 403:
+                    click.secho(r.json()['error']['message'],
+                                fg='red',
+                                bold=True)
+                    continue
 
-                    # get nextPageToken from current response
-                    # and insert it to the database
+                # get nextPageToken from current response
+                # and insert it to the database
 
-                    try:
-                        next_page_token = r.json()['nextPageToken']
-                        db.execute(
-                            """
-                            INSERT OR IGNORE INTO 
-                            search_api_response(next_page_token) 
-                            VALUES (?)
-                            """,
-                            (next_page_token,))
-
-                    except KeyError as e:
-                        click.echo("End of search results reached.")
-                        logger.info(f"End of results page reached.")
-
-                    # update database with response from current request
-
+                try:
+                    next_page_token = r.json()['nextPageToken']
                     db.execute(
                         """
-                        REPLACE INTO search_api_response(next_page_token,
-                                                           request_url,
-                                                           status_code,
-                                                           response,
-                                                           total_results,
-                                                           retrieval_time)
-                        VALUES (?,?,?,?,?,?)
+                        INSERT OR IGNORE INTO 
+                        search_api_response(next_page_token) 
+                        VALUES (?)
                         """,
-                        (token, r.url, r.status_code, json.dumps(r.json()),
-                         len(r.json()['items']),
-                         datetime.utcnow())
-                    )
+                        (next_page_token,))
 
-                    time.sleep(random.uniform(2, 3))
+                except KeyError as e:
+                    click.echo("End of search results reached.")
+                    logger.info(f"End of results page reached.")
+                    click.echo()
+
+                # update database with response from current request
+
+                db.execute(
+                    """
+                    REPLACE INTO search_api_response(next_page_token,
+                                                       request_url,
+                                                       status_code,
+                                                       response,
+                                                       total_results,
+                                                       retrieval_time)
+                    VALUES (?,?,?,?,?,?)
+                    """,
+                    (token, r.url, r.status_code, json.dumps(r.json()),
+                     len(r.json()['items']),
+                     datetime.utcnow())
+                )
+
+                time.sleep(1)
+                page += 1
 
         process_to_database(source='search', dbpath=dbpath)
         total_results = [row[0] for
@@ -223,14 +230,16 @@ class SearchCollector:
             f" - RAW JSON IS STORED IN search_api_response SCHEMA.\n"
             f" - CLEAN DATA IS STORED IN search_results SCHEMA.\n"
         )
-        click.secho(f"Search completed!\n"
-                    f"{total_results} videos found for "
+
+        click.secho(f"{total_results} videos found for "
                     f"keyword `{self.params['q']}`.\n"
                     f"Data is stored in {dbpath.resolve()}.",
                     fg="bright_green",
                     bold=True)
+        click.echo(f'Total quota units used: {self.quota.units}.')
 
     def get_enriching_data(self, endpoint: ['video', 'channel']):
+        click.echo()
         endpoint_url = _get_endpoint(endpoint)['url']
         endpoint_api_cost = _get_endpoint(endpoint)['api_cost_unit']
         endpoint_params = _get_endpoint(endpoint)['params']
@@ -248,7 +257,22 @@ class SearchCollector:
 
             self.quota.get_quota()
 
+            total_results = [row[0] for
+                             row in
+                             db.execute(
+                                 f"""
+                                 SELECT COUNT(*)
+                                 FROM {endpoint}_api_response
+                                 """
+                             )][0]
+
+            batches = int(int(total_results) / 50)
+
+            click.secho(f"Getting detailed {endpoint} data ⏳...",
+                        fg='magenta')
+
             while True:
+
                 item_ids = [row[0]
                             for row in
                             db.execute(
@@ -265,26 +289,20 @@ class SearchCollector:
                     logger.debug("Handling limit......")
                     self.quota.handle_limit(max_quota=self.max_quota)
 
-                    response = requests.get(endpoint_url,
-                                            params=endpoint_params)
-                    logger.debug(f"Getting request {response.url}.")
-                    response.raise_for_status()
+                    r = requests.get(endpoint_url,
+                                     params=endpoint_params)
+                    logger.debug(f"Getting request {r.url}.")
+                    r.raise_for_status()
 
                     logger.info(f"Retrieving additional {endpoint} data...\n"
                                 f"{self.quota.units}/"
                                 f"{self.max_quota} quota units used.\n"
-                                f"Status: {response.status_code}")
-
-                    click.echo()
-                    click.secho(f"Getting detailed {endpoint} data...",
-                                fg='magenta')
-                    click.echo(f'{response.status_code}')
-                    click.echo(f'Quota usage: {self.quota.units}.')
+                                f"Status: {r.status_code}")
 
                     logger.debug(
                         f"""
-                        {response.url}
-                        {response.status_code}
+                        {r.url}
+                        {r.status_code}
                         """)
 
                     self.quota.add_quota(unit_costs=endpoint_api_cost,
@@ -295,15 +313,9 @@ class SearchCollector:
                         f"Inserting data to {endpoint}_api_response")
 
                     with db:
-                        try:
-                            for i, item in enumerate(
-                                    response.json()['items']):
+                        for item in r.json()['items']:
+                            try:
                                 item_id = item['id']
-                                logger.debug(
-                                    f"""
-                                    Inserting {item_id}. {i + 1}/{len(
-                                        response.json()['items'])}... 
-                                    """)
                                 db.execute(
                                     f"""
                                     REPLACE INTO 
@@ -315,35 +327,34 @@ class SearchCollector:
                                     (item_id, json.dumps(item),
                                      datetime.now(tz=tz.UTC))
                                 )
-                        except KeyError:
-                            logging.warning(
-                                f"""
-                                ONE OF THESE ITEMS COULD NOT BE FOUND:
-                                {','.join(item_ids)}.
-                                """)
-                            click.secho(f"WARNING: data on some {endpoint}s "
-                                        f"could not be found.\n"
-                                        f"See log for more details.",
-                                        fg='yellow')
-                            for item_id in item_ids:
-                                db.execute(
+                            except KeyError:
+                                logging.warning(
                                     f"""
-                                    REPLACE INTO 
-                                    {endpoint}_api_response({endpoint}_id,
-                                                        retrieval_time)
-                                    VALUES (?,?)
-                                    """,
-                                    (item_id, datetime.now(tz=tz.UTC))
-                                )
+                                    ONE OF THESE ITEMS COULD NOT BE FOUND:
+                                    {','.join(item_ids)}.
+                                    """)
+                                click.secho(
+                                    f"WARNING: data on some {endpoint}s "
+                                    f"could not be found.\n"
+                                    f"See log for more details.",
+                                    fg='yellow')
+                                for item_id in item_ids:
+                                    db.execute(
+                                        f"""
+                                        REPLACE INTO 
+                                        {endpoint}_api_response({endpoint}_id,
+                                                            retrieval_time)
+                                        VALUES (?,?)
+                                        """,
+                                        (item_id, datetime.now(tz=tz.UTC))
+                                    )
 
-                    time.sleep(random.uniform(3, 5))
+                    time.sleep(1)
 
                 else:
-                    click.echo()
                     logger.info(f"No more {endpoint} items to retrieve.")
                     logger.info(f"RAW RESPONSES ARE IN {self.output_path}\n"
                                 f"SCHEMA: {endpoint}_api_response.")
-
                     break
 
             process_to_database(source=endpoint, dbpath=self.output_path)
@@ -357,6 +368,7 @@ class SearchCollector:
             )
             click.secho(f"All {endpoint} data have been collected!",
                         fg='bright_green')
+            click.echo(f'Total quota units used: {self.quota.units}.')
 
     def get_comments(self, replies=False, **kwargs):
         """Get comments of videos found in search results"""
@@ -397,6 +409,10 @@ class SearchCollector:
 
             self.quota.get_quota()
 
+            click.echo()
+            click.secho(f"Getting comment data ⏳...",
+                        fg='magenta')
+
             while True:
 
                 item_ids = [row[0]
@@ -413,204 +429,205 @@ class SearchCollector:
                     break
 
                 else:
-                    with click.progressbar(item_ids) as bar:
-                        for item_id in bar:
-                            click.echo()
-                            cmtthread_params = _get_endpoint('commentThread')[
-                                'params']
-                            cmtthread_params['key'] = self.api_key
-                            cmtthread_params['videoId'] = item_id
+                    for item_id in tqdm(item_ids):
+                        cmtthread_params = _get_endpoint('commentThread')[
+                            'params']
+                        cmtthread_params['key'] = self.api_key
+                        cmtthread_params['videoId'] = item_id
 
-                            logger.debug("Handling limit......")
-                            self.quota.handle_limit(max_quota=self.max_quota)
+                        logger.debug("Handling limit......")
+                        self.quota.handle_limit(max_quota=self.max_quota)
 
-                            while True:
+                        while True:
 
-                                with db:
-                                    # empty string for the base request url
-                                    # because it doesn't have a page token
+                            with db:
+                                # empty string for the base request url
+                                # because it doesn't have a page token
 
-                                    db.execute(
-                                        """
-                                        INSERT OR IGNORE INTO
-                                          comment_threads_api_response(
-                                            next_page_token,
-                                            video_id
-                                            )
-                                        VALUES (?,?)
+                                db.execute(
+                                    """
+                                    INSERT OR IGNORE INTO
+                                      comment_threads_api_response(
+                                        next_page_token,
+                                        video_id
+                                        )
+                                    VALUES (?,?)
+                                    """,
+                                    ('', item_id)
+                                )
+
+                                # get list of unrecorded page tokens
+                                logger.debug("Getting new page tokens "
+                                             "from database.")
+
+                                to_retrieve = set(
+                                    row[0]
+                                    for row in db.execute(
+                                        f"""
+                                        SELECT next_page_token
+                                        FROM comment_threads_api_response
+                                        WHERE retrieval_time IS NULL
+                                          AND video_id = ?
                                         """,
-                                        ('', item_id)
-                                    )
+                                        (item_id,))
+                                )
 
-                                    # get list of unrecorded page tokens
-                                    logger.debug("Getting new page tokens "
-                                                 "from database.")
+                            if not len(to_retrieve):
+                                logger.info("No more items to retrieve.")
+                                break
+                            else:
+                                logger.debug("Handling limit...")
+                                self.quota.handle_limit(
+                                    max_quota=self.max_quota)
 
-                                    to_retrieve = set(
-                                        row[0]
-                                        for row in db.execute(
-                                            f"""
-                                            SELECT next_page_token
-                                            FROM comment_threads_api_response
-                                            WHERE retrieval_time IS NULL
-                                              AND video_id = ?
-                                            """,
-                                            (item_id,))
-                                    )
+                                for token in to_retrieve:
+                                    # if base url has not been requested yet,
+                                    # request base url
 
-                                if not len(to_retrieve):
-                                    logger.info("No more items to retrieve.")
-                                    break
-                                else:
-                                    logger.debug("Handling limit...")
-                                    self.quota.handle_limit(
-                                        max_quota=self.max_quota)
+                                    if token == "":
+                                        r = requests.get(cmtthread_url,
+                                                         params=cmtthread_params)
+                                    else:
+                                        cmtthread_params[
+                                            'pageToken'] = token
+                                        r = requests.get(cmtthread_url,
+                                                         params=cmtthread_params)
 
-                                    for token in to_retrieve:
-                                        # if base url has not been requested yet,
-                                        # request base url
-
-                                        if token == "":
-                                            r = requests.get(cmtthread_url,
-                                                             params=cmtthread_params)
-                                        else:
-                                            cmtthread_params[
-                                                'pageToken'] = token
-                                            r = requests.get(cmtthread_url,
-                                                             params=cmtthread_params)
-
-                                        self.quota.add_quota(unit_costs=
-                                                             cmtthread_api_cost,
-                                                             created_utc=
-                                                             datetime.now(
-                                                                 tz=tz.UTC))
-
-                                        logger.info(f"Retrieving data...\n"
-                                                    f"{self.quota.units}/"
-                                                    f"{self.max_quota} "
-                                                    f"quota units used.\n"
-                                                    f"Status: {r.status_code}")
-
-                                        click.echo('Getting comments data...')
-                                        click.echo(f'{r.status_code}')
-                                        click.echo(f'Quota usage: '
-                                                   f'{self.quota.units}')
-
-                                        logger.debug(f"Getting comment "
-                                                     f"threads for "
-                                                     f"video {item_id}, "
-                                                     f"token {token}.")
-
-                                        if r.status_code == 403:
-                                            logger.error(f"Error: {item_id}")
-                                            logger.error(
-                                                r.json()['error']['message'])
-                                            click.secho('ERROR',
-                                                        fg='red',
-                                                        bold=True)
-                                            click.secho(
-                                                f"{r.json()['error']['message']}",
-                                                fg="red",
-                                                bold=True
-                                            )
-
-                                            errors_message = r.json()['error'][
-                                                'errors']
-                                            for error in errors_message:
-                                                logger.error(
-                                                    f"Reason: {error['reason']}")
-                                                if (error['reason'] ==
-                                                        'commentsDisabled'):
-                                                    db.execute(
-                                                        """
-                                                        REPLACE INTO
-                                                        comment_threads_api_response(
-                                                            next_page_token,
-                                                            video_id,
-                                                            retrieval_time
-                                                            )
-                                                        VALUES (?,?,?)
-                                                        """,
-                                                        (token,
-                                                         item_id,
+                                    self.quota.add_quota(unit_costs=
+                                                         cmtthread_api_cost,
+                                                         created_utc=
                                                          datetime.now(
                                                              tz=tz.UTC))
-                                                    )
-                                            time.sleep(random.randint(2, 3))
-                                            continue
 
-                                        # get nextPageToken from current response
-                                        # and insert it to the database
+                                    logger.info(f"Getting comment "
+                                                f"threads for "
+                                                f"video {item_id}, "
+                                                f"token {token}.\n"
+                                                f"Status: {r.status_code}.\n"
+                                                f"Total quota used: "
+                                                f"{self.quota.units}")
 
-                                        try:
-                                            next_page_token = r.json()[
-                                                'nextPageToken']
+                                    if r.status_code == 403:
+                                        logger.error(f"Error: {item_id}")
+                                        logger.error(
+                                            r.json()['error']['message'])
 
-                                            db.execute(
-                                                """
-                                                INSERT OR IGNORE INTO
-                                                comment_threads_api_response(
-                                                    next_page_token, video_id)
-                                                VALUES (?,?)
-                                                """,
-                                                (next_page_token, item_id))
+                                        errors_message = r.json()['error'][
+                                            'errors']
 
-                                        except KeyError as e:
-                                            logger.info(
-                                                f"End of results page reached.")
+                                        for error in errors_message:
+                                            logger.error(
+                                                f"Item {item_id}: "
+                                                f"{error['reason']}")
 
-                                        # update database with response
-                                        # from current request
+                                            # ignore if comment is disabled
+                                            # for the video
+                                            if (error['reason'] ==
+                                                    'commentsDisabled'):
+                                                click.secho('WARNING',
+                                                            fg='bright_red',
+                                                            bold=True)
+                                                click.secho(
+                                                    f"{r.json()['error']['message']}",
+                                                    fg="bright_red",
+                                                    bold=True
+                                                )
+                                                db.execute(
+                                                    """
+                                                    REPLACE INTO
+                                                    comment_threads_api_response(
+                                                        next_page_token,
+                                                        video_id,
+                                                        retrieval_time
+                                                        )
+                                                    VALUES (?,?,?)
+                                                    """,
+                                                    (token,
+                                                     item_id,
+                                                     datetime.now(
+                                                         tz=tz.UTC))
+                                                )
+                                            else:
+                                                click.secho('ERROR',
+                                                            fg='red',
+                                                            bold=True)
+                                                click.secho(
+                                                    f"{r.json()['error']['message']}",
+                                                    fg="red",
+                                                    bold=True
+                                                )
+                                                r.raise_for_status()
+                                        continue
+
+                                    # get nextPageToken from current response
+                                    # and insert it to the database
+
+                                    try:
+                                        next_page_token = r.json()[
+                                            'nextPageToken']
+
                                         db.execute(
                                             """
-                                            REPLACE INTO
+                                            INSERT OR IGNORE INTO
                                             comment_threads_api_response(
-                                                next_page_token,
-                                                video_id,
-                                                request_url,
-                                                status_code,
-                                                response,
-                                                retrieval_time
-                                                )
-                                            VALUES (?,?,?,?,?,?)
+                                                next_page_token, video_id)
+                                            VALUES (?,?)
                                             """,
-                                            (token,
-                                             item_id,
-                                             r.url,
-                                             r.status_code,
-                                             json.dumps(r.json()),
-                                             datetime.utcnow())
-                                        )
+                                            (next_page_token, item_id))
 
-                                        time.sleep(random.uniform(1, 2))
+                                    except KeyError as e:
+                                        logger.info(
+                                            f"End of results page reached.")
 
-                                    logger.debug("Inserting database...")
+                                    # update database with response
+                                    # from current request
                                     db.execute(
                                         """
-                                        REPLACE INTO comment_checks(
+                                        REPLACE INTO
+                                        comment_threads_api_response(
+                                            next_page_token,
                                             video_id,
+                                            request_url,
+                                            status_code,
+                                            response,
                                             retrieval_time
                                             )
-                                        VALUES (?,?)
+                                        VALUES (?,?,?,?,?,?)
                                         """,
-                                        (item_id, datetime.now(tz=tz.UTC))
+                                        (token,
+                                         item_id,
+                                         r.url,
+                                         r.status_code,
+                                         json.dumps(r.json()),
+                                         datetime.utcnow())
                                     )
+
+                                    time.sleep(1)
+
+                                logger.debug("Inserting database...")
+                                db.execute(
+                                    """
+                                    REPLACE INTO comment_checks(
+                                        video_id,
+                                        retrieval_time
+                                        )
+                                    VALUES (?,?)
+                                    """,
+                                    (item_id, datetime.now(tz=tz.UTC))
+                                )
 
         process_to_database(source='comment_thread',
                             dbpath=self.output_path)
+
+        click.secho(f"All comment data have been collected!",
+                    fg='bright_green')
+        click.echo(f'Total quota units used: {self.quota.units}.')
 
         # get replies to comments
         if replies:
             comment_url = _get_endpoint('comment')['url']
             comment_api_cost = _get_endpoint('comment')[
                 'api_cost_unit']
-
-            if not self.output_path:
-                raise InvalidRequestParameter("No search results found. "
-                                              "Do a Youtube search request "
-                                              "first.")
-            else:
-                db = sqlite3.connect(self.output_path)
 
             db.executescript(
                 """
@@ -633,6 +650,10 @@ class SearchCollector:
             )
             db.commit()
 
+            click.echo()
+            click.secho(f"Getting comment reply data ⏳...",
+                        fg='magenta')
+
             while True:
                 comment_ids = [row[0]
                                for row in
@@ -648,148 +669,146 @@ class SearchCollector:
                     logger.info("No items to retrieve. Collection completed.")
                     break
                 else:
-                    with click.progressbar(comment_ids) as bar:
-                        for comment_id in bar:
-                            click.echo()
-                            logger.info("Retrieving replies data...")
-                            click.echo("Getting comment reply data...")
-                            logger.debug(
-                                f"Getting replies for comment {comment_id}.")
+                    for comment_id in tqdm(comment_ids):
+                        logger.info(
+                            f"Getting replies for comment {comment_id}.")
 
-                            logger.debug("Handling limit...")
-                            self.quota.handle_limit(max_quota=self.max_quota)
+                        logger.debug("Handling limit...")
+                        self.quota.handle_limit(max_quota=self.max_quota)
 
-                            while True:
-                                to_retrieve = set(
-                                    row[0]
-                                    for row in db.execute(
-                                        f"""
-                                         SELECT next_page_token 
-                                         FROM reply_api_response
-                                         WHERE retrieval_time IS NULL
-                                           AND comment_id = ?
-                                        """,
-                                        (comment_id,))
-                                )
+                        while True:
+                            to_retrieve = set(
+                                row[0]
+                                for row in db.execute(
+                                    f"""
+                                     SELECT next_page_token 
+                                     FROM reply_api_response
+                                     WHERE retrieval_time IS NULL
+                                       AND comment_id = ?
+                                    """,
+                                    (comment_id,))
+                            )
 
-                                if not len(to_retrieve):
-                                    logger.info("No more items to retrieve.")
-                                    break
-                                else:
-                                    logger.debug("Handling limit...")
-                                    self.quota.handle_limit(
-                                        max_quota=self.max_quota)
+                            if not len(to_retrieve):
+                                logger.info("No more items to retrieve.")
+                                break
+                            else:
+                                logger.debug("Handling limit...")
+                                self.quota.handle_limit(
+                                    max_quota=self.max_quota)
 
-                                    for token in to_retrieve:
-                                        comment_params = \
-                                        _get_endpoint('comment')[
-                                            'params']
-                                        comment_params['key'] = self.api_key
-                                        comment_params['parentId'] = comment_id
+                                for token in to_retrieve:
+                                    comment_params = \
+                                        _get_endpoint('comment')['params']
+                                    comment_params['key'] = self.api_key
+                                    comment_params['parentId'] = comment_id
 
-                                        if token != "":
-                                            comment_params['pageToken'] = token
+                                    if token != "":
+                                        comment_params['pageToken'] = token
 
-                                        r = requests.get(comment_url,
-                                                         params=comment_params)
+                                    r = requests.get(comment_url,
+                                                     params=comment_params)
 
-                                        self.quota.add_quota(unit_costs=
-                                                             comment_api_cost,
-                                                             created_utc=
-                                                             datetime.now(
-                                                                 tz=tz.UTC))
-
-                                        logger.info(f"Retrieving data...\n"
-                                                    f"{self.quota.units}/"
-                                                    f"{self.max_quota} "
-                                                    f"quota units used.\n"
-                                                    f"Status: {r.status_code}")
-
-                                        click.echo(f'{r.status_code}')
-                                        click.echo(f'Quota usage: '
-                                                   f'{self.quota.units}')
-
-                                        logger.debug(f"Getting replies for"
-                                                     f" comment {comment_id}, "
-                                                     f"token {token}.")
-
-                                        if r.status_code == 403:
-                                            logger.error(
-                                                f"Error: {comment_id}")
-                                            logger.error(
-                                                r.json()['error']['message'])
-                                            errors_message = r.json()['error'][
-                                                'errors']
-                                            for error in errors_message:
-                                                logger.error(
-                                                    f"Reason: {error['reason']}")
-                                                if (error['reason'] ==
-                                                        'commentsDisabled'):
-                                                    db.execute(
-                                                        """
-                                                        REPLACE INTO 
-                                                        reply_api_response(
-                                                            next_page_token,
-                                                            comment_id,
-                                                            retrieval_time
-                                                            )
-                                                        VALUES (?,?,?)
-                                                        """,
-                                                        (token,
-                                                         comment_id,
+                                    self.quota.add_quota(unit_costs=
+                                                         comment_api_cost,
+                                                         created_utc=
                                                          datetime.now(
                                                              tz=tz.UTC))
-                                                    )
-                                            time.sleep(random.randint(5, 7))
-                                            continue
 
-                                        db.execute("BEGIN TRANSACTION")
-                                        try:
-                                            next_page_token = r.json()[
-                                                'nextPageToken']
-                                            db.execute(
-                                                """
-                                                INSERT OR IGNORE INTO 
-                                                reply_api_response(next_page_token,
-                                                                   comment_id) 
-                                                VALUES (?,?)
-                                                """,
-                                                (next_page_token, comment_id))
+                                    logger.info(f"Getting replies for"
+                                                 f" comment {comment_id}, "
+                                                 f"token {token}.\n"
+                                                f"Status: {r.status_code}.\n"
+                                                f"Total quota used: "
+                                                f"{self.quota.units}.")
 
-                                        except KeyError as e:
-                                            logger.info(
-                                                f"End of results page reached.")
+                                    if r.status_code == 403:
+                                        logger.error(
+                                            f"Error: {comment_id}")
+                                        logger.error(
+                                            r.json()['error']['message'])
+                                        errors_message = r.json()['error'][
+                                            'errors']
+                                        for error in errors_message:
+                                            logger.error(
+                                                f"Reason: {error['reason']}")
+                                            if (error['reason'] ==
+                                                    'commentsDisabled'):
+                                                db.execute(
+                                                    """
+                                                    REPLACE INTO 
+                                                    reply_api_response(
+                                                        next_page_token,
+                                                        comment_id,
+                                                        retrieval_time
+                                                        )
+                                                    VALUES (?,?,?)
+                                                    """,
+                                                    (token,
+                                                     comment_id,
+                                                     datetime.now(
+                                                         tz=tz.UTC))
+                                                )
+                                            else:
+                                                click.secho('ERROR',
+                                                            fg='red',
+                                                            bold=True)
+                                                click.secho(
+                                                    f"{r.json()['error']['message']}",
+                                                    fg="red",
+                                                    bold=True
+                                                )
+                                                r.raise_for_status()
+                                        continue
 
-                                        # update database with response
-                                        # from current request
+                                    db.execute("BEGIN TRANSACTION")
+                                    try:
+                                        next_page_token = r.json()['nextPageToken']
+
                                         db.execute(
                                             """
-                                            REPLACE INTO 
-                                            reply_api_response(
-                                                next_page_token,
-                                                comment_id,
-                                                request_url,
-                                                status_code,
-                                                response,
-                                                retrieval_time
-                                                )
-                                            VALUES (?,?,?,?,?,?)
+                                            INSERT OR IGNORE INTO 
+                                            reply_api_response(next_page_token,
+                                                               comment_id) 
+                                            VALUES (?,?)
                                             """,
-                                            (token,
-                                             comment_id,
-                                             r.url,
-                                             r.status_code,
-                                             json.dumps(r.json()),
-                                             datetime.now(tz=tz.UTC))
-                                        )
-                                        db.execute("COMMIT")
-                                        time.sleep(random.uniform(1, 2))
+                                            (next_page_token, comment_id))
+
+                                    except KeyError as e:
+                                        logger.info(
+                                            f"End of results page reached.")
+
+                                    # update database with response
+                                    # from current request
+                                    db.execute(
+                                        """
+                                        REPLACE INTO 
+                                        reply_api_response(
+                                            next_page_token,
+                                            comment_id,
+                                            request_url,
+                                            status_code,
+                                            response,
+                                            retrieval_time
+                                            )
+                                        VALUES (?,?,?,?,?,?)
+                                        """,
+                                        (token,
+                                         comment_id,
+                                         r.url,
+                                         r.status_code,
+                                         json.dumps(r.json()),
+                                         datetime.now(tz=tz.UTC))
+                                    )
+                                    db.execute("COMMIT")
+                                    time.sleep(1)
 
             process_to_database(source='reply',
                                 dbpath=self.output_path)
-            click.secho("All comment data collected!",
+            click.secho("All comment reply data collected!",
                         fg='bright_green',
                         bold=True)
+            click.echo(f'Total quota units used: {self.quota.units}.')
 
 
 def _get_endpoint(endpoint: ['search', 'video', 'channel']) -> dict:

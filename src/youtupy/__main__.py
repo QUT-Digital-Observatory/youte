@@ -33,6 +33,10 @@ logger.addHandler(file_handler)
 # CLI argument set up:
 @click.group()
 def youtupy():
+    """
+    Utility to collect YouTube video meta-data and comments via YouTube API.
+    Run `youtupy configure --help` to get started.
+    """
     pass
 
 
@@ -46,7 +50,15 @@ def youtupy():
               show_default=True)
 @click.option("--name", help="Name of the API key (optional)")
 @click.option("--comments", help="Get video comments", is_flag=True)
-def search(output, name, query, from_, to, max_quota, comments=False):
+@click.option("--replies", help="Get replies to video comments", is_flag=True)
+def search(output,
+           name,
+           query,
+           from_,
+           to,
+           max_quota,
+           comments=False,
+           replies=False):
     """Collect data from Youtube API.
     """
 
@@ -89,40 +101,44 @@ def search(output, name, query, from_, to, max_quota, comments=False):
 
     quota = Quota(api_key=api_key, config_path=str(config_file_path))
     clt.add_quota(quota=quota)
-    click.secho("Getting data...",
-                fg='magenta')
     clt.run(dbpath=output)
     clt.get_enriching_data(endpoint='video')
     clt.get_enriching_data(endpoint='channel')
 
     if comments:
-        clt.get_comments(replies=True)
+        clt.get_comments(replies=replies)
 
     click.echo()
-    click.secho(f'Clean data is in {output}.\n'
+    click.secho(f'All data is stored in {output}.\n'
                 f'Schema:\n'
                 f'  - search_results\n'
                 f'  - videos\n'
-                f'  - channels\n')
+                f'  - channels',
+                fg='cyan',
+                bold=True)
     if comments:
-        click.secho('  - comment_threads\n'
-                    '  - replies\n',
-                    fg='cyan')
+        click.secho('  - comment_threads',
+                    fg='cyan',
+                    bold=True)
+    if replies:
+        click.secho(' - replies',
+                    fg='cyan',
+                    bold=True)
 
 
 @youtupy.group()
-def init():
+def configure():
     """
-    Configure YouTube API keys to access data from YouTube API.
+    Set up API keys to access data from YouTube API.
     """
 
 
-@init.command()
+@configure.command()
 def add_key():
     """
     Add YouTube API key
     """
-    click.secho('Welcome to youtupy!', fg='green', bold=True)
+    click.secho('Welcome to youtupy! 👋', fg='green', bold=True)
     click.echo('Configuring your profile...')
     click.echo()
     click.echo('To get started, an API key is required to get data '
@@ -163,7 +179,7 @@ def add_key():
                '<name-of-key>')
 
 
-@init.command()
+@configure.command()
 @click.argument('name')
 def set_default(name):
     """Set default API key"""
@@ -174,7 +190,7 @@ def set_default(name):
     click.echo('%s is now your default API key.' % config[name]['key'])
 
 
-@init.command()
+@configure.command()
 def list_keys():
     """Show a list of keys already added"""
     click.echo()

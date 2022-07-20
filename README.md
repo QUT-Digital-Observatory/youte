@@ -170,7 +170,7 @@ The API key name has to be added to the config file first using `youtupy configu
 
 #### `--max-quota` (optional)
 
-Change the maximum quota allowed for your API key. The default value is 10,000, which is the standard quota cap for all Google accounts. Read more about YouTube API's quota system [below](##youtube-api-quota-system-and-youtupy-handling-of-quota).
+Change the maximum quota allowed for your API key. The default value is 10,000, which is the standard quota cap for all Google accounts. Read more about YouTube API's quota system [below](#youtube-api-quota-system-and-youtupy-handling-of-quota).
 
 ### What happens when `youtupy search` is run
 

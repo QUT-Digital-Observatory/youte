@@ -198,7 +198,11 @@ def list_keys():
     config = YoutubeConfig(filename=str(config_file_path))
 
     for name in config:
-        click.echo('%s -------- %s' % (name, config[name]['key']))
+        if 'default' in config[name]:
+            click.secho('%s -------- %s (*)' % (name, config[name]['key']),
+                        fg='blue')
+        else:
+            click.echo('%s -------- %s' % (name, config[name]['key']))
     click.echo()
     click.secho('All API keys are stored in %s' % config_file_path,
                 fg='green',

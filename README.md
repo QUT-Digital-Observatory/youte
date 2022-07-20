@@ -58,6 +58,8 @@ To see the list of all keys, run:
 youtupy configure list-keys
 ```
 
+The default key, if there is one, will have an asterisk next to it.
+
 #### About the config file
 
 youtupy's config file is stored in a central place, whose exact location depends on the running operating system:

@@ -71,16 +71,3 @@ def check_file_overwrite(file_path: Path) -> Path:
 
 def create_utc_datetime_string(string: str):
     return f"{string}T00:00:00Z"
-
-
-def get_random_quotes():
-    quotes = [
-        'There is a technical name for the "fear of long words": '
-        'hippopotomonstrosesquippedaliophobia.',
-        'Hunting unicorns is legal in Michigan.',
-        'Barry Manilow didn\'t write his hit song "I Write the Songs."',
-        'You\'re twice as likely to be killed by a vending machine than a shark',
-        'One in nine Americans—exactly 11 percent of the population—think '
-        'HTML is actually a disease.'
-    ]
-    return random.sample(quotes, k=1)[0]

@@ -6,8 +6,8 @@ import logging
 import click
 from pathlib import Path
 
-from youtupy.collector import SearchCollector
-from youtupy.config import YoutubeConfig
+from youtupy.collector import SearchCollector, Collector, Youtupy
+from youtupy.config import YoutubeConfig, get_api_key
 from youtupy.quota import Quota
 
 # Logging
@@ -78,7 +78,7 @@ def search(output,
                            "full list of registered API keys "
                            "or `youtupy init add-key` to add a new API key"
                            % name
-            )
+                           )
     else:
         default_check = []
         for name in config:
@@ -121,9 +121,111 @@ def search(output,
                     fg='cyan',
                     bold=True)
     if replies:
-        click.secho(' - replies',
+        click.secho('  - replies',
                     fg='cyan',
                     bold=True)
+
+
+@youtupy.command()
+@click.argument("ids", required=True)
+@click.option("-o", "--output", help="Output jsonl")
+@click.option("-p", "--parent",
+              help="Get comments for parent ids",
+              is_flag=True)
+@click.option("-c", "--channel",
+              help="Get comments for channel id",
+              is_flag=True)
+@click.option("-v", "--video",
+              help="Get comments for video id",
+              is_flag=True)
+@click.option("--max-quota", default=10000,
+              help="Maximum quota allowed",
+              show_default=True)
+@click.option("--name", help="Name of the API key (optional)")
+def get_comments(ids,
+                 output,
+                 name,
+                 max_quota,
+                 parent=False,
+                 channel=False,
+                 video=False):
+
+    click.secho("Getting API key from config file.",
+                fg='magenta')
+    config_file_path = Path(click.get_app_dir('youtupy')).joinpath('config')
+    config = YoutubeConfig(filename=str(config_file_path))
+
+    if name:
+        try:
+            api_key = config[name]['key']
+        except KeyError:
+            raise KeyError("No API key found for %s. "
+                           "Did you use a different name? "
+                           "Try: "
+                           "`youtupy init list-keys` to get a "
+                           "full list of registered API keys "
+                           "or `youtupy init add-key` to add a new API key"
+                           % name
+                           )
+    else:
+        default_check = []
+        for name in config:
+            if 'default' in config[name]:
+                default_check.append(name)
+        if not default_check:
+            raise KeyError("No API key name was specified, and "
+                           "you haven't got a default API key.")
+        else:
+            api_key = config[default_check[0]]['key']
+
+    quota = Quota(api_key=api_key, config_path=str(config_file_path))
+
+    collector = Collector(api_key=api_key, max_quota=max_quota)
+    collector.add_quota(quota)
+
+    collector.get_data_by_ids(source='comment_thread',
+                              ids=[ids],
+                              by_video_id=video,
+                              by_channel_id=channel,
+                              output_path=output)
+
+
+@youtupy.command()
+def test_search():
+    search = Youtupy(api_key='AIzaSyBsiJ0rJfoP4O93r50BNuPkUeRi61HVWQQ')
+    config_file_path = Path(click.get_app_dir('youtupy')).joinpath('config')
+
+    quota = Quota(api_key='AIzaSyBsiJ0rJfoP4O93r50BNuPkUeRi61HVWQQ',
+                  config_path=str(config_file_path))
+    search.add_quota(quota)
+
+    search.search(query='abortion',
+                  output_path='abortion.jsonl',
+                  part='snippet',
+                  maxResults=50,
+                  type='video',
+                  order='date',
+                  safeSearch='none')
+
+
+@youtupy.command()
+@click.argument("query", required=True)
+@click.option("-o", "--output", help="Output database. Must end in `.db`")
+@click.option("--from", "from_", help="Start date (YYYY-MM-DD)")
+@click.option("--to", help="End date (YYYY-MM-DD)")
+@click.option("--name", help="Name of the API key (optional)")
+@click.option("--comments", help="Get video comments", is_flag=True)
+@click.option("--replies", help="Get replies to video comments", is_flag=True)
+@click.option("--max-quota", default=10000,
+              help="Maximum quota allowed",
+              show_default=True)
+def search2(query,
+            output,
+            from_,
+            to,
+            name,
+            max_quota):
+
 
 
 @youtupy.group()
@@ -147,7 +249,8 @@ def add_key():
     click.echo('To obtain an API key, follow the steps in')
     click.echo('https://developers.google.com/youtube/v3/getting-started.')
     click.echo()
-    click.echo('Once you have an API key, run `youtupy init add-key` to start.')
+    click.echo(
+        'Once you have an API key, run `youtupy init add-key` to start.')
 
     click.secho('Setting up you Youtube configuration...',
                 fg='magenta')

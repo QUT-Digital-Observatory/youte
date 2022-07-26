@@ -1,6 +1,7 @@
 import logging
-import pathlib
+from pathlib import Path
 import configobj
+import click
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ class YoutubeConfig(configobj.ConfigObj):
         try:
             self[name]['default'] = True
             self.write()
-            logger.info('%s is now the default API key.' %name)
+            logger.info('%s is now the default API key.' % name)
         except KeyError:
             logger.error(
                 """No such name found.
@@ -36,3 +37,33 @@ class YoutubeConfig(configobj.ConfigObj):
                 """)
 
 
+def get_api_key(name, filename='config'):
+    click.secho("Getting API key from config file.",
+                fg='magenta')
+    config_file_path = Path(click.get_app_dir('youtupy')).joinpath(filename)
+    config = YoutubeConfig(filename=str(config_file_path))
+
+    if name:
+        try:
+            api_key = config[name]['key']
+        except KeyError:
+            raise KeyError("No API key found for %s. "
+                           "Did you use a different name? "
+                           "Try: "
+                           "`youtupy init list-keys` to get a "
+                           "full list of registered API keys "
+                           "or `youtupy init add-key` to add a new API key"
+                           % name
+                           )
+    else:
+        default_check = []
+        for name in config:
+            if 'default' in config[name]:
+                default_check.append(name)
+        if not default_check:
+            raise KeyError("No API key name was specified, and "
+                           "you haven't got a default API key.")
+        else:
+            api_key = config[default_check[0]]['key']
+
+    return api_key

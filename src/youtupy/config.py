@@ -37,7 +37,7 @@ class YoutubeConfig(configobj.ConfigObj):
                 """)
 
 
-def get_api_key(name, filename='config'):
+def get_api_key(name=None, filename='config'):
     click.secho("Getting API key from config file.",
                 fg='magenta')
     config_file_path = Path(click.get_app_dir('youtupy')).joinpath(filename)
@@ -67,3 +67,8 @@ def get_api_key(name, filename='config'):
             api_key = config[default_check[0]]['key']
 
     return api_key
+
+
+def get_config_path(filename='config'):
+    config_file_path = Path(click.get_app_dir('youtupy')).joinpath(filename)
+    return str(config_file_path)

@@ -132,6 +132,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Quota database
-.quota
+# Others
+archive/
 *.db
+*.jsonl

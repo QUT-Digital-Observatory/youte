@@ -60,6 +60,8 @@ def _request_with_error_handling(url, params):
                     bold=True)
         sys.exit()
 
+    time.sleep(1)
+
     return response
 
 
@@ -178,8 +180,9 @@ class Youtupy:
                 click.echo()
                 _prompt_save_progress(filename='history')
 
-        click.secho(f'Complete! Total units used: {self.quota}',
-                    fg='bright green')
+        click.secho(f'Complete! {page} pages of search results collected.\n'
+                    f'Total units used: {self.quota.units}',
+                    fg='bright_green')
         os.remove('history')
 
     def list_items(self,
@@ -190,7 +193,7 @@ class Youtupy:
                    by_channel_id=False,
                    by_video_id=False,
                    **kwargs):
-        request_info = _get_endpoint(source)
+        request_info = _get_endpoint(item_type)
         url = request_info['url']
         api_cost_unit = request_info['api_cost_unit']
         params = request_info['params']
@@ -215,19 +218,19 @@ class Youtupy:
                              (by_channel_id or by_video_id)))
 
         if can_batch_ids:
-
+            logger.info("Batching ids")
+            batch_no = 0
+            click.secho(f"Getting data ⏳")
             while ids:
-                batch_no = 1
                 if len(ids) <= 50:
-                    click.secho(f"Getting data ⏳")
-                    ids_string = '.'.join(ids)
-                    for elm in ids:
-                        ids.remove(elm)
+                    logger.info(f"{len(ids) <= 50}")
+                    ids_string = ','.join(ids)
+                    ids = None
                 else:
-                    total_batches = int(ceil(len(ids) / 50))
-                    click.echo(f"Getting batch {batch_no}/{total_batches} ⏳")
+                    total_batches = int(len(ids) / 50)
+                    click.echo(f"{total_batches} pages remaining ⏳")
                     batch = random.sample(ids, k=50)
-                    ids_string = '.'.join(batch)
+                    ids_string = ','.join(batch)
                     for elm in batch:
                         ids.remove(elm)
 
@@ -243,7 +246,10 @@ class Youtupy:
                 _write_output_to_jsonl(output_path=output_path,
                                        json_rec=r.json())
 
-                batch += 1
+                batch_no += 1
+
+            click.echo(f"{batch_no} pages collected.\n"
+                       f"Total quota used: {self.quota.units}.")
 
         elif cannot_batch_ids:
 
@@ -287,145 +293,7 @@ class Youtupy:
                 click.secho('Completed!', fg='green')
 
 
-class Collector:
-    def __init__(self, api_key: str, max_quota: int = 10000):
-        self.api_key = api_key
-        self.params = None
-        self.url = None
-        self.output_path = None
-        self.max_quota = max_quota
-        self.quota = None
-
-    def add_param(self, **param: Union[str, float]) -> None:
-        for key, value in param.items():
-            if (key == 'publishedAfter' or
-                    key == 'publishedBefore'):
-                value = create_utc_datetime_string(value)
-            self.params[key] = value
-
-    def add_quota(self, quota: Quota):
-        self.quota = quota
-
-    def get_data_by_ids(self,
-                        source,
-                        ids: List,
-                        output_path,
-                        by_parent_id=False,
-                        by_channel_id=False,
-                        by_video_id=False,
-                        **kwargs):
-        request_info = _get_endpoint(source)
-        url = request_info['url']
-        api_cost_unit = request_info['api_cost_unit']
-        params = request_info['params']
-        params['key'] = self.api_key
-
-        for key, value in kwargs.items():
-            params[key] = value
-
-        # remove duplicate ids
-        ids = list(set(ids))
-
-        self.quota.get_quota()
-
-        if (source in ['channels', 'videos'] or
-                (source == 'comments' and not by_parent_id) or
-                (source == 'comment_threads' and not (by_video_id or
-                                                      by_channel_id))):
-
-            while ids:
-                batch_no = 1
-                if len(ids) <= 50:
-                    click.secho(f"Getting data ⏳")
-                    ids_string = '.'.join(ids)
-                    for elm in ids:
-                        ids.remove(elm)
-                else:
-                    total_batches = int(ceil(len(ids) / 50))
-                    click.echo(f"Getting batch {batch_no}/{total_batches} ⏳")
-                    batch = random.sample(ids, k=50)
-                    ids_string = '.'.join(batch)
-                    for elm in batch:
-                        ids.remove(elm)
-
-                params['id'] = ids_string
-
-                self.quota.handle_limit(max_quota=self.max_quota)
-
-                r = requests.get(url, params=params)
-                logger.info(f'Getting {r.url}.\n'
-                            f'Status: {r.status_code}.')
-
-                self.quota.add_quota(api_cost_unit, datetime.now(tz=tz.UTC))
-                logger.info(f'Quota used: {self.quota.units}.')
-
-                logger.info(f'Writing output to {output_path}.')
-                with open(output_path, 'a+') as file:
-                    json_record = json.dumps(r.json())
-                    file.write(json_record + '\n')
-
-                batch += 1
-
-        elif ((source == 'comments' and by_parent_id) or
-              (source == 'comment_thread' and (by_channel_id or
-                                               by_video_id))):
-            for each in tqdm(ids):
-                if by_parent_id:
-                    params['parentId'] = each
-                elif by_video_id:
-                    params['videoId'] = each
-                elif by_channel_id:
-                    params['channelId'] = each
-
-                while True:
-                    tokens = []
-                    if not os.path.exists('history'):
-                        history = ConfigObj('history')
-                        tokens.append('')
-                    else:
-                        history = ConfigObj('history')
-                        for key, value in history.items():
-                            if value == 'none':
-                                tokens.append(key)
-
-                    if not tokens:
-                        break
-
-                    for token in tokens:
-                        self.quota.handle_limit(max_quota=self.max_quota)
-                        if token != '':
-                            params['nextPageToken'] = token
-
-                        r = requests.get(url, params=params)
-                        logger.info(f'Getting {r.url}.\n'
-                                    f'Status: {r.status_code}.')
-
-                        r.raise_for_status()
-
-                        self.quota.add_quota(api_cost_unit,
-                                             datetime.now(tz=tz.UTC))
-                        logger.info(f'Quota used: {self.quota.units}.')
-
-                        try:
-                            next_page_token = r.json()['nextPageToken']
-                            history[next_page_token] = 'none'
-                        except KeyError:
-                            click.echo("No more page...")
-
-                        # store recorded and unrecorded tokens in config file
-                        history[token] = datetime.now(tz=tz.UTC)
-                        history.write()
-
-                        logger.info(f'Writing output to {output_path}.')
-                        with open(output_path, 'a+') as file:
-                            json_record = json.dumps(r.json())
-                            file.write(json_record + '\n')
-
-                os.remove('history')
-                click.secho('Completed!', fg='green')
-
-
-class SearchCollector:
+class ArchiveCollector:
 
     def __init__(self, api_key: str, max_quota: int = 10000):
         self.params = {
@@ -1233,7 +1101,7 @@ def _get_endpoint(endpoint) -> dict:
             }
         },
 
-        'video': {
+        'videos': {
             'url': r'https://www.googleapis.com/youtube/v3/videos',
             'api_cost_unit': 1,
             'params': {
@@ -1244,7 +1112,7 @@ def _get_endpoint(endpoint) -> dict:
             }
         },
 
-        'channel': {
+        'channels': {
             'url': r'https://www.googleapis.com/youtube/v3/channels',
             'api_cost_unit': 1,
             'params': {
@@ -1255,7 +1123,7 @@ def _get_endpoint(endpoint) -> dict:
             }
         },
 
-        'comment_thread': {
+        'comment_threads': {
             'url': r'https://www.googleapis.com/youtube/v3/commentThreads',
             'api_cost_unit': 1,
             'params': {
@@ -1265,7 +1133,7 @@ def _get_endpoint(endpoint) -> dict:
             }
         },
 
-        'comment': {
+        'comments': {
             'url': r'https://www.googleapis.com/youtube/v3/comments',
             'api_cost_unit': 1,
             'params': {

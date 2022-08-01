@@ -6,8 +6,8 @@ import logging
 import click
 from pathlib import Path
 
-from youtupy.collector import SearchCollector, Collector, Youtupy
-from youtupy.config import YoutubeConfig, get_api_key
+from youtupy.collector import ArchiveCollector, Youtupy
+from youtupy.config import YoutubeConfig, get_api_key, get_config_path
 from youtupy.quota import Quota
 
 # Logging
@@ -51,55 +51,28 @@ def youtupy():
 @click.option("--name", help="Name of the API key (optional)")
 @click.option("--comments", help="Get video comments", is_flag=True)
 @click.option("--replies", help="Get replies to video comments", is_flag=True)
-def search(output,
-           name,
-           query,
-           from_,
-           to,
-           max_quota,
-           comments=False,
-           replies=False):
-    """Collect data from Youtube API.
-    """
+def full_archive(output,
+                 name,
+                 query,
+                 from_,
+                 to,
+                 max_quota,
+                 comments=False,
+                 replies=False):
+    """Archive all data from YouTube API matching search criteria."""
 
-    click.secho("Getting API key from config file.",
-                fg='magenta')
-    config_file_path = Path(click.get_app_dir('youtupy')).joinpath('config')
-    config = YoutubeConfig(filename=str(config_file_path))
-
-    if name:
-        try:
-            api_key = config[name]['key']
-        except KeyError:
-            raise KeyError("No API key found for %s. "
-                           "Did you use a different name? "
-                           "Try: "
-                           "`youtupy init list-keys` to get a "
-                           "full list of registered API keys "
-                           "or `youtupy init add-key` to add a new API key"
-                           % name
-                           )
-    else:
-        default_check = []
-        for name in config:
-            if 'default' in config[name]:
-                default_check.append(name)
-        if not default_check:
-            raise KeyError("No API key name was specified, and "
-                           "you haven't got a default API key.")
-        else:
-            api_key = config[default_check[0]]['key']
+    api_key = get_api_key(name=name)
 
     click.secho("Setting up collector...",
                 fg='magenta')
-    clt = SearchCollector(api_key=api_key, max_quota=max_quota)
+    clt = ArchiveCollector(api_key=api_key, max_quota=max_quota)
     clt.add_param(q=query)
     if from_:
         clt.add_param(publishedAfter=from_)
     if to:
         clt.add_param(publishedBefore=to)
 
-    quota = Quota(api_key=api_key, config_path=str(config_file_path))
+    quota = Quota(api_key=api_key, config_path=get_config_path())
     clt.add_quota(quota=quota)
     clt.run(dbpath=output)
     clt.get_enriching_data(endpoint='video')
@@ -144,41 +117,16 @@ def search(output,
 @click.option("--name", help="Name of the API key (optional)")
 def get_comments(ids,
                  output,
-                 name,
                  max_quota,
+                 name,
                  parent=False,
                  channel=False,
                  video=False):
+    """Get YouTube comments."""
 
-    click.secho("Getting API key from config file.",
-                fg='magenta')
-    config_file_path = Path(click.get_app_dir('youtupy')).joinpath('config')
-    config = YoutubeConfig(filename=str(config_file_path))
+    api_key = get_api_key(name=name)
 
-    if name:
-        try:
-            api_key = config[name]['key']
-        except KeyError:
-            raise KeyError("No API key found for %s. "
-                           "Did you use a different name? "
-                           "Try: "
-                           "`youtupy init list-keys` to get a "
-                           "full list of registered API keys "
-                           "or `youtupy init add-key` to add a new API key"
-                           % name
-                           )
-    else:
-        default_check = []
-        for name in config:
-            if 'default' in config[name]:
-                default_check.append(name)
-        if not default_check:
-            raise KeyError("No API key name was specified, and "
-                           "you haven't got a default API key.")
-        else:
-            api_key = config[default_check[0]]['key']
-
-    quota = Quota(api_key=api_key, config_path=str(config_file_path))
+    quota = Quota(api_key=api_key, config_path=get_config_path())
 
     collector = Collector(api_key=api_key, max_quota=max_quota)
     collector.add_quota(quota)
@@ -191,42 +139,77 @@ def get_comments(ids,
 
 
 @youtupy.command()
-def test_search():
-    search = Youtupy(api_key='AIzaSyBsiJ0rJfoP4O93r50BNuPkUeRi61HVWQQ')
-    config_file_path = Path(click.get_app_dir('youtupy')).joinpath('config')
-
-    quota = Quota(api_key='AIzaSyBsiJ0rJfoP4O93r50BNuPkUeRi61HVWQQ',
-                  config_path=str(config_file_path))
-    search.add_quota(quota)
-
-    search.search(query='abortion',
-                  output_path='abortion.jsonl',
-                  part='snippet',
-                  maxResults=50,
-                  type='video',
-                  order='date',
-                  safeSearch='none')
-
-
-@youtupy.command()
 @click.argument("query", required=True)
-@click.option("-o", "--output", help="Output database. Must end in `.db`")
+@click.option("-o", "--output", help="Output jsonl file. Ends in .jsonl.")
 @click.option("--from", "from_", help="Start date (YYYY-MM-DD)")
 @click.option("--to", help="End date (YYYY-MM-DD)")
 @click.option("--name", help="Name of the API key (optional)")
-@click.option("--comments", help="Get video comments", is_flag=True)
-@click.option("--replies", help="Get replies to video comments", is_flag=True)
+@click.option("--get-id", help="Only retrieve video IDs", is_flag=True)
 @click.option("--max-quota", default=10000,
               help="Maximum quota allowed",
               show_default=True)
-def search2(query,
+def search(query,
+           output,
+           from_,
+           to,
+           name,
+           max_quota,
+           get_id=False):
+    """Do a YouTube search."""
+    api_key = get_api_key(name=name)
+
+    search_collector = Youtupy(api_key=api_key, max_quota=max_quota)
+    quota = Quota(api_key=api_key, config_path=get_config_path())
+    search_collector.quota = quota
+
+    meta_data = 'kind,etag,nextPageToken,regionCode,pageInfo'
+    fields = f'{meta_data},items/id/videoId' if get_id else '*'
+
+    params = {
+        'part': 'snippet',
+        'maxResults': 50,
+        'type': 'video',
+        'order': 'date',
+        'safeSearch': 'none',
+        'fields': fields
+    }
+    if from_:
+        params['publishedAfter'] = from_
+    if to:
+        params['publishedBefore'] = to
+
+    search_collector.search(query=query, output_path=output, **params)
+
+
+@youtupy.command()
+@click.argument("filepath", required=True)
+@click.option("-o", "--output", help="Output jsonl file. Ends in .jsonl.")
+@click.option("--channel",
+              help="Hydrate channel data",
+              default=False)
+@click.option("--name", help="Name of the API key (optional)")
+@click.option("--max-quota",
+              default=10000,
+              help="Maximum quota allowed",
+              show_default=True)
+def hydrate(filepath,
             output,
-            from_,
-            to,
+            channel,
             name,
             max_quota):
+    """Hydrate video or channel ids."""
+    api_key = get_api_key(name=name)
+    collector = Youtupy(api_key=api_key, max_quota=max_quota)
+    quota = Quota(api_key=api_key, config_path=get_config_path())
+    collector.quota = quota
 
+    with open(filepath, mode='r') as filepath:
+        ids = [row.rstrip() for row in filepath.readlines()]
 
+    item_type = 'channels' if channel else 'videos'
+    collector.list_items(item_type=item_type,
+                         ids=ids,
+                         output_path=output)
 
 @youtupy.group()
 def configure():

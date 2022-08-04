@@ -13,7 +13,6 @@ import click
 from tqdm import tqdm
 from configobj import ConfigObj
 import os
-from math import ceil
 import sys
 
 from youtupy.quota import Quota
@@ -24,21 +23,31 @@ from youtupy.utilities import (
     create_utc_datetime_string
 )
 from youtupy import databases
-from youtupy.exceptions import InvalidRequestParameter, StopCollector
+from youtupy.exceptions import InvalidRequestParameter
 from youtupy.process import process_to_database
 
 logger = logging.getLogger(__name__)
 
 
+def _confirm_existing_history(filename: str) -> None:
+    if os.path.exists(filename):
+        confirm_text = 'A historsy file is detected in your current directory.\n' \
+                       'Do you want to resume progress from this history file? ' \
+                       'If you are at all unsure, say No.'
+        confirm_prompt = click.confirm(confirm_text)
+
+        if not confirm_prompt:
+            os.remove(filename)
+
+
 def _load_page_token_from_file(filename: str) -> Tuple[List, str]:
     tokens = []
+    history = ConfigObj(filename)
 
     # create a temporary 'history' config file
     if not os.path.exists(filename):
-        history = ConfigObj(filename)
         tokens.append('')
     else:
-        history = ConfigObj(filename)
         for key, value in history.items():
             if value == 'none':
                 tokens.append(key)
@@ -46,7 +55,7 @@ def _load_page_token_from_file(filename: str) -> Tuple[List, str]:
     return tokens, history
 
 
-def _request_with_error_handling(url, params):
+def _request_with_error_handling(url, params) -> Response:
     response = requests.get(url, params=params)
     logger.info(f'Getting {response.url}.\n'
                 f'Status: {response.status_code}.')
@@ -65,28 +74,28 @@ def _request_with_error_handling(url, params):
     return response
 
 
-def _write_output_to_jsonl(output_path, json_rec):
+def _write_output_to_jsonl(output_path, json_rec) -> None:
     logger.info(f'Writing output to {output_path}.')
     with open(output_path, 'a') as file:
         json_record = json.dumps(json_rec)
         file.write(json_record + '\n')
 
 
-def _get_params(**kwargs):
+def _get_params(**kwargs) -> dict:
     """Populate request parameters"""
     params = {}
 
     for key, value in kwargs.items():
         # proper datetime string formatting
-        if (key == 'publishedAfter' or
-                key == 'publishedBefore'):
+        if (key == 'publishedAfter'
+                or key == 'publishedBefore'):
             value = create_utc_datetime_string(value)
         params[key] = value
 
     return params
 
 
-def _prompt_save_progress(filename):
+def _prompt_save_progress(filename) -> None:
     if os.path.exists(filename):
         if click.confirm('Do you want to save your '
                          'current progress?'):
@@ -98,13 +107,13 @@ def _prompt_save_progress(filename):
 
 
 def _get_page_token(response: Response,
-                    saved_to: ConfigObj):
+                    saved_to: ConfigObj) -> None:
     try:
         next_page_token = response.json()['nextPageToken']
         saved_to[next_page_token] = 'none'
         saved_to.write()
     except KeyError:
-        click.echo("No more page...")
+        logger.info("No more page...")
 
 
 class Youtupy:
@@ -135,6 +144,9 @@ class Youtupy:
         self.quota.get_quota()
 
         page = 1
+
+        _confirm_existing_history('history')
+
         while True:
             try:
                 tokens, history = _load_page_token_from_file('history')
@@ -156,21 +168,20 @@ class Youtupy:
 
                     click.echo(f"Getting page {page} ⏳")
 
-                    r = _request_with_error_handling(url=url,
-                                                     params=params)
+                    r = _request_with_error_handling(url=url, params=params)
 
                     self.quota.add_quota(api_cost,
                                          datetime.now(tz=tz.UTC))
 
                     logger.info(f'Quota used: {self.quota.units}.')
 
+                    history['request_url'] = r.url
                     _get_page_token(response=r, saved_to=history)
 
                     _write_output_to_jsonl(output_path=output_path,
                                            json_rec=r.json())
 
                     # store recorded and unrecorded tokens in config file
-                    history['id'] = r.url
                     history[token] = datetime.now(tz=tz.UTC)
                     history.write()
 
@@ -189,10 +200,11 @@ class Youtupy:
                    item_type,
                    ids: List,
                    output_path,
-                   by_parent_id=False,
-                   by_channel_id=False,
-                   by_video_id=False,
+                   by_parent_id=None,
+                   by_channel_id=None,
+                   by_video_id=None,
                    **kwargs):
+
         request_info = _get_endpoint(item_type)
         url = request_info['url']
         api_cost_unit = request_info['api_cost_unit']
@@ -202,25 +214,28 @@ class Youtupy:
         for key, value in kwargs.items():
             params[key] = value
 
-        # remove duplicate ids
         ids = list(set(ids))
 
         self.quota.get_quota()
 
-        can_batch_ids = (item_type in ['channels', 'videos'] or
-                         (item_type == 'comments' and not by_parent_id) or
-                         (item_type == 'comment_threads' and not (
-                                 by_video_id or
-                                 by_channel_id)))
+        # SET COLLECTOR TYPE
+        # YouTube endpoints fall into 2 categories:
+        # 1. A comma-separated list of ids can be passed in the request param
+        # 2. Only a single id can be passed in the request param
 
-        cannot_batch_ids = ((item_type == 'comments' and by_parent_id) or
-                            (item_type == 'comment_thread' and
-                             (by_channel_id or by_video_id)))
+        is_channel_video = item_type in ['channels', 'videos']
+        get_comments_only = item_type == 'comments' and not by_parent_id
+        get_by_parents = item_type == 'comments' and by_parent_id
+        get_by_video_channel = (item_type == 'comment_threads') and \
+            (by_channel_id or by_video_id)
+
+        can_batch_ids = is_channel_video or get_comments_only
+        cannot_batch_ids = get_by_parents or get_by_video_channel
 
         if can_batch_ids:
             logger.info("Batching ids")
             batch_no = 0
-            click.secho(f"Getting data ⏳")
+            click.secho("Getting data ⏳")
             while ids:
                 if len(ids) <= 50:
                     logger.info(f"{len(ids) <= 50}")
@@ -262,35 +277,41 @@ class Youtupy:
                     params['channelId'] = each
 
                 while True:
-                    tokens, history = _load_page_token_from_file('history')
+                    try:
+                        tokens, history = _load_page_token_from_file('history')
 
-                    if not tokens:
-                        break
+                        if not tokens:
+                            break
 
-                    for token in tokens:
-                        self.quota.handle_limit(max_quota=self.max_quota)
-                        if token != '':
-                            params['pageToken'] = token
+                        for token in tokens:
+                            self.quota.handle_limit(max_quota=self.max_quota)
+                            if token != '':
+                                params['pageToken'] = token
 
-                        _request_with_error_handling(url=url,
-                                                     params=params)
+                            r = _request_with_error_handling(url=url,
+                                                             params=params)
 
-                        self.quota.add_quota(api_cost_unit,
-                                             datetime.now(tz=tz.UTC))
-                        logger.info(f'Quota used: {self.quota.units}.')
+                            self.quota.add_quota(api_cost_unit,
+                                                 datetime.now(tz=tz.UTC))
+                            logger.info(f'Quota used: {self.quota.units}.')
 
-                        _get_page_token(response=r,
-                                        saved_to=history)
+                            _get_page_token(response=r,
+                                            saved_to=history)
 
-                        _write_output_to_jsonl(output_path=output_path,
-                                               json_rec=r.json())
+                            _write_output_to_jsonl(output_path=output_path,
+                                                   json_rec=r.json())
 
-                        # store recorded and unrecorded tokens in config file
-                        history[token] = datetime.now(tz=tz.UTC)
-                        history.write()
+                            # store recorded and unrecorded tokens in config file
+                            history[token] = datetime.now(tz=tz.UTC)
+                            history.write()
+
+                    except KeyboardInterrupt:
+                        os.remove('history')
 
                 os.remove('history')
-                click.secho('Completed!', fg='green')
+
+            click.secho('Completed!', fg='green')
+            click.secho(f'File saved in {output_path}', fg='green')
 
 
 class ArchiveCollector:
@@ -313,8 +334,8 @@ class ArchiveCollector:
 
     def add_param(self, **param: Union[str, float]) -> None:
         for key, value in param.items():
-            if (key == 'publishedAfter' or
-                    key == 'publishedBefore'):
+            if (key == 'publishedAfter'
+                    or key == 'publishedBefore'):
                 value = create_utc_datetime_string(value)
             self.params[key] = value
 
@@ -345,8 +366,8 @@ class ArchiveCollector:
                                           "search requests.")
 
         if warning:
-            if ('publishedAfter' not in self.params and
-                    'publishedBefore' not in self.params):
+            if ('publishedAfter' not in self.params
+                    and 'publishedBefore' not in self.params):
                 click.secho("WARNING:",
                             fg='red',
                             bold=True)
@@ -368,7 +389,7 @@ class ArchiveCollector:
 
         logger.info(
             f"""
-            Starting querying Youtube search results. 
+            Starting querying Youtube search results.
             Quota unit cost will be {self.api_cost}.
             """)
 
@@ -381,7 +402,7 @@ class ArchiveCollector:
                 # doesn't have a page token
                 db.execute(
                     """
-                    INSERT OR IGNORE INTO search_api_response(next_page_token) 
+                    INSERT OR IGNORE INTO search_api_response(next_page_token)
                     VALUES ('')
                     """)
 
@@ -392,8 +413,8 @@ class ArchiveCollector:
                     row[0]
                     for row in db.execute(
                         """
-                        SELECT next_page_token 
-                        FROM search_api_response 
+                        SELECT next_page_token
+                        FROM search_api_response
                         WHERE retrieval_time IS NULL
                         """)
                 )
@@ -447,8 +468,8 @@ class ArchiveCollector:
                     next_page_token = r.json()['nextPageToken']
                     db.execute(
                         """
-                        INSERT OR IGNORE INTO 
-                        search_api_response(next_page_token) 
+                        INSERT OR IGNORE INTO
+                        search_api_response(next_page_token)
                         VALUES (?)
                         """,
                         (next_page_token,))
@@ -544,9 +565,9 @@ class ArchiveCollector:
                             for row in
                             db.execute(
                                 f"""
-                               SELECT {endpoint}_id 
-                               FROM {endpoint}_api_response 
-                               WHERE retrieval_time IS NULL 
+                               SELECT {endpoint}_id
+                               FROM {endpoint}_api_response
+                               WHERE retrieval_time IS NULL
                                LIMIT 50
                                """)]
 
@@ -585,10 +606,10 @@ class ArchiveCollector:
                                 item_id = item['id']
                                 db.execute(
                                     f"""
-                                    REPLACE INTO 
-                                    {endpoint}_api_response({endpoint}_id, 
-                                                       response, 
-                                                       retrieval_time) 
+                                    REPLACE INTO
+                                    {endpoint}_api_response({endpoint}_id,
+                                                       response,
+                                                       retrieval_time)
                                     VALUES (?,?,?)
                                     """,
                                     (item_id, json.dumps(item),
@@ -608,7 +629,7 @@ class ArchiveCollector:
                                 for item_id in item_ids:
                                     db.execute(
                                         f"""
-                                        REPLACE INTO 
+                                        REPLACE INTO
                                         {endpoint}_api_response({endpoint}_id,
                                                             retrieval_time)
                                         VALUES (?,?)
@@ -760,10 +781,8 @@ class ArchiveCollector:
                                         r = requests.get(cmtthread_url,
                                                          params=cmtthread_params)
 
-                                    self.quota.add_quota(unit_costs=
-                                                         cmtthread_api_cost,
-                                                         created_utc=
-                                                         datetime.now(
+                                    self.quota.add_quota(unit_costs=cmtthread_api_cost,
+                                                         created_utc=datetime.now(
                                                              tz=tz.UTC))
 
                                     logger.info(f"Getting comment "
@@ -789,8 +808,8 @@ class ArchiveCollector:
 
                                             # ignore if comment is disabled
                                             # for the video
-                                            if (error['reason'] ==
-                                                    'commentsDisabled'):
+                                            if (error['reason']
+                                                    == 'commentsDisabled'):
                                                 click.secho('WARNING',
                                                             fg='bright_red',
                                                             bold=True)
@@ -907,7 +926,7 @@ class ArchiveCollector:
                          retrieval_time,
                          PRIMARY KEY (next_page_token, comment_id)
                          );
-                         
+
                 INSERT OR IGNORE INTO reply_api_response(next_page_token,
                                                          comment_id)
                     SELECT '', thread_id
@@ -948,7 +967,7 @@ class ArchiveCollector:
                                 row[0]
                                 for row in db.execute(
                                     f"""
-                                     SELECT next_page_token 
+                                     SELECT next_page_token
                                      FROM reply_api_response
                                      WHERE retrieval_time IS NULL
                                        AND comment_id = ?
@@ -976,10 +995,8 @@ class ArchiveCollector:
                                     r = requests.get(comment_url,
                                                      params=comment_params)
 
-                                    self.quota.add_quota(unit_costs=
-                                                         comment_api_cost,
-                                                         created_utc=
-                                                         datetime.now(
+                                    self.quota.add_quota(unit_costs=comment_api_cost,
+                                                         created_utc=datetime.now(
                                                              tz=tz.UTC))
 
                                     logger.info(f"Getting replies for"
@@ -999,11 +1016,11 @@ class ArchiveCollector:
                                         for error in errors_message:
                                             logger.error(
                                                 f"Reason: {error['reason']}")
-                                            if (error['reason'] ==
-                                                    'commentsDisabled'):
+                                            if (error['reason']
+                                                    == 'commentsDisabled'):
                                                 db.execute(
                                                     """
-                                                    REPLACE INTO 
+                                                    REPLACE INTO
                                                     reply_api_response(
                                                         next_page_token,
                                                         comment_id,
@@ -1035,9 +1052,9 @@ class ArchiveCollector:
 
                                         db.execute(
                                             """
-                                            INSERT OR IGNORE INTO 
+                                            INSERT OR IGNORE INTO
                                             reply_api_response(next_page_token,
-                                                               comment_id) 
+                                                               comment_id)
                                             VALUES (?,?)
                                             """,
                                             (next_page_token, comment_id))
@@ -1050,7 +1067,7 @@ class ArchiveCollector:
                                     # from current request
                                     db.execute(
                                         """
-                                        REPLACE INTO 
+                                        REPLACE INTO
                                         reply_api_response(
                                             next_page_token,
                                             comment_id,
@@ -1105,7 +1122,8 @@ def _get_endpoint(endpoint) -> dict:
             'url': r'https://www.googleapis.com/youtube/v3/videos',
             'api_cost_unit': 1,
             'params': {
-                'part': 'snippet,statistics,topicDetails,status',
+                'part': 'snippet,statistics,topicDetails,status,'
+                        'contentDetails,recordingDetails,id',
                 'id': None,
                 'maxResults': 50,
                 'key': None

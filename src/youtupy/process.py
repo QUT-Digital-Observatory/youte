@@ -1,15 +1,180 @@
 import sqlite3
 import html
 import json
+from typing import Iterable, Mapping
+import re
+from tqdm import tqdm
+
+from youtupy.utilities import validate_file, check_file_overwrite
+from youtupy.table_mappings import video_sql_tables
 
 
-def process_to_database(source: ['search', 'video', 'channel'], dbpath: str):
+def _get_items(input) -> Iterable:
+    with open(input, mode='r') as file:
+        responses = (row.rstrip() for row in file.readlines())
+        for response in responses:
+            items = json.loads(response)['items']
+            for item in items:
+                yield item
+
+
+def _unnest_map(input: Mapping) -> Iterable:
+    for key, value in input.items():
+        if isinstance(value, Mapping):
+            yield from _annotate_key(value, name=key)
+        else:
+            yield key, value
+
+
+def _annotate_key(input, name):
+    for key, value in input.items():
+        if isinstance(value, Mapping):
+            yield from _annotate_key(value, name=key)
+        else:
+            yield f'{name}_{key}', value
+
+
+def _normalise_name(string):
+    pattern = re.compile(r'([A-Z])')
+    new_string = re.sub(pattern, r'_\1', string)
+    return new_string.lower()
+
+
+def tidy_search(input: str, output: str) -> None:
+    output = check_file_overwrite(validate_file(output, suffix='.db'))
+    db = sqlite3.connect(output)
+    with db:
+        db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS search_results(
+                 id primary key,
+                 kind,
+                 published_at,
+                 title,
+                 description,
+                 thumbnail_url,
+                 thumbnail_width,
+                 thumbnail_height,
+                 channel_title,
+                 channel_id,
+                 playlist_id,
+                 live_broadcast_content
+                 );
+            """
+        )
+
+    items = _get_items(input=input)
+
+    for item in items:
+        kind = item['id']['kind']
+        video_id = item['id']['videoId']
+        channel_id = item['id']['channelId']
+        playlist_id = item['id']['playlistId']
+        snippet = item['snippet']
+        published_at = snippet['publishedAt']
+        title = html.unescape(snippet['title'])
+        description = snippet['description']
+        thumbnail_url = snippet['thumbnails']['url']
+        thumbnail_width = snippet['thumbnails']['width']
+        thumbnail_height = snippet['thumbnails']['height']
+        channel_title = snippet['channelTitle']
+        live_broadcast_content = snippet['liveBroadcastContent']
+
+        db.execute(
+            """
+                    REPLACE INTO search_results
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                    """,
+            (video_id,
+             kind,
+             published_at,
+             title,
+             description,
+             thumbnail_url,
+             thumbnail_width,
+             thumbnail_height,
+             channel_title,
+             channel_id,
+             playlist_id,
+             live_broadcast_content)
+        )
+        db.commit()
+
+    db.close()
+
+
+def tidy_video(input: str, output: str) -> None:
+    output = check_file_overwrite(validate_file(output, suffix='.db'))
+    db = sqlite3.connect(output)
+
+    db.execute(video_sql_tables['create'])
+
+    items = _get_items(input=input)
+    for item in tqdm(items):
+        video_mapping = {}
+
+        snippet = item['snippet']
+        content_details = item['contentDetails']
+        status = item['status']
+        statistics = item['statistics']
+        topic_details = item.get('topicDetails')
+        content_rating = content_details['contentRating']
+        recording = item['recordingDetails']
+        region_restriction = content_details.get('regionRestriction')
+
+        video_mapping['video_id'] = item['id']
+        video_mapping['published_at'] = snippet['publishedAt']
+        video_mapping['channel_id'] = snippet['channelId']
+        video_mapping['title'] = snippet['title']
+        video_mapping['description'] = snippet['description']
+        video_mapping['thumbnails'] = json.dumps(snippet['thumbnails'])
+        video_mapping['channel_title'] = snippet['channelTitle']
+        video_mapping['tags'] = str(snippet.get('tags'))
+        video_mapping['category_id'] = snippet['categoryId']
+        video_mapping['live_broadcast_content'] = snippet[
+            'liveBroadcastContent']
+        video_mapping['default_language'] = snippet.get('defaultLanguage')
+        video_mapping['localized_title'] = snippet['localized']['title']
+        video_mapping['localized_description'] = snippet['localized'][
+            'description']
+        video_mapping['default_audio_language'] = snippet.get(
+            'defaultAudioLanguage')
+        video_mapping['duration'] = content_details['duration']
+        video_mapping['dimension'] = content_details['dimension']
+        video_mapping['definition'] = content_details['definition']
+        video_mapping['caption'] = content_details['caption']
+        video_mapping['licensed_content'] = content_details['licensedContent']
+        video_mapping['region_allowed'] = str(region_restriction.get('allowed')) \
+            if region_restriction else None
+        video_mapping['region_blocked'] = str(region_restriction.get('blocked')) \
+            if region_restriction else None
+        video_mapping['yt_rating'] = content_rating.get('ytRating')
+        video_mapping['upload_status'] = status['uploadStatus']
+        video_mapping['rejection_reason'] = status.get('rejectionReason')
+        video_mapping['privacy_status'] = status['privacyStatus']
+        video_mapping['license'] = status['license']
+        video_mapping['public_stats_viewable'] = status['publicStatsViewable']
+        video_mapping['made_for_kids'] = status['madeForKids']
+        video_mapping['view_count'] = statistics.get('viewCount')
+        video_mapping['like_count'] = statistics.get('likeCount')
+        video_mapping['comment_count'] = statistics.get('commentCount')
+        video_mapping['topic_categories'] = str(
+            topic_details['topicCategories']) if topic_details else None
+        video_mapping['recording_location'] = str(recording.get('location'))
+
+        db.execute(video_sql_tables['insert'], video_mapping)
+        db.commit()
+
+    db.close()
+
+
+def process_to_database(source, dbpath: str):
     db = sqlite3.connect(dbpath)
     schema = f"{source}_results" if source == 'search' else f"{source}s"
 
     if source == 'search':
         api_responses = db.execute("""
-                SELECT response 
+                SELECT response
                 FROM search_api_response
                 WHERE response NOTNULL
                 """)
@@ -28,9 +193,9 @@ def process_to_database(source: ['search', 'video', 'channel'], dbpath: str):
                 with db:
                     db.execute(
                         f"""
-                        INSERT OR IGNORE INTO 
+                        INSERT OR IGNORE INTO
                         {schema}(video_id, published_at, channel_id,
-                                       title, description, channel_title) 
+                                       title, description, channel_title)
                         values (?,?,?,?,?,?)
                         """,
                         (video_id, published_at, channel_id,
@@ -40,7 +205,7 @@ def process_to_database(source: ['search', 'video', 'channel'], dbpath: str):
     elif source == 'video':
         api_responses = db.execute(
             """
-            SELECT video_id, response 
+            SELECT video_id, response
             FROM video_api_response
             WHERE response NOTNULL
             """)
@@ -72,7 +237,7 @@ def process_to_database(source: ['search', 'video', 'channel'], dbpath: str):
             with db:
                 db.execute(
                     """
-                    INSERT OR REPLACE INTO videos 
+                    INSERT OR REPLACE INTO videos
                     VALUES (?,?,?,?,?,?,?,?,?,?,?)
                     """,
                     (video_id, published_at, channel_id, title, description,
@@ -82,7 +247,7 @@ def process_to_database(source: ['search', 'video', 'channel'], dbpath: str):
     elif source == 'channel':
         api_responses = db.execute(
             """
-            SELECT channel_id, response 
+            SELECT channel_id, response
             FROM channel_api_response
             WHERE response NOTNULL
             """)
@@ -255,5 +420,3 @@ def process_to_database(source: ['search', 'video', 'channel'], dbpath: str):
                          published_at,
                          updated_at)
                     )
-
-

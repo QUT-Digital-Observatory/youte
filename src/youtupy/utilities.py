@@ -9,7 +9,7 @@ from youtupy.exceptions import InvalidFileName
 logger = logging.getLogger(__name__)
 
 
-def insert_ids_to_db(dbpath, source: ['video', 'channel'], table):
+def insert_ids_to_db(dbpath, source, table):
     logger.debug("Connect to db...")
     db = sqlite3.connect(dbpath)
 
@@ -37,7 +37,7 @@ def insert_ids_to_db(dbpath, source: ['video', 'channel'], table):
     logger.debug("inserting ids")
     db.executemany(
         f"""
-        INSERT OR IGNORE INTO {table}({source}_id) values(?) 
+        INSERT OR IGNORE INTO {table}({source}_id) values(?)
         """,
         item_ids)
     db.commit()
@@ -55,7 +55,7 @@ def check_file_overwrite(file_path: Path) -> Path:
     if file_path.exists():
         flag = input(
             """
-            This database already exists. 
+            This database already exists.
             Continue with this database? [Y/N]
             """).lower()
 

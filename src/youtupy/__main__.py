@@ -9,6 +9,7 @@ from pathlib import Path
 from youtupy.collector import ArchiveCollector, Youtupy
 from youtupy.config import YoutubeConfig, get_api_key, get_config_path
 from youtupy.quota import Quota
+from youtupy import process
 
 # Logging
 logger = logging.getLogger()
@@ -100,42 +101,51 @@ def full_archive(output,
 
 
 @youtupy.command()
-@click.argument("ids", required=True)
+@click.argument("filepath", required=True)
 @click.option("-o", "--output", help="Output jsonl")
-@click.option("-p", "--parent",
+@click.option("-p", "--by-parent",
               help="Get comments for parent ids",
               is_flag=True)
-@click.option("-c", "--channel",
+@click.option("-c", "--by-channel",
               help="Get comments for channel id",
               is_flag=True)
-@click.option("-v", "--video",
+@click.option("-v", "--by-video",
               help="Get comments for video id",
               is_flag=True)
 @click.option("--max-quota", default=10000,
               help="Maximum quota allowed",
               show_default=True)
 @click.option("--name", help="Name of the API key (optional)")
-def get_comments(ids,
-                 output,
-                 max_quota,
-                 name,
-                 parent=False,
-                 channel=False,
-                 video=False):
-    """Get YouTube comments."""
+def list_comments(filepath,
+                  output,
+                  max_quota,
+                  name,
+                  by_video=None,
+                  by_parent=None,
+                  by_channel=None):
+    """
+    Get YouTube comments.
+
+    By default, get all comments from a list of comment ids.
+    """
 
     api_key = get_api_key(name=name)
 
     quota = Quota(api_key=api_key, config_path=get_config_path())
+    collector = Youtupy(api_key=api_key, max_quota=max_quota)
+    collector.quota = quota
 
-    collector = Collector(api_key=api_key, max_quota=max_quota)
-    collector.add_quota(quota)
+    with open(filepath, mode='r') as filepath:
+        ids = [row.rstrip() for row in filepath.readlines()]
 
-    collector.get_data_by_ids(source='comment_thread',
-                              ids=[ids],
-                              by_video_id=video,
-                              by_channel_id=channel,
-                              output_path=output)
+    item_type = 'comment_threads' if by_channel or by_video else 'comments'
+
+    collector.list_items(item_type=item_type,
+                         ids=ids,
+                         output_path=output,
+                         by_parent_id=by_parent,
+                         by_channel_id=by_channel,
+                         by_video_id=by_video)
 
 
 @youtupy.command()
@@ -183,7 +193,7 @@ def search(query,
 
 @youtupy.command()
 @click.argument("filepath", required=True)
-@click.option("-o", "--output", help="Output jsonl file. Ends in .jsonl.")
+@click.option("-o", "--output", help="Output jsonl file. Ends in `.jsonl`.")
 @click.option("--channel",
               help="Hydrate channel data",
               default=False)
@@ -210,6 +220,15 @@ def hydrate(filepath,
     collector.list_items(item_type=item_type,
                          ids=ids,
                          output_path=output)
+
+
+@youtupy.command()
+@click.argument("filepath", required=True)
+@click.option("-o", "--output", help='Output database file. Ends in `.db`.')
+def tidy(filepath, output):
+    """Tidy raw JSON response into relational SQLite databases"""
+    process.tidy_video(input=filepath, output=output)
+
 
 @youtupy.group()
 def configure():
@@ -241,7 +260,7 @@ def add_key():
     api_key = click.prompt('Enter your API key')
     username = click.prompt('Enter a name for this key')
 
-    config_file_path = Path(click.get_app_dir('youtupy')).joinpath('config')
+    config_file_path = Path(get_config_path())
 
     if not config_file_path.parent.exists():
         click.echo('Creating config folder at %s' % config_file_path.parent)

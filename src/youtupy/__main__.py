@@ -6,7 +6,7 @@ import logging
 import click
 from pathlib import Path
 
-from youtupy.collector import ArchiveCollector, Youtupy
+from youtupy.collector import Youtupy
 from youtupy.config import YoutubeConfig, get_api_key, get_config_path
 from youtupy.quota import Quota
 from youtupy import process
@@ -39,65 +39,6 @@ def youtupy():
     Run `youtupy configure --help` to get started.
     """
     pass
-
-
-@youtupy.command()
-@click.argument("query", required=True)
-@click.option("-o", "--output", help="Output database. Must end in `.db`")
-@click.option("--from", "from_", help="Start date (YYYY-MM-DD)")
-@click.option("--to", help="End date (YYYY-MM-DD)")
-@click.option("--max-quota", default=10000,
-              help="Maximum quota allowed",
-              show_default=True)
-@click.option("--name", help="Name of the API key (optional)")
-@click.option("--comments", help="Get video comments", is_flag=True)
-@click.option("--replies", help="Get replies to video comments", is_flag=True)
-def full_archive(output,
-                 name,
-                 query,
-                 from_,
-                 to,
-                 max_quota,
-                 comments=False,
-                 replies=False):
-    """Archive all data from YouTube API matching search criteria."""
-
-    api_key = get_api_key(name=name)
-
-    click.secho("Setting up collector...",
-                fg='magenta')
-    clt = ArchiveCollector(api_key=api_key, max_quota=max_quota)
-    clt.add_param(q=query)
-    if from_:
-        clt.add_param(publishedAfter=from_)
-    if to:
-        clt.add_param(publishedBefore=to)
-
-    quota = Quota(api_key=api_key, config_path=get_config_path())
-    clt.add_quota(quota=quota)
-    clt.run(dbpath=output)
-    clt.get_enriching_data(endpoint='video')
-    clt.get_enriching_data(endpoint='channel')
-
-    if comments:
-        clt.get_comments(replies=replies)
-
-    click.echo()
-    click.secho(f'All data is stored in {output}.\n'
-                f'Schema:\n'
-                f'  - search_results\n'
-                f'  - videos\n'
-                f'  - channels',
-                fg='cyan',
-                bold=True)
-    if comments:
-        click.secho('  - comment_threads',
-                    fg='cyan',
-                    bold=True)
-    if replies:
-        click.secho('  - replies',
-                    fg='cyan',
-                    bold=True)
 
 
 @youtupy.command()
@@ -196,7 +137,7 @@ def search(query,
 @click.option("-o", "--output", help="Output jsonl file. Ends in `.jsonl`.")
 @click.option("--channel",
               help="Hydrate channel data",
-              default=False)
+              is_flag=True)
 @click.option("--name", help="Name of the API key (optional)")
 @click.option("--max-quota",
               default=10000,
@@ -227,8 +168,8 @@ def hydrate(filepath,
 @click.option("-o", "--output", help='Output database file. Ends in `.db`.')
 def tidy(filepath, output):
     """Tidy raw JSON response into relational SQLite databases"""
-    process.tidy_video(input=filepath, output=output)
-
+    process.master_tidy(filepath=filepath, output=output)
+    click.secho("Completed!", fg='green')
 
 @youtupy.group()
 def configure():

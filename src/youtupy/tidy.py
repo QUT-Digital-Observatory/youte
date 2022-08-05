@@ -11,11 +11,16 @@ import youtupy.table_mappings as mappings
 
 logger = logging.getLogger()
 
-def master_tidy(filepath, output):
+
+def master_tidy(filepath: str, output: str) -> None:
+    output = check_file_overwrite(validate_file(output, suffix='.db'))
+
     with open(filepath, mode='r') as file:
         first_response = json.loads(file.readline())
         kind = first_response['kind']
+
     if 'video' in kind:
+        logger.info(f"{kind}")
         tidy_video(filepath, output)
     elif 'channel' in kind:
         tidy_channel(filepath, output)
@@ -23,8 +28,8 @@ def master_tidy(filepath, output):
         tidy_comments(filepath, output)
 
 
-def _get_items(input) -> Iterable:
-    with open(input, mode='r') as file:
+def _get_items(filepath: str) -> Iterable:
+    with open(filepath, mode='r') as file:
         responses = (row.rstrip() for row in file.readlines())
         for response in responses:
             try:
@@ -35,16 +40,16 @@ def _get_items(input) -> Iterable:
                 logger.warning("No items found in JSON response")
 
 
-def _unnest_map(input: Mapping) -> Iterable:
-    for key, value in input.items():
+def _unnest_map(filepath: Mapping) -> Iterable:
+    for key, value in filepath.items():
         if isinstance(value, Mapping):
             yield from _annotate_key(value, name=key)
         else:
             yield key, value
 
 
-def _annotate_key(input, name):
-    for key, value in input.items():
+def _annotate_key(filepath, name):
+    for key, value in filepath.items():
         if isinstance(value, Mapping):
             yield from _annotate_key(value, name=key)
         else:
@@ -57,8 +62,7 @@ def _normalise_name(string):
     return new_string.lower()
 
 
-def tidy_search(input: str, output: str) -> None:
-    output = check_file_overwrite(validate_file(output, suffix='.db'))
+def tidy_search(filepath: str, output: str) -> None:
     db = sqlite3.connect(output)
     with db:
         db.execute(
@@ -80,7 +84,7 @@ def tidy_search(input: str, output: str) -> None:
             """
         )
 
-    items = _get_items(input=input)
+    items = _get_items(filepath=filepath)
 
     for item in items:
         kind = item['id']['kind']
@@ -120,13 +124,12 @@ def tidy_search(input: str, output: str) -> None:
     db.close()
 
 
-def tidy_video(input: str, output: str) -> None:
-    output = check_file_overwrite(validate_file(output, suffix='.db'))
+def tidy_video(filepath: str, output: str) -> None:
     db = sqlite3.connect(output)
 
     db.execute(mappings.video_sql_table['create'])
 
-    items = _get_items(input=input)
+    items = _get_items(filepath=filepath)
     for item in tqdm(items):
         video_mapping = {}
 
@@ -189,13 +192,12 @@ def tidy_video(input: str, output: str) -> None:
     db.close()
 
 
-def tidy_channel(input: str, output: str) -> None:
-    output = check_file_overwrite(validate_file(output, suffix='.db'))
+def tidy_channel(filepath: str, output: str) -> None:
     db = sqlite3.connect(output)
 
     db.execute(mappings.channel_sql_table['create'])
 
-    items = _get_items(input=input)
+    items = _get_items(filepath=filepath)
     for item in tqdm(items):
         channel_mapping = {}
 
@@ -235,8 +237,10 @@ def tidy_channel(input: str, output: str) -> None:
         channel_mapping['is_linked'] = status.get('isLinked')
         channel_mapping['made_for_kids'] = status.get('madeForKids')
         channel_mapping['keywords'] = branding['channel'].get('keywords')
-        channel_mapping['moderate_comments'] = branding['channel'].get('moderateComments')
-        channel_mapping['unsubscribed_trailer'] = branding['channel'].get('unsubscribedTrailer')
+        channel_mapping['moderate_comments'] = branding['channel'].get(
+            'moderateComments')
+        channel_mapping['unsubscribed_trailer'] = branding['channel'].get(
+            'unsubscribedTrailer')
         channel_mapping['content_owner'] = owner.get('contentOwner')
         channel_mapping['time_linked'] = owner.get('timeLinked')
 
@@ -246,19 +250,19 @@ def tidy_channel(input: str, output: str) -> None:
     db.close()
 
 
-def tidy_comments(input, output) -> None:
-    output = check_file_overwrite(validate_file(output, suffix='.db'))
+def tidy_comments(filepath, output) -> None:
     db = sqlite3.connect(output)
 
     db.execute(mappings.comment_sql_table['create'])
 
-    items = _get_items(input=input)
+    items = _get_items(filepath=filepath)
     for item in tqdm(items):
         comment_mapping = {}
 
         if 'topLevelComment' in item['snippet']:
             snippet = item['snippet']['topLevelComment']['snippet']
-            comment_mapping['reply_count'] = item['snippet'].get('totalReplyCount')
+            comment_mapping['reply_count'] = item['snippet'].get(
+                'totalReplyCount')
             comment_mapping['can_reply'] = item['snippet'].get('canReply')
         else:
             comment_mapping['reply_count'] = None
@@ -284,5 +288,3 @@ def tidy_comments(input, output) -> None:
         db.commit()
 
     db.close()
-
-

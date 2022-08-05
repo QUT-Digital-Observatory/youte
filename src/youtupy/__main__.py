@@ -9,7 +9,7 @@ from pathlib import Path
 from youtupy.collector import Youtupy
 from youtupy.config import YoutubeConfig, get_api_key, get_config_path
 from youtupy.quota import Quota
-from youtupy import process
+from youtupy import tidy
 
 # Logging
 logger = logging.getLogger()

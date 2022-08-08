@@ -16,12 +16,8 @@ import os
 import sys
 
 from youtupy.quota import Quota
-from youtupy.utilities import (
-    insert_ids_to_db,
-    validate_file,
-    check_file_overwrite,
-    create_utc_datetime_string
-)
+from youtupy.utilities import create_utc_datetime_string
+
 from youtupy import databases
 from youtupy.exceptions import InvalidRequestParameter
 
@@ -61,6 +57,7 @@ def _request_with_error_handling(url, params) -> Response:
 
     if response.status_code in [403, 400, 404]:
         logger.error(f"Error: {response.url}")
+        logger.error(f"Error: {params}")
 
         errors = response.json()['error']['errors']
         for error in errors:
@@ -74,6 +71,7 @@ def _request_with_error_handling(url, params) -> Response:
                             fg='red',
                             bold=True)
                 click.secho(f"Reason: {error['reason']}", fg='red', bold=True)
+                logger.error(json.dumps(response.json()))
                 sys.exit()
 
     time.sleep(1)
@@ -166,9 +164,8 @@ class Youtupy:
                     self.quota.handle_limit(max_quota=self.max_quota)
 
                     url = 'https://www.googleapis.com/youtube/v3/search'
-                    params = _get_params(key=self.api_key,
-                                         q=query,
-                                         **kwargs)
+                    
+                    params = _get_params(key=self.api_key, q=query, **kwargs)
 
                     if token != '':
                         params['pageToken'] = token
@@ -177,8 +174,7 @@ class Youtupy:
 
                     r = _request_with_error_handling(url=url, params=params)
 
-                    self.quota.add_quota(api_cost,
-                                         datetime.now(tz=tz.UTC))
+                    self.quota.add_quota(api_cost, datetime.now(tz=tz.UTC))
 
                     logger.info(f'Quota used: {self.quota.units}.')
 
@@ -231,13 +227,16 @@ class Youtupy:
         # 2. Only a single id can be passed in the request param
 
         is_channel_video = item_type in ['channels', 'videos']
-        get_comments_only = item_type == 'comments' and not by_parent_id
-        get_by_parents = item_type == 'comments' and by_parent_id
+        get_comments_only = (item_type == 'comments') and not by_parent_id
+        get_by_parents = (item_type == 'comments') and by_parent_id
         get_by_video_channel = (item_type == 'comment_threads') and \
                                (by_channel_id or by_video_id)
 
         can_batch_ids = is_channel_video or get_comments_only
         cannot_batch_ids = get_by_parents or get_by_video_channel
+
+        if get_comments_only:
+            del params['maxResults']
 
         if can_batch_ids:
             logger.info("Batching ids")
@@ -245,7 +244,6 @@ class Youtupy:
             click.secho("Getting data ⏳")
             while ids:
                 if len(ids) <= 50:
-                    logger.info(f"{len(ids) <= 50}")
                     ids_string = ','.join(ids)
                     ids = None
                 else:
@@ -313,7 +311,9 @@ class Youtupy:
                             history.write()
 
                     except KeyboardInterrupt:
-                        os.remove('history')
+                        if Path('history').exists():
+                            os.remove('history')
+                        sys.exit()
 
                 os.remove('history')
 
@@ -348,7 +348,7 @@ def _get_endpoint(endpoint) -> dict:
             'api_cost_unit': 1,
             'params': {
                 'part': 'snippet,statistics,topicDetails,status,'
-                        'contentDetails,recordingDetails,id,hello',
+                        'contentDetails,recordingDetails,id',
                 'id': None,
                 'maxResults': 50,
                 'key': None

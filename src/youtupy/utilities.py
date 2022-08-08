@@ -3,45 +3,11 @@ import sqlite3
 import json
 import logging
 from pathlib import Path
+import click
 
 from youtupy.exceptions import InvalidFileName
 
 logger = logging.getLogger(__name__)
-
-
-def insert_ids_to_db(dbpath, source, table):
-    logger.debug("Connect to db...")
-    db = sqlite3.connect(dbpath)
-
-    source = source.lower()
-    logger.debug("select response from api table")
-    search_api_responses = db.execute(
-        """
-                SELECT response FROM search_api_response
-                WHERE response NOTNULL
-                """)
-
-    item_ids = []
-
-    logger.debug("extracting ids")
-    for search_api_response in search_api_responses:
-        items = json.loads(search_api_response[0])['items']
-        for item in items:
-            if source == 'video':
-                item_id = item['id']['videoId']
-            elif source == 'channel':
-                item_id = item['snippet']['channelId']
-
-            item_ids.append((item_id,))
-
-    logger.debug("inserting ids")
-    db.executemany(
-        f"""
-        INSERT OR IGNORE INTO {table}({source}_id) values(?)
-        """,
-        item_ids)
-    db.commit()
-    db.close()
 
 
 def validate_file(file_name, suffix=None):
@@ -53,16 +19,10 @@ def validate_file(file_name, suffix=None):
 
 def check_file_overwrite(file_path: Path) -> Path:
     if file_path.exists():
-        flag = input(
-            """
-            This database already exists.
-            Continue with this database? [Y/N]
-            """).lower()
-
-        if flag == 'y':
+        flag = click.confirm("Database already exists. Overwrite?")
+        if flag:
             logger.info(f"Updating existing database {file_path.resolve()}...")
-
-        if flag == 'n':
+        else:
             file_name = input("Input new database name: ")
             file_path = Path(file_name)
 

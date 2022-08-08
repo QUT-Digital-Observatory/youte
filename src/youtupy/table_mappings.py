@@ -148,7 +148,7 @@ comment_sql_table = {
             comment_id PRIMARY KEY,
             video_id,
             channel_id,
-            parent_id
+            parent_id,
             can_reply,
             reply_count,
             text_display,
@@ -168,6 +168,7 @@ comment_sql_table = {
         VALUES (
             :comment_id,
             :video_id,
+            :channel_id,
             :parent_id,
             :can_reply,
             :reply_count,

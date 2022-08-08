@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 import configobj
 import click
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class YoutubeConfig(configobj.ConfigObj):
         except KeyError:
             logger.error(
                 """No such name found.
-                You might not have added this profile or 
+                You might not have added this profile or
                 added it under a different name.
                 Run:
                 - `youtupy init list-keys` to see the list of registered keys.
@@ -38,8 +39,10 @@ class YoutubeConfig(configobj.ConfigObj):
 
 
 def get_api_key(name=None, filename='config'):
-    click.secho("Getting API key from config file.",
-                fg='magenta')
+    """Get API key from config file.
+    If no name is given, use default API key
+    """
+    click.secho("Getting API key from config file.", fg='magenta')
     config_file_path = Path(click.get_app_dir('youtupy')).joinpath(filename)
     config = YoutubeConfig(filename=str(config_file_path))
 
@@ -47,22 +50,28 @@ def get_api_key(name=None, filename='config'):
         try:
             api_key = config[name]['key']
         except KeyError:
-            raise KeyError("No API key found for %s. "
-                           "Did you use a different name? "
-                           "Try: "
-                           "`youtupy init list-keys` to get a "
-                           "full list of registered API keys "
-                           "or `youtupy init add-key` to add a new API key"
-                           % name
-                           )
+            click.secho("ERROR", fg='red', bold=True)
+            click.secho("No API key found for %s. Did you use a different name?\n"
+                        "Try:\n"
+                        "`youtupy init list-keys` to get a "
+                        "full list of registered API keys "
+                        "or `youtupy init add-key` to add a new API key"
+                        % name,
+                        fg='red',
+                        bold=True
+                        )
+            sys.exit()
     else:
         default_check = []
         for name in config:
             if 'default' in config[name]:
                 default_check.append(name)
         if not default_check:
-            raise KeyError("No API key name was specified, and "
-                           "you haven't got a default API key.")
+            click.secho("No API key name was specified, and "
+                        "you haven't got a default API key.",
+                        fg='red',
+                        bold=True)
+            sys.exit()
         else:
             api_key = config[default_check[0]]['key']
 

@@ -70,7 +70,11 @@ youtupy's config file is stored in a central place, whose exact location depends
 
 The config file stores API keys, as well as the quota usage associated with each API key.
 
+## (all sections below are out-of-date)
+New content to be updated soon.
+
 ## Run a search
+
 
 `youtupy search` is the command that collects data from YouTube API.
 

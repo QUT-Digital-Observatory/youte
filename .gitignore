@@ -136,3 +136,4 @@ dmypy.json
 archive/
 *.db
 *.jsonl
+demo

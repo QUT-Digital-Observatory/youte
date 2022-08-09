@@ -106,8 +106,8 @@ def list_comments(filepath: str,
                   max_quota: int,
                   name: str,
                   by_video,
-                  by_parent=None,
-                  by_channel=None) -> None:
+                  by_parent,
+                  by_channel) -> None:
     """
     Get YouTube comments from a list of comment/channel/video ids.
 
@@ -123,7 +123,8 @@ def list_comments(filepath: str,
     with open(filepath, mode='r') as filepath:
         ids = [row.rstrip() for row in filepath.readlines()]
 
-    item_type = 'comment_threads' if (by_channel or by_video) else 'comments'
+    # item_type = 'comment_threads' if (by_channel or by_video) else 'comments'
+    item_type = 'comments' if by_parent else 'comment_threads'
     collector.list_items(item_type=item_type,
                          ids=ids,
                          output_path=output,

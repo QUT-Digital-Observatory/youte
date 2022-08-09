@@ -7,45 +7,78 @@ from dateutil import tz
 import random
 import json
 import time
-from typing import Union, List, Tuple
+from typing import List, Tuple
 from pathlib import Path
 import click
 from tqdm import tqdm
-from configobj import ConfigObj
 import os
 import sys
 
 from youtupy.quota import Quota
 from youtupy.utilities import create_utc_datetime_string
 
-from youtupy import databases
-from youtupy.exceptions import InvalidRequestParameter
-
 logger = logging.getLogger(__name__)
+
+
+class ProgressSaver:
+    def __init__(self, path):
+        self.path = path
+        self.conn = sqlite3.connect(path)
+
+    def load_token(self) -> List:
+        with self.conn as con:
+            con.executescript(
+                """
+                CREATE TABLE IF NOT EXISTS history (
+                    next_page_token PRIMARY KEY,
+                    retrieval_time
+                    );
+                
+                INSERT OR IGNORE INTO history(next_page_token)
+                VALUES ("");
+                """
+            )
+
+        tokens = [row[0] for row in
+                  con.execute(
+                      """
+                    SELECT next_page_token FROM history
+                    WHERE retrieval_time IS NULL
+                    """)
+                  ]
+
+        return tokens
+
+    def update_token(self, token: str) -> None:
+        self.conn.execute("REPLACE INTO history VALUES (?,?)",
+                          (token, datetime.now(tz=tz.UTC))
+                          )
+        self.conn.commit()
+
+    def add_token(self, token: str) -> None:
+        self.conn.execute(
+            """
+            INSERT OR IGNORE INTO history(next_page_token)
+            VALUES (?)
+            """,
+            (token,))
 
 
 def _confirm_existing_history(filename: str) -> None:
     if os.path.exists(filename):
-        confirm_text = 'A historsy file is detected in your current directory.\n' \
-                       'Do you want to resume progress from this history file? ' \
-                       'If you are at all unsure, say No.'
+        confirm_text = f"""
+        A history file '{filename}' is detected in your current directory.
+        Do you want to resume progress from this history file? 
+        If you are at all unsure, say No."""
         confirm_prompt = click.confirm(confirm_text)
 
         if not confirm_prompt:
             os.remove(filename)
 
 
-def _load_page_token_from_file(filename: str) -> Tuple[List, str]:
-    tokens = []
-    history = ConfigObj(filename)
-
-    # create a temporary 'history' config file
-    if not os.path.exists(filename):
-        tokens.append('')
-    else:
-        for key, value in history.items():
-            if value == 'none':
-                tokens.append(key)
+def _load_page_token(filename='history.db') -> Tuple[List, ProgressSaver]:
+    history = ProgressSaver(path=filename)
+    tokens = history.load_token()
 
     return tokens, history
 
@@ -112,11 +145,10 @@ def _prompt_save_progress(filename) -> None:
 
 
 def _get_page_token(response: Response,
-                    saved_to: ConfigObj) -> None:
+                    saved_to: ProgressSaver) -> None:
     try:
         next_page_token = response.json()['nextPageToken']
-        saved_to[next_page_token] = 'none'
-        saved_to.write()
+        saved_to.add_token(next_page_token)
     except KeyError:
         logger.info("No more page...")
 
@@ -150,11 +182,12 @@ class Youtupy:
 
         page = 1
 
-        _confirm_existing_history('history')
+        history_file = 'history.db'
+        _confirm_existing_history(history_file)
 
         while True:
             try:
-                tokens, history = _load_page_token_from_file('history')
+                tokens, history = _load_page_token(history_file)
 
                 if not tokens:
                     break
@@ -164,7 +197,7 @@ class Youtupy:
                     self.quota.handle_limit(max_quota=self.max_quota)
 
                     url = 'https://www.googleapis.com/youtube/v3/search'
-                    
+
                     params = _get_params(key=self.api_key, q=query, **kwargs)
 
                     if token != '':
@@ -178,26 +211,23 @@ class Youtupy:
 
                     logger.info(f'Quota used: {self.quota.units}.')
 
-                    history['request_url'] = r.url
                     _get_page_token(response=r, saved_to=history)
 
                     _write_output_to_jsonl(output_path=output_path,
                                            json_rec=r.json())
 
                     # store recorded and unrecorded tokens in config file
-                    history[token] = datetime.now(tz=tz.UTC)
-                    history.write()
-
+                    history.update_token(token)
                     page += 1
 
             except KeyboardInterrupt:
                 click.echo()
-                _prompt_save_progress(filename='history')
+                _prompt_save_progress(filename=history_file)
 
         click.secho(f'Complete! {page} pages of search results collected.\n'
                     f'Total units used: {self.quota.units}',
                     fg='bright_green')
-        os.remove('history')
+        os.remove(history_file)
 
     def list_items(self,
                    item_type,
@@ -227,7 +257,8 @@ class Youtupy:
         # 2. Only a single id can be passed in the request param
 
         is_channel_video = item_type in ['channels', 'videos']
-        get_comments_only = (item_type == 'comments') and not by_parent_id
+        get_comments_only = (item_type == 'comment_threads') and \
+                            (not (by_parent_id or by_channel_id or by_video_id))
         get_by_parents = (item_type == 'comments') and by_parent_id
         get_by_video_channel = (item_type == 'comment_threads') and \
                                (by_channel_id or by_video_id)
@@ -283,14 +314,23 @@ class Youtupy:
 
                 while True:
                     try:
-                        tokens, history = _load_page_token_from_file('history')
+                        history_file = Path('history.db')
+
+                        if history_file.exists():
+                            os.remove(history_file)
+
+                        tokens, history = _load_page_token(history_file)
 
                         if not tokens:
+                            logger.info("No more token found.")
                             break
 
                         for token in tokens:
                             self.quota.handle_limit(max_quota=self.max_quota)
+                            logger.info(tokens)
+
                             if token != '':
+                                logger.info('Adding page token...')
                                 params['pageToken'] = token
 
                             r = _request_with_error_handling(url=url,
@@ -300,22 +340,20 @@ class Youtupy:
                                                  datetime.now(tz=tz.UTC))
                             logger.info(f'Quota used: {self.quota.units}.')
 
-                            _get_page_token(response=r,
-                                            saved_to=history)
+                            _get_page_token(response=r, saved_to=history)
 
                             _write_output_to_jsonl(output_path=output_path,
                                                    json_rec=r.json())
 
-                            # store recorded and unrecorded tokens in config file
-                            history[token] = datetime.now(tz=tz.UTC)
-                            history.write()
+                            # store recorded and unrecorded tokens
+                            history.update_token(token)
 
                     except KeyboardInterrupt:
-                        if Path('history').exists():
-                            os.remove('history')
+                        if history_file.exists():
+                            os.remove(history_file)
                         sys.exit()
 
-                os.remove('history')
+                os.remove(history_file)
 
             click.secho('Completed!', fg='green')
             click.secho(f'File saved in {output_path}', fg='green')

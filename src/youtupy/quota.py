@@ -1,4 +1,3 @@
-import os
 from datetime import datetime, timedelta
 import logging
 from dateutil import tz
@@ -12,8 +11,12 @@ logger = logging.getLogger(__name__)
 
 
 class Quota:
-    def __init__(self, api_key, config_path, units=None,
-                 created_utc=None, reset_remaining=None):
+    def __init__(self,
+                 api_key,
+                 config_path,
+                 units=None,
+                 created_utc=None,
+                 reset_remaining=None):
         self.units = units
         self.api_key = api_key
         self._created_utc = created_utc
@@ -37,36 +40,34 @@ class Quota:
         logger.debug("Getting quota usage from %s" % full_path)
 
         if not full_path.exists():
-            raise InvalidFileName('Config file not found. '
-                                  'Try `youtupy init` first.')
+            raise InvalidFileName("Config file not found.")
 
         config = YoutubeConfig(str(full_path))
 
         for profile in config:
-            if config[profile]['key'] == self.api_key:
+            if config[profile]["key"] == self.api_key:
                 name = profile
 
-        if 'name' not in locals():
-            raise KeyError('No profile for key %s found.'
-                           'Configure your API key first with `youtupy init`.')
+        if "name" not in locals():
+            raise KeyError(
+                "No profile for key %s found."
+                "Configure your API key first with `youtupy init`."
+            )
 
-        if 'units' not in config[name]:
+        if "units" not in config[name]:
             self.units = 0
             self.created_utc = None
         else:
-            quota = int(config[name]['units'])
-            timestamp = datetime.fromisoformat(config[name]['created_utc'])
+            quota = int(config[name]["units"])
+            timestamp = datetime.fromisoformat(config[name]["created_utc"])
 
             # get midnight Pacific time
-            now_pt = datetime.now(tz=tz.gettz('US/Pacific'))
-            midnight_pt = now_pt.replace(hour=0,
-                                         minute=0,
-                                         second=0,
-                                         microsecond=0)
+            now_pt = datetime.now(tz=tz.gettz("US/Pacific"))
+            midnight_pt = now_pt.replace(hour=0, minute=0,
+                                         second=0, microsecond=0)
 
             if timestamp > midnight_pt:
-                logger.debug(
-                    f"Quota data found, {quota} units have been used.")
+                logger.debug(f"Quota found, {quota} units have been used.")
                 self.units = quota
                 self.created_utc = timestamp
                 self.reset_remaining = _get_reset_remaining(timestamp)
@@ -85,24 +86,25 @@ class Quota:
         logger.debug("Getting quota usage from %s" % full_path)
 
         if not full_path.exists():
-            raise InvalidFileName('Config file not found. '
-                                  'Try `youtupy init` first.')
+            raise InvalidFileName("Config file not found.")
 
         else:
             config = YoutubeConfig(str(full_path))
 
             for profile in config:
-                if config[profile]['key'] == self.api_key:
+                if config[profile]["key"] == self.api_key:
                     name = profile
 
-            if 'name' not in locals():
-                raise KeyError('No profile for key %s found.'
-                               'Configure your API key first '
-                               'with `youtupy init`.' % self.api_key)
+            if "name" not in locals():
+                raise KeyError(
+                    "No profile for key %s found."
+                    "Configure your API key first "
+                    "with `youtupy init`." % self.api_key
+                )
 
             else:
-                config[name]['units'] = self.units
-                config[name]['created_utc'] = self.created_utc
+                config[name]["units"] = self.units
+                config[name]["created_utc"] = self.created_utc
                 config.write()
 
     def handle_limit(self, max_quota):
@@ -122,7 +124,7 @@ class Quota:
 
 
 def _get_reset_remaining(current) -> int:
-    next_reset = datetime.now(tz=tz.gettz('US/Pacific')) + timedelta(days=1)
+    next_reset = datetime.now(tz=tz.gettz("US/Pacific")) + timedelta(days=1)
     next_reset = next_reset.replace(hour=0, minute=0, second=0, microsecond=0)
 
     reset_remaining = next_reset - current

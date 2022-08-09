@@ -51,15 +51,16 @@ def get_api_key(name=None, filename='config'):
             api_key = config[name]['key']
         except KeyError:
             click.secho("ERROR", fg='red', bold=True)
-            click.secho("No API key found for %s. Did you use a different name?\n"
-                        "Try:\n"
-                        "`youtupy init list-keys` to get a "
-                        "full list of registered API keys "
-                        "or `youtupy init add-key` to add a new API key"
-                        % name,
-                        fg='red',
-                        bold=True
-                        )
+            click.secho(
+                "No API key found for %s. Did you use a different name?\n"
+                "Try:\n"
+                "`youtupy init list-keys` to get a "
+                "full list of registered API keys "
+                "or `youtupy init add-key` to add a new API key"
+                % name,
+                fg='red',
+                bold=True
+                )
             sys.exit()
     else:
         default_check = []

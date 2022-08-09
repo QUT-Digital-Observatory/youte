@@ -33,7 +33,7 @@ class ProgressSaver:
                     next_page_token PRIMARY KEY,
                     retrieval_time
                     );
-                
+
                 INSERT OR IGNORE INTO history(next_page_token)
                 VALUES ("");
                 """
@@ -68,7 +68,7 @@ def _confirm_existing_history(filename: str) -> None:
     if os.path.exists(filename):
         confirm_text = f"""
         A history file '{filename}' is detected in your current directory.
-        Do you want to resume progress from this history file? 
+        Do you want to resume progress from this history file?
         If you are at all unsure, say No."""
         confirm_prompt = click.confirm(confirm_text)
 
@@ -76,7 +76,7 @@ def _confirm_existing_history(filename: str) -> None:
             os.remove(filename)
 
 
-def _load_page_token(filename='history.db') -> Tuple[List, ProgressSaver]:
+def _load_page_token(filename) -> Tuple[List, ProgressSaver]:
     history = ProgressSaver(path=filename)
     tokens = history.load_token()
 
@@ -258,7 +258,9 @@ class Youtupy:
 
         is_channel_video = item_type in ['channels', 'videos']
         get_comments_only = (item_type == 'comment_threads') and \
-                            (not (by_parent_id or by_channel_id or by_video_id))
+                            (not (by_parent_id or
+                                  by_channel_id or
+                                  by_video_id))
         get_by_parents = (item_type == 'comments') and by_parent_id
         get_by_video_channel = (item_type == 'comment_threads') and \
                                (by_channel_id or by_video_id)
@@ -304,6 +306,8 @@ class Youtupy:
 
         elif cannot_batch_ids:
 
+            history_file = Path('history.db')
+
             for each in tqdm(ids):
                 if by_parent_id:
                     params['parentId'] = each
@@ -314,7 +318,6 @@ class Youtupy:
 
                 while True:
                     try:
-                        history_file = Path('history.db')
 
                         if history_file.exists():
                             os.remove(history_file)

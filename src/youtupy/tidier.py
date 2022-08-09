@@ -1,10 +1,11 @@
 import sqlite3
 import html
 import json
-from typing import Iterable, Mapping
+from typing import Iterable, Mapping, Union
 import re
 from tqdm import tqdm
 import logging
+from pathlib import Path
 
 from youtupy.utilities import validate_file, check_file_overwrite
 import youtupy.table_mappings as mappings
@@ -12,7 +13,7 @@ import youtupy.table_mappings as mappings
 logger = logging.getLogger()
 
 
-def master_tidy(filepath: str, output: str) -> None:
+def master_tidy(filepath: str, output: Union[str, Path]) -> None:
     output = check_file_overwrite(validate_file(output, suffix='.db'))
 
     with open(filepath, mode='r') as file:
@@ -64,7 +65,7 @@ def _normalise_name(string):
     return new_string.lower()
 
 
-def tidy_search(filepath: str, output: str) -> None:
+def tidy_search(filepath: str, output: Union[str, Path]) -> None:
     db = sqlite3.connect(output)
     with db:
         db.execute(
@@ -117,7 +118,7 @@ def tidy_search(filepath: str, output: str) -> None:
     db.close()
 
 
-def tidy_video(filepath: str, output: str) -> None:
+def tidy_video(filepath: str, output: Union[str, Path]) -> None:
     db = sqlite3.connect(output)
 
     db.execute(mappings.video_sql_table['create'])
@@ -185,7 +186,7 @@ def tidy_video(filepath: str, output: str) -> None:
     db.close()
 
 
-def tidy_channel(filepath: str, output: str) -> None:
+def tidy_channel(filepath: str, output: Union[str, Path]) -> None:
     db = sqlite3.connect(output)
 
     db.execute(mappings.channel_sql_table['create'])
@@ -221,7 +222,8 @@ def tidy_channel(filepath: str, output: str) -> None:
         channel_mapping['view_count'] = statistics.get('viewCount')
         channel_mapping['subscriber_count'] = statistics.get('subscriberCount')
         channel_mapping['video_count'] = statistics.get('videoCount')
-        channel_mapping['hidden_subscriber_count'] = statistics['hiddenSubscriberCount']
+        channel_mapping['hidden_subscriber_count'] = statistics[
+            'hiddenSubscriberCount']
         channel_mapping['topic_ids'] = str(
             topic_details.get('topicIds')) if topic_details else None
         channel_mapping['topic_categories'] = str(
@@ -243,7 +245,7 @@ def tidy_channel(filepath: str, output: str) -> None:
     db.close()
 
 
-def tidy_comments(filepath, output) -> None:
+def tidy_comments(filepath, output: Union[str, Path]) -> None:
     db = sqlite3.connect(output)
 
     db.execute(mappings.comment_sql_table['create'])
@@ -270,7 +272,8 @@ def tidy_comments(filepath, output) -> None:
         comment_mapping['text_original'] = snippet['textOriginal']
         comment_mapping['author_name'] = snippet['authorDisplayName']
         comment_mapping['author_channel_url'] = snippet['authorChannelUrl']
-        comment_mapping['author_channel_id'] = snippet['authorChannelId']['value']
+        comment_mapping['author_channel_id'] = snippet[
+            'authorChannelId']['value']
         comment_mapping['can_rate'] = snippet['canRate']
         comment_mapping['viewer_rating'] = snippet['viewerRating']
         comment_mapping['like_count'] = snippet['likeCount']

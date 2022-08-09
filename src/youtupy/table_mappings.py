@@ -89,9 +89,9 @@ channel_sql_table = {
             localized_title,
             localized_description,
             country,
-            related_playlists_likes, -- ID of the playlist containing 
+            related_playlists_likes, -- ID of the playlist containing
                                      -- the channel's liked videos
-            related_playlists_uploads, -- playlist containing channel's uploaded videos
+            related_playlists_uploads, -- playlist of channel's uploaded videos
             view_count,
             subscriber_count,
             hidden_subscriber_count,
@@ -183,5 +183,4 @@ comment_sql_table = {
             :published_at,
             :updated_at
             )
-              """
-}
+            """}

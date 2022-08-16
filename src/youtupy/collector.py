@@ -39,20 +39,22 @@ class ProgressSaver:
                 """
             )
 
-        tokens = [row[0] for row in
-                  con.execute(
-                      """
+        tokens = [
+            row[0]
+            for row in con.execute(
+                """
                     SELECT next_page_token FROM history
                     WHERE retrieval_time IS NULL
-                    """)
-                  ]
+                    """
+            )
+        ]
 
         return tokens
 
     def update_token(self, token: str) -> None:
-        self.conn.execute("REPLACE INTO history VALUES (?,?)",
-                          (token, datetime.now(tz=tz.UTC))
-                          )
+        self.conn.execute(
+            "REPLACE INTO history VALUES (?,?)", (token, datetime.now(tz=tz.UTC))
+        )
         self.conn.commit()
 
     def add_token(self, token: str) -> None:
@@ -61,7 +63,8 @@ class ProgressSaver:
             INSERT OR IGNORE INTO history(next_page_token)
             VALUES (?)
             """,
-            (token,))
+            (token,),
+        )
 
 
 def _confirm_existing_history(filename: str) -> None:
@@ -85,25 +88,24 @@ def _load_page_token(filename) -> Tuple[List, ProgressSaver]:
 
 def _request_with_error_handling(url, params) -> Response:
     response = requests.get(url, params=params)
-    logger.info(f'Getting {response.url}.\n'
-                f'Status: {response.status_code}.')
+    logger.info(f"Getting {response.url}.\n" f"Status: {response.status_code}.")
 
     if response.status_code in [403, 400, 404]:
         logger.error(f"Error: {response.url}")
         logger.error(f"Error: {params}")
 
-        errors = response.json()['error']['errors']
+        errors = response.json()["error"]["errors"]
         for error in errors:
             # ignore if comment is disabled
-            if error['reason'] == 'commentsDisabled':
-                click.secho('WARNING:', fg='bright_red', bold=True)
-                click.secho(error['reason'], fg="bright_red", bold=True)
+            if error["reason"] == "commentsDisabled":
+                click.secho("WARNING:", fg="bright_red", bold=True)
+                click.secho(error["reason"], fg="bright_red", bold=True)
             else:
-                click.secho('ERROR:', fg='red', bold=True)
-                click.secho('An error has occurred in making the request.',
-                            fg='red',
-                            bold=True)
-                click.secho(f"Reason: {error['reason']}", fg='red', bold=True)
+                click.secho("ERROR:", fg="red", bold=True)
+                click.secho(
+                    "An error has occurred in making the request.", fg="red", bold=True
+                )
+                click.secho(f"Reason: {error['reason']}", fg="red", bold=True)
                 logger.error(json.dumps(response.json()))
                 sys.exit()
 
@@ -113,10 +115,10 @@ def _request_with_error_handling(url, params) -> Response:
 
 
 def _write_output_to_jsonl(output_path, json_rec) -> None:
-    logger.info(f'Writing output to {output_path}.')
-    with open(output_path, 'a') as file:
+    logger.info(f"Writing output to {output_path}.")
+    with open(output_path, "a") as file:
         json_record = json.dumps(json_rec)
-        file.write(json_record + '\n')
+        file.write(json_record + "\n")
 
 
 def _get_params(**kwargs) -> dict:
@@ -125,8 +127,7 @@ def _get_params(**kwargs) -> dict:
 
     for key, value in kwargs.items():
         # proper datetime string formatting
-        if (key == 'publishedAfter'
-                or key == 'publishedBefore'):
+        if key == "publishedAfter" or key == "publishedBefore":
             value = create_utc_datetime_string(value)
         params[key] = value
 
@@ -135,28 +136,24 @@ def _get_params(**kwargs) -> dict:
 
 def _prompt_save_progress(filename) -> None:
     if os.path.exists(filename):
-        if click.confirm('Do you want to save your '
-                         'current progress?'):
+        if click.confirm("Do you want to save your " "current progress?"):
             full_path = Path(filename).resolve()
-            click.echo(f'Progress saved at {full_path}.')
+            click.echo(f"Progress saved at {full_path}.")
         else:
             os.remove(filename)
     sys.exit()
 
 
-def _get_page_token(response: Response,
-                    saved_to: ProgressSaver) -> None:
+def _get_page_token(response: Response, saved_to: ProgressSaver) -> None:
     try:
-        next_page_token = response.json()['nextPageToken']
+        next_page_token = response.json()["nextPageToken"]
         saved_to.add_token(next_page_token)
     except KeyError:
         logger.info("No more page...")
 
 
 class Youtupy:
-    def __init__(self,
-                 api_key: str,
-                 max_quota: int = 10000):
+    def __init__(self, api_key: str, max_quota: int = 10000):
         self.api_key = api_key
         self._quota = None
         self.max_quota = max_quota
@@ -172,17 +169,14 @@ class Youtupy:
         else:
             raise TypeError("Has to be a Quota object.")
 
-    def search(self,
-               query,
-               output_path,
-               **kwargs):
+    def search(self, query, output_path, **kwargs):
         api_cost = 100
 
         self.quota.get_quota()
 
         page = 1
 
-        history_file = 'history.db'
+        history_file = "history.db"
         _confirm_existing_history(history_file)
 
         while True:
@@ -196,12 +190,12 @@ class Youtupy:
 
                     self.quota.handle_limit(max_quota=self.max_quota)
 
-                    url = 'https://www.googleapis.com/youtube/v3/search'
+                    url = "https://www.googleapis.com/youtube/v3/search"
 
                     params = _get_params(key=self.api_key, q=query, **kwargs)
 
-                    if token != '':
-                        params['pageToken'] = token
+                    if token != "":
+                        params["pageToken"] = token
 
                     click.echo(f"Getting page {page} ⏳")
 
@@ -209,12 +203,11 @@ class Youtupy:
 
                     self.quota.add_quota(api_cost, datetime.now(tz=tz.UTC))
 
-                    logger.info(f'Quota used: {self.quota.units}.')
+                    logger.info(f"Quota used: {self.quota.units}.")
 
                     _get_page_token(response=r, saved_to=history)
 
-                    _write_output_to_jsonl(output_path=output_path,
-                                           json_rec=r.json())
+                    _write_output_to_jsonl(output_path=output_path, json_rec=r.json())
 
                     # store recorded and unrecorded tokens in config file
                     history.update_token(token)
@@ -224,25 +217,29 @@ class Youtupy:
                 click.echo()
                 _prompt_save_progress(filename=history_file)
 
-        click.secho(f'Complete! {page} pages of search results collected.\n'
-                    f'Total units used: {self.quota.units}',
-                    fg='bright_green')
+        click.secho(
+            f"Complete! {page} pages of search results collected.\n"
+            f"Total units used: {self.quota.units}",
+            fg="bright_green",
+        )
         os.remove(history_file)
 
-    def list_items(self,
-                   item_type,
-                   ids: List,
-                   output_path,
-                   by_parent_id=None,
-                   by_channel_id=None,
-                   by_video_id=None,
-                   **kwargs):
+    def list_items(
+        self,
+        item_type,
+        ids: List,
+        output_path,
+        by_parent_id=None,
+        by_channel_id=None,
+        by_video_id=None,
+        **kwargs,
+    ):
 
         request_info = _get_endpoint(item_type)
-        url = request_info['url']
-        api_cost_unit = request_info['api_cost_unit']
-        params = request_info['params']
-        params['key'] = self.api_key
+        url = request_info["url"]
+        api_cost_unit = request_info["api_cost_unit"]
+        params = request_info["params"]
+        params["key"] = self.api_key
 
         for key, value in kwargs.items():
             params[key] = value
@@ -256,20 +253,20 @@ class Youtupy:
         # 1. A comma-separated list of ids can be passed in the request param
         # 2. Only a single id can be passed in the request param
 
-        is_channel_video = item_type in ['channels', 'videos']
-        get_comments_only = (item_type == 'comment_threads') and \
-                            (not (by_parent_id or
-                                  by_channel_id or
-                                  by_video_id))
-        get_by_parents = (item_type == 'comments') and by_parent_id
-        get_by_video_channel = (item_type == 'comment_threads') and \
-                               (by_channel_id or by_video_id)
+        is_channel_video = item_type in ["channels", "videos"]
+        get_comments_only = (item_type == "comment_threads") and (
+            not (by_parent_id or by_channel_id or by_video_id)
+        )
+        get_by_parents = (item_type == "comments") and by_parent_id
+        get_by_video_channel = (item_type == "comment_threads") and (
+            by_channel_id or by_video_id
+        )
 
         can_batch_ids = is_channel_video or get_comments_only
         cannot_batch_ids = get_by_parents or get_by_video_channel
 
         if get_comments_only:
-            del params['maxResults']
+            del params["maxResults"]
 
         if can_batch_ids:
             logger.info("Batching ids")
@@ -277,44 +274,45 @@ class Youtupy:
             click.secho("Getting data ⏳")
             while ids:
                 if len(ids) <= 50:
-                    ids_string = ','.join(ids)
+                    ids_string = ",".join(ids)
                     ids = None
                 else:
                     total_batches = int(len(ids) / 50)
                     click.echo(f"{total_batches} pages remaining ⏳")
                     batch = random.sample(ids, k=50)
-                    ids_string = ','.join(batch)
+                    ids_string = ",".join(batch)
                     for elm in batch:
                         ids.remove(elm)
 
-                params['id'] = ids_string
+                params["id"] = ids_string
 
                 self.quota.handle_limit(max_quota=self.max_quota)
 
                 r = _request_with_error_handling(url=url, params=params)
 
                 self.quota.add_quota(api_cost_unit, datetime.now(tz=tz.UTC))
-                logger.info(f'Quota used: {self.quota.units}.')
+                logger.info(f"Quota used: {self.quota.units}.")
 
-                _write_output_to_jsonl(output_path=output_path,
-                                       json_rec=r.json())
+                _write_output_to_jsonl(output_path=output_path, json_rec=r.json())
 
                 batch_no += 1
 
-            click.echo(f"{batch_no} pages collected.\n"
-                       f"Total quota used: {self.quota.units}.")
+            click.echo(
+                f"{batch_no} pages collected.\n"
+                f"Total quota used: {self.quota.units}."
+            )
 
         elif cannot_batch_ids:
 
-            history_file = Path('history.db')
+            history_file = Path("history.db")
 
             for each in tqdm(ids):
                 if by_parent_id:
-                    params['parentId'] = each
+                    params["parentId"] = each
                 elif by_video_id:
-                    params['videoId'] = each
+                    params["videoId"] = each
                 elif by_channel_id:
-                    params['channelId'] = each
+                    params["channelId"] = each
 
                 while True:
                     try:
@@ -332,21 +330,20 @@ class Youtupy:
                             self.quota.handle_limit(max_quota=self.max_quota)
                             logger.info(tokens)
 
-                            if token != '':
-                                logger.info('Adding page token...')
-                                params['pageToken'] = token
+                            if token != "":
+                                logger.info("Adding page token...")
+                                params["pageToken"] = token
 
-                            r = _request_with_error_handling(url=url,
-                                                             params=params)
+                            r = _request_with_error_handling(url=url, params=params)
 
-                            self.quota.add_quota(api_cost_unit,
-                                                 datetime.now(tz=tz.UTC))
-                            logger.info(f'Quota used: {self.quota.units}.')
+                            self.quota.add_quota(api_cost_unit, datetime.now(tz=tz.UTC))
+                            logger.info(f"Quota used: {self.quota.units}.")
 
                             _get_page_token(response=r, saved_to=history)
 
-                            _write_output_to_jsonl(output_path=output_path,
-                                                   json_rec=r.json())
+                            _write_output_to_jsonl(
+                                output_path=output_path, json_rec=r.json()
+                            )
 
                             # store recorded and unrecorded tokens
                             history.update_token(token)
@@ -358,8 +355,8 @@ class Youtupy:
 
                 os.remove(history_file)
 
-            click.secho('Completed!', fg='green')
-            click.secho(f'File saved in {output_path}', fg='green')
+            click.secho("Completed!", fg="green")
+            click.secho(f"File saved in {output_path}", fg="green")
 
 
 def _get_endpoint(endpoint) -> dict:
@@ -370,62 +367,51 @@ def _get_endpoint(endpoint) -> dict:
     'commentThread', or 'comment'
     """
     api_endpoints = {
-        'search': {
-            'url': r'https://www.googleapis.com/youtube/v3/search',
-            'api_cost_unit': 100,
-            'params': {
-                'part': 'snippet',
-                'maxResults': 50,
-                'q': None,
-                'type': 'video',
-                'order': 'date',
-                'safeSearch': 'none',
-                'key': None
-            }
+        "search": {
+            "url": r"https://www.googleapis.com/youtube/v3/search",
+            "api_cost_unit": 100,
+            "params": {
+                "part": "snippet",
+                "maxResults": 50,
+                "q": None,
+                "type": "video",
+                "order": "date",
+                "safeSearch": "none",
+                "key": None,
+            },
         },
-
-        'videos': {
-            'url': r'https://www.googleapis.com/youtube/v3/videos',
-            'api_cost_unit': 1,
-            'params': {
-                'part': 'snippet,statistics,topicDetails,status,'
-                        'contentDetails,recordingDetails,id',
-                'id': None,
-                'maxResults': 50,
-                'key': None
-            }
+        "videos": {
+            "url": r"https://www.googleapis.com/youtube/v3/videos",
+            "api_cost_unit": 1,
+            "params": {
+                "part": "snippet,statistics,topicDetails,status,"
+                "contentDetails,recordingDetails,id",
+                "id": None,
+                "maxResults": 50,
+                "key": None,
+            },
         },
-
-        'channels': {
-            'url': r'https://www.googleapis.com/youtube/v3/channels',
-            'api_cost_unit': 1,
-            'params': {
-                'part': 'snippet,statistics,topicDetails,status,'
-                        'contentDetails,brandingSettings,contentOwnerDetails',
-                'id': None,
-                'maxResults': 50,
-                'key': None
-            }
+        "channels": {
+            "url": r"https://www.googleapis.com/youtube/v3/channels",
+            "api_cost_unit": 1,
+            "params": {
+                "part": "snippet,statistics,topicDetails,status,"
+                "contentDetails,brandingSettings,contentOwnerDetails",
+                "id": None,
+                "maxResults": 50,
+                "key": None,
+            },
         },
-
-        'comment_threads': {
-            'url': r'https://www.googleapis.com/youtube/v3/commentThreads',
-            'api_cost_unit': 1,
-            'params': {
-                'part': 'snippet',
-                'maxResults': 100,
-                'order': 'time'
-            }
+        "comment_threads": {
+            "url": r"https://www.googleapis.com/youtube/v3/commentThreads",
+            "api_cost_unit": 1,
+            "params": {"part": "snippet", "maxResults": 100, "order": "time"},
         },
-
-        'comments': {
-            'url': r'https://www.googleapis.com/youtube/v3/comments',
-            'api_cost_unit': 1,
-            'params': {
-                'part': 'snippet',
-                'maxResults': 100
-            }
-        }
+        "comments": {
+            "url": r"https://www.googleapis.com/youtube/v3/comments",
+            "api_cost_unit": 1,
+            "params": {"part": "snippet", "maxResults": 100},
+        },
     }
 
     return api_endpoints[endpoint]

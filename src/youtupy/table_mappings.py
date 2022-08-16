@@ -1,5 +1,5 @@
 video_sql_table = {
-    'create': """
+    "create": """
         CREATE TABLE IF NOT EXISTS videos (
             video_id PRIMARY KEY,
             published_at,
@@ -36,7 +36,7 @@ video_sql_table = {
             recording_location
         )
               """,
-    'insert': """
+    "insert": """
         INSERT OR REPLACE INTO videos
         VALUES (
             :video_id,
@@ -73,11 +73,11 @@ video_sql_table = {
             :topic_categories,
             :recording_location
         )
-              """
+              """,
 }
 
 channel_sql_table = {
-    'create': """
+    "create": """
         CREATE TABLE IF NOT EXISTS channels(
             channel_id PRIMARY KEY,
             title,
@@ -108,8 +108,7 @@ channel_sql_table = {
             time_linked
             )
               """,
-
-    'insert': """
+    "insert": """
         INSERT OR REPLACE INTO channels
         VALUES (
             :channel_id,
@@ -139,11 +138,11 @@ channel_sql_table = {
             :content_owner,
             :time_linked
             )
-              """
+              """,
 }
 
 comment_sql_table = {
-    'create': """
+    "create": """
         CREATE TABLE IF NOT EXISTS comments(
             comment_id PRIMARY KEY,
             video_id,
@@ -163,7 +162,7 @@ comment_sql_table = {
             updated_at
             )
              """,
-    'insert': """
+    "insert": """
         INSERT OR REPLACE INTO comments
         VALUES (
             :comment_id,
@@ -183,4 +182,5 @@ comment_sql_table = {
             :published_at,
             :updated_at
             )
-            """}
+            """,
+}

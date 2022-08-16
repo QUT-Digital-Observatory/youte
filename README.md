@@ -77,15 +77,16 @@ Options:
   --from TEXT          Start date (YYYY-MM-DD)  
   --to TEXT            End date (YYYY-MM-DD)  
   --name TEXT          Name of the API key (optional)  
-  --get-id             Only retrieve video IDs  --max-quota INTEGER  Maximum quota allowed  [default: 10000]  
+  --get-id             Only retrieve video IDs
+  --max-quota INTEGER  Maximum quota allowed  [default: 10000]
   --help               Show this message and exit.  
 ```  
   
 ### Example  
   
 ```commandline  
-youtupy search 'study with me' --from 2022-08-01 --to 2022-08-07 --output study_with_me.jsonl  
-youtupy search gaza --from 2022-07-25 --name user_2 --get-id --output gaza_ids.jsonl  
+youtupy search 'study with me' --from 2022-08-01 --to 2022-08-07 study_with_me.jsonl
+youtupy search gaza --from 2022-07-25 --name user_2 --get-id gaza_ids.jsonl
 ```  
   
 ### Arguments and options  
@@ -95,13 +96,13 @@ youtupy search gaza --from 2022-07-25 --name user_2 --get-id --output gaza_ids.j
 The terms to search for. You can also use the Boolean NOT (-) and OR (|) operators to exclude videos or to find videos that are associated with one of several search terms. If the terms contain spaces, the entire QUERY value has to be wrapped in single quotes.  
   
 ```commandline  
-youtupy search 'koala|australia zoo -kangaroo' --output aussie_animals.jsonl  
+youtupy search 'koala|australia zoo -kangaroo' aussie_animals.jsonl
 ```  
   
 If you are looking for exact phrases, the exact phrases can be wrapped in double quotes, then wrapped again by single quotes.  
   
 ```commandline  
-youtupy search '"australia zoo"' --output aussie_zoo.jsonl  
+youtupy search '"australia zoo"' aussie_zoo.jsonl
 ```  
   
 #### `--from` (optional)  

@@ -41,17 +41,17 @@ When doing a youtupy search, if you don't specify an API key name, youtupy will 
 If you want to manually set an existing key as a default, run:  
   
 ```shell  
-youtupy configure set-default <name-of-existing-key>
+youtupy config set-default <name-of-existing-key>
 ```  
   
-Note that what is passed to this command is the _name_ of the API key, not the API key itself. It follows that the API key has to be first added to the config file using `youtupy configure add-key`. If you use `set-default` with a key that has not been added to the config file, an error will be raised.  
-  
+Note that what is passed to this command is the _name_ of the API key, not the API key itself. It follows that the API key has to be first added to the config file using `youtupy config add-key`. If you use `set-default` with a key that has not been added to the config file, an error will be raised.  
+
 **See the list of all keys**  
   
 To see the list of all keys, run:  
   
 ```shell  
-youtupy configure list-keys
+youtupy config list-keys
 ```  
   
 The default key, if there is one, will have an asterisk next to it.  

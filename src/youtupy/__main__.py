@@ -10,7 +10,6 @@ from youtupy.collector import Youtupy
 from youtupy.config import YoutubeConfig, get_api_key, get_config_path
 from youtupy.quota import Quota
 from youtupy import tidier
-from youtupy.utilities import validate_file
 
 # Logging
 logger = logging.getLogger()
@@ -44,7 +43,7 @@ def youtupy():
 
 @youtupy.command()
 @click.argument("query", required=True)
-@click.option("-o", "--output", help="Output jsonl file. Ends in `.jsonl`.")
+@click.argument("output", required=True)
 @click.option("--from", "from_", help="Start date (YYYY-MM-DD)")
 @click.option("--to", help="End date (YYYY-MM-DD)")
 @click.option("--name", help="Name of the API key (optional)")
@@ -62,8 +61,6 @@ def search(
     get_id=False,
 ):
     """Do a YouTube search."""
-
-    output = validate_file(output, suffix=".jsonl")
 
     api_key = get_api_key(name=name)
 
@@ -90,7 +87,7 @@ def search(
 
 @youtupy.command()
 @click.argument("filepath", required=True)
-@click.option("-o", "--output", help="Output jsonl")
+@click.argument("output", required=True)
 @click.option(
     "-p", "--by-parent", help="Get all replies to a parent comment", is_flag=True
 )
@@ -117,8 +114,6 @@ def list_comments(
     By default, get all comments from a list of comment ids.
     """
 
-    output = validate_file(output, suffix=".jsonl")
-
     api_key = get_api_key(name=name)
 
     collector = _set_up_collector(api_key=api_key, max_quota=max_quota)
@@ -140,7 +135,7 @@ def list_comments(
 
 @youtupy.command()
 @click.argument("filepath", required=True)
-@click.option("-o", "--output", help="Output jsonl file. Ends in `.jsonl`.")
+@click.argument("output", required=True)
 @click.option(
     "--channel", help="Hydrate channel IDs instead of video IDs", is_flag=True
 )
@@ -155,8 +150,6 @@ def hydrate(filepath, output, channel, name, max_quota):
     By default, the function hydrates video IDs.
     """
 
-    output = validate_file(output, suffix=".jsonl")
-
     api_key = get_api_key(name=name)
 
     collector = _set_up_collector(api_key=api_key, max_quota=max_quota)
@@ -170,10 +163,9 @@ def hydrate(filepath, output, channel, name, max_quota):
 
 @youtupy.command()
 @click.argument("filepath", required=True)
-@click.option("-o", "--output", help="Output database file. Ends in `.db`.")
+@click.argument("output", required=True)
 def tidy(filepath, output):
     """Tidy raw JSON response into relational SQLite databases"""
-    output = validate_file(output, suffix=".db")
     tidier.master_tidy(filepath=filepath, output=output)
 
 

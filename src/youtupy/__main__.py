@@ -37,7 +37,7 @@ logger.addHandler(file_handler)
 def youtupy():
     """
     Utility to collect and tidy YouTube meta-data and comments via YouTube API.
-    Run `youtupy configure --help` to get started.
+    Run `youtupy config --help` to get started.
     """
     pass
 

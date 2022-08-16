@@ -211,7 +211,7 @@ def add_key():
 
     if not config_file_path.parent.exists():
         click.echo()
-        click.echo(
+        click.secho(
             "Creating config folder at %s" % config_file_path.parent, fg="magenta"
         )
         config_file_path.parent.mkdir(parents=True)

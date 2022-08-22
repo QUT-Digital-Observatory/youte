@@ -13,6 +13,11 @@ import youtupy.table_mappings as mappings
 logger = logging.getLogger()
 
 
+def connect_db(db_path: Union[str, Path]) -> sqlite3.Connection:
+    """Helper function for opening DB connections with standard config set."""
+    return sqlite3.connect(db_path, isolation_level=None)
+
+
 def master_tidy(filepath: str, output: Union[str, Path]) -> None:
     output = check_file_overwrite(validate_file(output, suffix=".db"))
 
@@ -66,23 +71,25 @@ def _normalise_name(string):
 
 
 def tidy_search(filepath: str, output: Union[str, Path]) -> None:
-    db = sqlite3.connect(output)
-    with db:
-        db.execute(
-            """
-            CREATE TABLE IF NOT EXISTS search_results(
-                 id primary key,
-                 kind,
-                 published_at,
-                 title,
-                 description,
-                 thumbnails,
-                 channel_title,
-                 channel_id,
-                 live_broadcast_content
-                 );
-            """
-        )
+    db = connect_db(output)
+
+    db.execute("begin")
+
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS search_results(
+             id primary key,
+             kind,
+             published_at,
+             title,
+             description,
+             thumbnails,
+             channel_title,
+             channel_id,
+             live_broadcast_content
+             );
+        """
+    )
 
     items = _get_items(filepath=filepath)
 
@@ -115,13 +122,16 @@ def tidy_search(filepath: str, output: Union[str, Path]) -> None:
                 live_broadcast_content,
             ),
         )
-        db.commit()
+
+    db.execute("commit")
 
     db.close()
 
 
 def tidy_video(filepath: str, output: Union[str, Path]) -> None:
-    db = sqlite3.connect(output)
+    db = connect_db(output)
+
+    db.execute("begin")
 
     db.execute(mappings.video_sql_table["create"])
 
@@ -181,14 +191,16 @@ def tidy_video(filepath: str, output: Union[str, Path]) -> None:
         video_mapping["recording_location"] = str(recording.get("location"))
 
         db.execute(mappings.video_sql_table["insert"], video_mapping)
-        db.commit()
+
+        db.execute("commit")
 
     db.close()
 
 
 def tidy_channel(filepath: str, output: Union[str, Path]) -> None:
-    db = sqlite3.connect(output)
+    db = connect_db(output)
 
+    db.execute("begin")
     db.execute(mappings.channel_sql_table["create"])
 
     items = _get_items(filepath=filepath)
@@ -244,14 +256,16 @@ def tidy_channel(filepath: str, output: Union[str, Path]) -> None:
         channel_mapping["time_linked"] = owner.get("timeLinked")
 
         db.execute(mappings.channel_sql_table["insert"], channel_mapping)
-        db.commit()
+
+    db.execute("commit")
 
     db.close()
 
 
 def tidy_comments(filepath, output: Union[str, Path]) -> None:
-    db = sqlite3.connect(output)
+    db = connect_db(output)
 
+    db.execute("begin")
     db.execute(mappings.comment_sql_table["create"])
 
     items = _get_items(filepath=filepath)
@@ -283,6 +297,7 @@ def tidy_comments(filepath, output: Union[str, Path]) -> None:
         comment_mapping["updated_at"] = snippet["updatedAt"]
 
         db.execute(mappings.comment_sql_table["insert"], comment_mapping)
-        db.commit()
+
+    db.execute("commit")
 
     db.close()

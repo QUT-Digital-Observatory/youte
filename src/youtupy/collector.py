@@ -53,7 +53,7 @@ class ProgressSaver:
 
     def update_token(self, token: str) -> None:
         self.conn.execute(
-            "REPLACE INTO history VALUES (?,?)", (token, datetime.now(tz=tz.UTC))
+          "REPLACE INTO history VALUES (?,?)", (token, datetime.now(tz=tz.UTC))
         )
         self.conn.commit()
 
@@ -317,8 +317,8 @@ class Youtupy:
                 while True:
                     try:
 
-                        if history_file.exists():
-                            os.remove(history_file)
+                        # if history_file.exists():
+                        #     os.remove(history_file)
 
                         tokens, history = _load_page_token(history_file)
 

@@ -25,7 +25,6 @@ class ProgressSaver:
         self.conn = sqlite3.connect(path, isolation_level=None)
 
     def load_token(self) -> List:
-        self.conn.execute("BEGIN")
         self.conn.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS history (
@@ -37,7 +36,6 @@ class ProgressSaver:
                 VALUES ("");
                 """
             )
-        self.conn.execute("COMMIT")
 
         tokens = [
             row[0]
@@ -108,7 +106,7 @@ def _request_with_error_handling(url: str, params: Mapping) -> requests.Response
                 click.secho(
                     "An error has occurred in making the request.", fg="red", bold=True
                 )
-                click.secho(f"Reason: {error['reason']}", fg="red", bold=True)
+                click.secho(f"Reason: {error['message']}", fg="red", bold=True)
                 logger.error(json.dumps(response.json()))
                 sys.exit(1)
 
@@ -311,6 +309,7 @@ class Youtupy:
             history_file = Path(saved_to)
 
             for each in tqdm(ids):
+
                 if by_parent_id:
                     params["parentId"] = each
                 elif by_video_id:
@@ -320,9 +319,8 @@ class Youtupy:
 
                 while True:
                     try:
-
-                        # if history_file.exists():
-                        #     os.remove(history_file)
+                        if 'pageToken' in params:
+                            del params['pageToken']
 
                         tokens, history = _load_page_token(history_file)
 
@@ -332,7 +330,6 @@ class Youtupy:
 
                         for token in tokens:
                             self.quota.handle_limit(max_quota=self.max_quota)
-                            logger.info(tokens)
 
                             if token != "":
                                 logger.info("Adding page token...")
@@ -355,7 +352,7 @@ class Youtupy:
                     except KeyboardInterrupt:
                         if history_file.exists():
                             os.remove(history_file)
-                        sys.exit()
+                        sys.exit(1)
 
                 os.remove(history_file)
 

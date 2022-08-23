@@ -13,10 +13,10 @@ from youtupy import tidier
 
 # Logging
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 file_handler = logging.FileHandler("youtupy.log")
-file_handler.setLevel(logging.DEBUG)
+file_handler.setLevel(logging.INFO)
 file_formatter = logging.Formatter(
     "%(asctime)s - %(module)s: %(message)s (%(levelname)s)"
 )

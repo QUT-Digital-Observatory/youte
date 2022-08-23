@@ -3,6 +3,8 @@ Copyright: Digital Observatory 2022 <digitalobservatory@qut.edu.au>
 Author: Boyd Nguyen <thaihoang.nguyen@qut.edu.au>
 """
 import logging
+import sys
+
 import click
 from pathlib import Path
 
@@ -85,9 +87,6 @@ def search(
 @click.option(
     "-p", "--by-parent", help="Get all replies to a parent comment", is_flag=True
 )
-@click.option(
-    "-c", "--by-channel", help="Get all comments for a channel ID", is_flag=True
-)
 @click.option("-v", "--by-video", help="Get all comments for a video ID", is_flag=True)
 @click.option(
     "--max-quota", default=10000, help="Maximum quota allowed", show_default=True
@@ -99,8 +98,7 @@ def list_comments(
     max_quota: int,
     name: str,
     by_video,
-    by_parent,
-    by_channel,
+    by_parent
 ) -> None:
     """
     Get YouTube comments from a list of comment/channel/video ids.
@@ -115,16 +113,25 @@ def list_comments(
     with open(filepath, mode="r") as filepath:
         ids = [row.rstrip() for row in filepath.readlines()]
 
-    # item_type = 'comment_threads' if (by_channel or by_video) else 'comments'
+    if by_video and by_parent:
+        click.secho("Both video and parent flags are on. Only one is allowed.",
+                    fg="red",
+                    bold=True)
+        sys.exit(1)
+
     item_type = "comments" if by_parent else "comment_threads"
-    collector.list_items(
-        item_type=item_type,
-        ids=ids,
-        output_path=output,
-        by_parent_id=by_parent,
-        by_channel_id=by_channel,
-        by_video_id=by_video,
-    )
+
+    if by_video:
+        by = 'video'
+    elif by_parent:
+        by = 'parent'
+    else:
+        by = None
+
+    collector.list_items(item_type=item_type,
+                         ids=ids,
+                         output_path=output,
+                         by=by)
 
 
 @youtupy.command()

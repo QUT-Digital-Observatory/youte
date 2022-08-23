@@ -230,13 +230,10 @@ class Youtupy:
         item_type,
         ids: List,
         output_path,
-        by_parent_id=None,
-        by_channel_id=None,
-        by_video_id=None,
+        by=None,
         saved_to='history.db',
         **kwargs,
     ):
-
         request_info = _get_endpoint(item_type)
         url = request_info["url"]
         api_cost_unit = request_info["api_cost_unit"]
@@ -255,13 +252,18 @@ class Youtupy:
         # 1. A comma-separated list of ids can be passed in the request param
         # 2. Only a single id can be passed in the request param
 
+        valid_by_values = ['parent', 'video']
+
+        if by and by not in valid_by_values:
+            raise ValueError("`by` must be `parent` or `video`")
+
         is_channel_video = item_type in ["channels", "videos"]
         get_comments_only = (item_type == "comment_threads") and (
-            not (by_parent_id or by_channel_id or by_video_id)
+            not (by == 'parent' or by == 'video')
         )
-        get_by_parents = (item_type == "comments") and by_parent_id
+        get_by_parents = (item_type == "comments") and by == 'parent'
         get_by_video_channel = (item_type == "comment_threads") and (
-            by_channel_id or by_video_id
+            by == 'video'
         )
 
         can_batch_ids = is_channel_video or get_comments_only
@@ -310,12 +312,10 @@ class Youtupy:
 
             for each in tqdm(ids):
 
-                if by_parent_id:
+                if by == 'parent':
                     params["parentId"] = each
-                elif by_video_id:
+                elif by == 'video':
                     params["videoId"] = each
-                elif by_channel_id:
-                    params["channelId"] = each
 
                 while True:
                     try:

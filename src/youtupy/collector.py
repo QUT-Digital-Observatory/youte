@@ -1,13 +1,12 @@
 import logging
 import sqlite3
 import requests
-from requests import Response
 from datetime import datetime
 from dateutil import tz
 import random
 import json
 import time
-from typing import List, Tuple
+from typing import List, Tuple, Mapping
 from pathlib import Path
 import click
 from tqdm import tqdm
@@ -23,11 +22,11 @@ logger = logging.getLogger(__name__)
 class ProgressSaver:
     def __init__(self, path):
         self.path = path
-        self.conn = sqlite3.connect(path)
+        self.conn = sqlite3.connect(path, isolation_level=None)
 
     def load_token(self) -> List:
-        with self.conn as con:
-            con.executescript(
+        self.conn.execute("BEGIN")
+        self.conn.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS history (
                     next_page_token PRIMARY KEY,
@@ -38,10 +37,11 @@ class ProgressSaver:
                 VALUES ("");
                 """
             )
+        self.conn.execute("COMMIT")
 
         tokens = [
             row[0]
-            for row in con.execute(
+            for row in self.conn.execute(
                 """
                     SELECT next_page_token FROM history
                     WHERE retrieval_time IS NULL
@@ -66,6 +66,9 @@ class ProgressSaver:
             (token,),
         )
 
+    def close(self) -> None:
+        self.conn.close()
+
 
 def _confirm_existing_history(filename: str) -> None:
     if os.path.exists(filename):
@@ -86,9 +89,9 @@ def _load_page_token(filename) -> Tuple[List, ProgressSaver]:
     return tokens, history
 
 
-def _request_with_error_handling(url, params) -> Response:
+def _request_with_error_handling(url: str, params: Mapping) -> requests.Response:
     response = requests.get(url, params=params)
-    logger.info(f"Getting {response.url}.\n" f"Status: {response.status_code}.")
+    logger.info(f"Getting {response.url}.\nStatus: {response.status_code}.")
 
     if response.status_code in [403, 400, 404]:
         logger.error(f"Error: {response.url}")
@@ -107,14 +110,14 @@ def _request_with_error_handling(url, params) -> Response:
                 )
                 click.secho(f"Reason: {error['reason']}", fg="red", bold=True)
                 logger.error(json.dumps(response.json()))
-                sys.exit()
+                sys.exit(1)
 
     time.sleep(1)
 
     return response
 
 
-def _write_output_to_jsonl(output_path, json_rec) -> None:
+def _write_output_to_jsonl(output_path: str, json_rec: Mapping) -> None:
     logger.info(f"Writing output to {output_path}.")
     with open(output_path, "a") as file:
         json_record = json.dumps(json_rec)
@@ -144,7 +147,7 @@ def _prompt_save_progress(filename) -> None:
     sys.exit()
 
 
-def _get_page_token(response: Response, saved_to: ProgressSaver) -> None:
+def _get_page_token(response: requests.Response, saved_to: ProgressSaver) -> None:
     try:
         next_page_token = response.json()["nextPageToken"]
         saved_to.add_token(next_page_token)
@@ -169,14 +172,14 @@ class Youtupy:
         else:
             raise TypeError("Has to be a Quota object.")
 
-    def search(self, query, output_path, **kwargs):
+    def search(self, query, output_path, save_to='history.db', **kwargs):
         api_cost = 100
 
         self.quota.get_quota()
 
         page = 1
 
-        history_file = "history.db"
+        history_file = save_to
         _confirm_existing_history(history_file)
 
         while True:
@@ -232,6 +235,7 @@ class Youtupy:
         by_parent_id=None,
         by_channel_id=None,
         by_video_id=None,
+        saved_to='history.db',
         **kwargs,
     ):
 
@@ -304,7 +308,7 @@ class Youtupy:
 
         elif cannot_batch_ids:
 
-            history_file = Path("history.db")
+            history_file = Path(saved_to)
 
             for each in tqdm(ids):
                 if by_parent_id:

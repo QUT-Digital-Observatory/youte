@@ -26,7 +26,7 @@ class ProgressSaver:
 
     def load_token(self) -> List:
         self.conn.executescript(
-                """
+            """
                 CREATE TABLE IF NOT EXISTS history (
                     next_page_token PRIMARY KEY,
                     retrieval_time
@@ -35,7 +35,7 @@ class ProgressSaver:
                 INSERT OR IGNORE INTO history(next_page_token)
                 VALUES ("");
                 """
-            )
+        )
 
         tokens = [
             row[0]
@@ -51,7 +51,7 @@ class ProgressSaver:
 
     def update_token(self, token: str) -> None:
         self.conn.execute(
-          "REPLACE INTO history VALUES (?,?)", (token, datetime.now(tz=tz.UTC))
+            "REPLACE INTO history VALUES (?,?)", (token, datetime.now(tz=tz.UTC))
         )
         self.conn.commit()
 
@@ -170,7 +170,7 @@ class Youte:
         else:
             raise TypeError("Has to be a Quota object.")
 
-    def search(self, query, output_path, save_to='history.db', **kwargs):
+    def search(self, query, output_path, save_to="history.db", **kwargs):
         api_cost = 100
 
         self.quota.get_quota()
@@ -231,7 +231,7 @@ class Youte:
         ids: List,
         output_path,
         by=None,
-        saved_to='history.db',
+        saved_to="history.db",
         **kwargs,
     ):
         request_info = _get_endpoint(item_type)
@@ -252,19 +252,17 @@ class Youte:
         # 1. A comma-separated list of ids can be passed in the request param
         # 2. Only a single id can be passed in the request param
 
-        valid_by_values = ['parent', 'video']
+        valid_by_values = ["parent", "video"]
 
         if by and by not in valid_by_values:
             raise ValueError("`by` must be `parent` or `video`")
 
         is_channel_video = item_type in ["channels", "videos"]
         get_comments_only = (item_type == "comment_threads") and (
-            not (by == 'parent' or by == 'video')
+            not (by == "parent" or by == "video")
         )
-        get_by_parents = (item_type == "comments") and by == 'parent'
-        get_by_video_channel = (item_type == "comment_threads") and (
-            by == 'video'
-        )
+        get_by_parents = (item_type == "comments") and by == "parent"
+        get_by_video_channel = (item_type == "comment_threads") and (by == "video")
 
         can_batch_ids = is_channel_video or get_comments_only
         cannot_batch_ids = get_by_parents or get_by_video_channel
@@ -312,15 +310,15 @@ class Youte:
 
             for each in tqdm(ids):
 
-                if by == 'parent':
+                if by == "parent":
                     params["parentId"] = each
-                elif by == 'video':
+                elif by == "video":
                     params["videoId"] = each
 
                 while True:
                     try:
-                        if 'pageToken' in params:
-                            del params['pageToken']
+                        if "pageToken" in params:
+                            del params["pageToken"]
 
                         tokens, history = _load_page_token(history_file)
 

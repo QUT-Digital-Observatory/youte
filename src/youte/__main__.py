@@ -93,12 +93,7 @@ def search(
 )
 @click.option("--name", help="Name of the API key (optional)")
 def list_comments(
-    filepath: str,
-    output: str,
-    max_quota: int,
-    name: str,
-    by_video,
-    by_parent
+    filepath: str, output: str, max_quota: int, name: str, by_video, by_parent
 ) -> None:
     """
     Get YouTube comments from a list of comment/channel/video ids.
@@ -114,24 +109,23 @@ def list_comments(
         ids = [row.rstrip() for row in filepath.readlines()]
 
     if by_video and by_parent:
-        click.secho("Both video and parent flags are on. Only one is allowed.",
-                    fg="red",
-                    bold=True)
+        click.secho(
+            "Both video and parent flags are on. Only one is allowed.",
+            fg="red",
+            bold=True,
+        )
         sys.exit(1)
 
     item_type = "comments" if by_parent else "comment_threads"
 
     if by_video:
-        by = 'video'
+        by = "video"
     elif by_parent:
-        by = 'parent'
+        by = "parent"
     else:
         by = None
 
-    collector.list_items(item_type=item_type,
-                         ids=ids,
-                         output_path=output,
-                         by=by)
+    collector.list_items(item_type=item_type, ids=ids, output_path=output, by=by)
 
 
 @youte.command()

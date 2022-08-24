@@ -60,8 +60,7 @@ class Quota:
 
             # get midnight Pacific time
             now_pt = datetime.now(tz=tz.gettz("US/Pacific"))
-            midnight_pt = now_pt.replace(
-                hour=0, minute=0, second=0, microsecond=0)
+            midnight_pt = now_pt.replace(hour=0, minute=0, second=0, microsecond=0)
 
             if timestamp > midnight_pt:
                 logger.debug(f"Quota found, {quota} units have been used.")

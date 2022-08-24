@@ -110,15 +110,15 @@ youte search '"australia zoo"' aussie_zoo.jsonl
 
 #### `OUTPUT`  
 
-Path of the output file where raw JSON responses will be stored. Must have `.json` file endings. If the output file already exists, `youte` will **_update_** the existing file, instead of overwriting it.  
+Path of the output file where raw JSON responses will be stored. Must have `.json` file endings (e.g., `.json` or `.jsonl`). If the output file already exists, `youte` will **_update_** the existing file, instead of overwriting it.  
 
 #### `--from` (optional)  
 
-Start date limit for the search results returned - the results returned by the API should only contain videos created on or after this date. Has to be in ISO format (YYYY-MM-DD).  
+Start date limit for the search results returned - the results returned by the API should only contain videos created on or after this date (UTC time, which is the default time zone for the YouTube API). Has to be in ISO format (YYYY-MM-DD).  
 
 #### `--to` (optional)  
 
-End date limit for the search results returned - the results returned by the API should only contain videos created on or before this date. Has to be in ISO format (YYYY-MM-DD).  
+End date limit for the search results returned - the results returned by the API should only contain videos created on or before this date (UTC time, which is the default time zone for the YouTube API). Has to be in ISO format (YYYY-MM-DD).  
 
 #### `--get-id` (optional)  
 
@@ -132,7 +132,7 @@ The API key name has to be added to the config file first using `youte config ad
 
 #### `--max-quota` (optional)  
 
-Change the maximum quota allowed for your API key. The default value is 10,000, which is the standard quota cap for all Google accounts. Read more about YouTube API's quota system [below](#youtube-api-quota-system-and-youte-handling-of-quota).  
+Change the maximum quota that your API key is allowed to consume. The default value is 10,000, which is the standard quota cap for all Google accounts. Read more about YouTube API's quota system [below](#youtube-api-quota-system-and-youte-handling-of-quota).  
 
 ### Saving search progress  
 

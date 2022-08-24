@@ -65,7 +65,7 @@ youte's config file is stored in a central place whose exact location depends on
 
 - Linux/Unix: ~/.config/youte/   
 - Mac OS X: ~/Library/Application Support/youte  
-- Windows: C:\Users\<user>\AppData\Roaming\youte  
+- Windows: C:\Users\\<user>\AppData\Roaming\youte  
 
 The config file stores API keys, as well as the quota usage associated with each API key.  
 
@@ -74,11 +74,11 @@ The config file stores API keys, as well as the quota usage associated with each
 ```commandline  
 Usage: youte search [OPTIONS] QUERY OUTPUT
 
-Do a YouTube search. OUTPUT should be a filename ending in .jsonl
+Do a YouTube search. OUTPUT should be a filename with a `.json` file ending (e.g., `.json` or `.jsonl`).
 
 Options:
-  --from TEXT          Start date (YYYY-MM-DD)
-  --to TEXT            End date (YYYY-MM-DD)
+  --from TEXT          Start date (YYYY-MM-DD) in UTC time
+  --to TEXT            End date (YYYY-MM-DD) in UTC time
   --name TEXT          Name of the API key (optional)
   --get-id             Only retrieve video IDs
   --max-quota INTEGER  Maximum quota allowed  [default: 10000]
@@ -191,15 +191,15 @@ Options:
 ### Examples  
 
 ```commandline  
-youte hydrate video_ids.csv --output videos.jsonl  
-youte hydrate channel_ids.txt --output channels.jsonl  
+youte hydrate video_ids.csv videos.jsonl  
+youte hydrate channel_ids.txt --channel channels.jsonl  
 ```  
 
 ### Arguments and options  
 
 #### `FILEPATH`  
 
-Path of a text file containing a line-separated list of video or channel IDs.  
+Path of a text file (e.g., `.csv` or `.txt`) containing a line-separated list of video or channel IDs.  
 
 #### `--channel`  
 

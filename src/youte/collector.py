@@ -13,8 +13,8 @@ from tqdm import tqdm
 import os
 import sys
 
-from youtupy.quota import Quota
-from youtupy.utilities import create_utc_datetime_string
+from youte.quota import Quota
+from youte.utilities import create_utc_datetime_string
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +153,7 @@ def _get_page_token(response: requests.Response, saved_to: ProgressSaver) -> Non
         logger.info("No more page...")
 
 
-class Youtupy:
+class Youte:
     def __init__(self, api_key: str, max_quota: int = 10000):
         self.api_key = api_key
         self._quota = None

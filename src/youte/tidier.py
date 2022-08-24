@@ -7,8 +7,8 @@ from tqdm import tqdm
 import logging
 from pathlib import Path
 
-from youtupy.utilities import validate_file, check_file_overwrite
-import youtupy.table_mappings as mappings
+from youte.utilities import validate_file, check_file_overwrite
+import youte.table_mappings as mappings
 
 logger = logging.getLogger()
 
@@ -172,13 +172,16 @@ def tidy_video(filepath: str, output: Union[str, Path]) -> None:
 
         # optional properties
         video_mapping["default_language"] = snippet.get("defaultLanguage")
-        video_mapping["default_audio_language"] = snippet.get("defaultAudioLanguage")
+        video_mapping["default_audio_language"] = snippet.get(
+            "defaultAudioLanguage")
         video_mapping["rejection_reason"] = status.get("rejectionReason")
         video_mapping["region_allowed"] = (
-            str(region_restriction.get("allowed")) if region_restriction else None
+            str(region_restriction.get("allowed")
+                ) if region_restriction else None
         )
         video_mapping["region_blocked"] = (
-            str(region_restriction.get("blocked")) if region_restriction else None
+            str(region_restriction.get("blocked")
+                ) if region_restriction else None
         )
         video_mapping["yt_rating"] = content_rating.get("ytRating")
         video_mapping["tags"] = str(snippet.get("tags"))
@@ -274,7 +277,8 @@ def tidy_comments(filepath, output: Union[str, Path]) -> None:
 
         if "topLevelComment" in item["snippet"]:
             snippet = item["snippet"]["topLevelComment"]["snippet"]
-            comment_mapping["reply_count"] = item["snippet"].get("totalReplyCount")
+            comment_mapping["reply_count"] = item["snippet"].get(
+                "totalReplyCount")
             comment_mapping["can_reply"] = item["snippet"].get("canReply")
         else:
             comment_mapping["reply_count"] = None

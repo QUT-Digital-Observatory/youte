@@ -8,16 +8,16 @@ import sys
 import click
 from pathlib import Path
 
-from youtupy.collector import Youtupy
-from youtupy.config import YoutubeConfig, get_api_key, get_config_path
-from youtupy.quota import Quota
-from youtupy import tidier
+from youte.collector import Youte
+from youte.config import YouteConfig, get_api_key, get_config_path
+from youte.quota import Quota
+from youte import tidier
 
 # Logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-file_handler = logging.FileHandler("youtupy.log")
+file_handler = logging.FileHandler("youte.log")
 file_handler.setLevel(logging.INFO)
 file_formatter = logging.Formatter(
     "%(asctime)s - %(module)s: %(message)s (%(levelname)s)"
@@ -29,15 +29,15 @@ logger.addHandler(file_handler)
 
 # CLI argument set up:
 @click.group()
-def youtupy():
+def youte():
     """
     Utility to collect and tidy YouTube meta-data and comments via YouTube API.
-    Run `youtupy config --help` to get started.
+    Run `youte config --help` to get started.
     """
     pass
 
 
-@youtupy.command()
+@youte.command()
 @click.argument("query", required=True)
 @click.argument("output", required=True)
 @click.option("--from", "from_", help="Start date (YYYY-MM-DD)")
@@ -81,7 +81,7 @@ def search(
     search_collector.search(query=query, output_path=output, **params)
 
 
-@youtupy.command()
+@youte.command()
 @click.argument("filepath", required=True)
 @click.argument("output", required=True)
 @click.option(
@@ -134,7 +134,7 @@ def list_comments(
                          by=by)
 
 
-@youtupy.command()
+@youte.command()
 @click.argument("filepath", required=True)
 @click.argument("output", required=True)
 @click.option(
@@ -162,7 +162,7 @@ def hydrate(filepath, output, channel, name, max_quota):
     collector.list_items(item_type=item_type, ids=ids, output_path=output)
 
 
-@youtupy.command()
+@youte.command()
 @click.argument("filepath", required=True)
 @click.argument("output", required=True)
 def tidy(filepath, output):
@@ -170,7 +170,7 @@ def tidy(filepath, output):
     tidier.master_tidy(filepath=filepath, output=output)
 
 
-@youtupy.group()
+@youte.group()
 def config():
     """
     Set up API keys to access data from YouTube API.
@@ -183,7 +183,7 @@ def add_key():
     Add YouTube API key
     """
     click.echo()
-    click.secho("Welcome to youtupy! 👋", fg="green", bold=True)
+    click.secho("Welcome to youte! 👋", fg="green", bold=True)
     click.echo("Configuring your profile...")
     click.echo()
     click.echo(
@@ -193,7 +193,7 @@ def add_key():
     click.echo("To obtain an API key, follow the steps in")
     click.echo("https://developers.google.com/youtube/v3/getting-started.")
     click.echo()
-    click.echo("Once you have an API key, run `youtupy configure add-key` to start.")
+    click.echo("Once you have an API key, run `youte configure add-key` to start.")
 
     click.secho("Setting up you Youtube configuration...", fg="magenta")
     click.echo()
@@ -209,7 +209,7 @@ def add_key():
         )
         config_file_path.parent.mkdir(parents=True)
 
-    config = YoutubeConfig(filename=str(config_file_path))
+    config = YouteConfig(filename=str(config_file_path))
     click.echo(f"Config file is stored at {config_file_path.resolve()}.")
 
     config.add_profile(name=username, key=api_key)
@@ -219,9 +219,9 @@ def add_key():
     click.echo()
     click.secho("API key successfully configured 🔑!", fg="green", bold=True)
     click.echo()
-    click.echo("To add more API keys, rerun `youtupy config add-key`.")
+    click.echo("To add more API keys, rerun `youte config add-key`.")
     click.echo(
-        "To set an API key as default, run `youtupy config set-default" " <name-of-key>"
+        "To set an API key as default, run `youte config set-default" " <name-of-key>"
     )
 
 
@@ -230,8 +230,8 @@ def add_key():
 def set_default(name):
     """Set default API key"""
     click.echo("Setting %s as default key" % name)
-    config_file_path = Path(click.get_app_dir("youtupy")).joinpath("config")
-    config = YoutubeConfig(filename=str(config_file_path))
+    config_file_path = Path(click.get_app_dir("youte")).joinpath("config")
+    config = YouteConfig(filename=str(config_file_path))
     config.set_default(name)
     click.echo("%s is now your default API key 🔑" % config[name]["key"])
 
@@ -240,7 +240,7 @@ def set_default(name):
 def list_keys():
     """Show a list of keys already added"""
     click.echo()
-    config = YoutubeConfig(filename=get_config_path())
+    config = YouteConfig(filename=get_config_path())
 
     if not Path(get_config_path()).exists():
         click.echo("No API key has been added to config file.")
@@ -261,7 +261,7 @@ def list_keys():
 
 def _set_up_collector(api_key, max_quota):
     quota = Quota(api_key=api_key, config_path=get_config_path())
-    collector = Youtupy(api_key=api_key, max_quota=max_quota)
+    collector = Youte(api_key=api_key, max_quota=max_quota)
     collector.quota = quota
 
     return collector

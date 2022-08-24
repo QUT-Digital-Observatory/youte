@@ -4,8 +4,8 @@ from dateutil import tz
 import time
 from pathlib import Path
 
-from youtupy.config import YoutubeConfig
-from youtupy.exceptions import InvalidFileName
+from youte.config import YouteConfig
+from youte.exceptions import InvalidFileName
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class Quota:
         if not full_path.exists():
             raise InvalidFileName("Config file not found.")
 
-        config = YoutubeConfig(str(full_path))
+        config = YouteConfig(str(full_path))
 
         for profile in config:
             if config[profile]["key"] == self.api_key:
@@ -48,7 +48,7 @@ class Quota:
         if "name" not in locals():
             raise KeyError(
                 "No profile for key %s found."
-                "Configure your API key first with `youtupy init`."
+                "Configure your API key first with `youte init`."
             )
 
         if "units" not in config[name]:
@@ -60,7 +60,8 @@ class Quota:
 
             # get midnight Pacific time
             now_pt = datetime.now(tz=tz.gettz("US/Pacific"))
-            midnight_pt = now_pt.replace(hour=0, minute=0, second=0, microsecond=0)
+            midnight_pt = now_pt.replace(
+                hour=0, minute=0, second=0, microsecond=0)
 
             if timestamp > midnight_pt:
                 logger.debug(f"Quota found, {quota} units have been used.")
@@ -85,7 +86,7 @@ class Quota:
             raise InvalidFileName("Config file not found.")
 
         else:
-            config = YoutubeConfig(str(full_path))
+            config = YouteConfig(str(full_path))
 
             for profile in config:
                 if config[profile]["key"] == self.api_key:
@@ -95,7 +96,7 @@ class Quota:
                 raise KeyError(
                     "No profile for key %s found."
                     "Configure your API key first "
-                    "with `youtupy init`." % self.api_key
+                    "with `youte init`." % self.api_key
                 )
 
             else:

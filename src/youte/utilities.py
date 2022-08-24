@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 import click
 
-from youtupy.exceptions import InvalidFileName
+from youte.exceptions import InvalidFileName
 
 logger = logging.getLogger(__name__)
 

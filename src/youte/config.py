@@ -7,9 +7,9 @@ import sys
 logger = logging.getLogger(__name__)
 
 
-class YoutubeConfig(configobj.ConfigObj):
+class YouteConfig(configobj.ConfigObj):
     def __init__(self, filename):
-        super(YoutubeConfig, self).__init__(filename)
+        super(YouteConfig, self).__init__(filename)
         self.file_path = filename
 
     def add_profile(self, name, key):
@@ -33,8 +33,8 @@ class YoutubeConfig(configobj.ConfigObj):
                 You might not have added this profile or
                 added it under a different name.
                 Run:
-                - `youtupy init list-keys` to see the list of registered keys.
-                - `youtupy init add-key to add a new API key.
+                - `youte init list-keys` to see the list of registered keys.
+                - `youte init add-key to add a new API key.
                 """
             )
 
@@ -44,8 +44,8 @@ def get_api_key(name=None, filename="config"):
     If no name is given, use default API key
     """
     click.secho("Getting API key from config file.", fg="magenta")
-    config_file_path = Path(click.get_app_dir("youtupy")).joinpath(filename)
-    config = YoutubeConfig(filename=str(config_file_path))
+    config_file_path = Path(click.get_app_dir("youte")).joinpath(filename)
+    config = YouteConfig(filename=str(config_file_path))
 
     if name:
         try:
@@ -55,9 +55,9 @@ def get_api_key(name=None, filename="config"):
             click.secho(
                 "No API key found for %s. Did you use a different name?\n"
                 "Try:\n"
-                "`youtupy init list-keys` to get a "
+                "`youte init list-keys` to get a "
                 "full list of registered API keys "
-                "or `youtupy init add-key` to add a new API key" % name,
+                "or `youte init add-key` to add a new API key" % name,
                 fg="red",
                 bold=True,
             )
@@ -82,5 +82,5 @@ def get_api_key(name=None, filename="config"):
 
 
 def get_config_path(filename="config"):
-    config_file_path = Path(click.get_app_dir("youtupy")).joinpath(filename)
+    config_file_path = Path(click.get_app_dir("youte")).joinpath(filename)
     return str(config_file_path)

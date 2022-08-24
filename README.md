@@ -8,9 +8,12 @@ A command line utility to get YouTube video metadata from Youtube API.
 
 ```shell  
 git clone git@github.com:QUT-Digital-Observatory/youte.gitcd youte  
+
 # create a virtual environment (Linux)  
 python3 -m venv venvsource venv/bin/activate  
-# other any other ways of creating virtual environments  
+
+# or use your preferred way of creating a virtual environment, for example:
+conda create --name new_env_name
 
 # install package (note the dot "." at the end)  
 pip install -e .
@@ -71,7 +74,7 @@ The config file stores API keys, as well as the quota usage associated with each
 ```commandline  
 Usage: youte search [OPTIONS] QUERY OUTPUT
 
-Do a YouTube search.
+Do a YouTube search. OUTPUT should be a filename ending in .jsonl
 
 Options:
   --from TEXT          Start date (YYYY-MM-DD)

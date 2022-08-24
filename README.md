@@ -65,7 +65,7 @@ youte's config file is stored in a central place whose exact location depends on
 
 - Linux/Unix: ~/.config/youte/   
 - Mac OS X: ~/Library/Application Support/youte  
-- Windows: C:\Users\\<user>\AppData\Roaming\youte  
+- Windows: C:\Users\\\<user>\\AppData\Roaming\youte  
 
 The config file stores API keys, as well as the quota usage associated with each API key.  
 

@@ -198,7 +198,7 @@ class Youte:
                     if token != "":
                         params["pageToken"] = token
 
-                    click.echo(f"Getting page {page} ⏳")
+                    click.echo(f"Getting page {page}")
 
                     r = _request_with_error_handling(url=url, params=params)
 
@@ -273,14 +273,14 @@ class Youte:
         if can_batch_ids:
             logger.info("Batching ids")
             batch_no = 0
-            click.secho("Getting data ⏳")
+            click.secho("Getting data")
             while ids:
                 if len(ids) <= 50:
                     ids_string = ",".join(ids)
                     ids = None
                 else:
                     total_batches = int(len(ids) / 50)
-                    click.echo(f"{total_batches} pages remaining ⏳")
+                    click.echo(f"{total_batches} pages remaining")
                     batch = random.sample(ids, k=50)
                     ids_string = ",".join(batch)
                     for elm in batch:

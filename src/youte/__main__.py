@@ -177,11 +177,11 @@ def add_key():
     Add YouTube API key
     """
     click.echo()
-    click.secho("Welcome to youte! 👋", fg="green", bold=True)
+    click.secho("Welcome to youte!", fg="green", bold=True)
     click.echo("Configuring your profile...")
     click.echo()
     click.echo(
-        "To get started, an API key is required to get data " "from Youtube API."
+        "To get started, an API key is required to get data from Youtube API."
     )
     click.echo()
     click.echo("To obtain an API key, follow the steps in")
@@ -211,7 +211,7 @@ def add_key():
     if click.confirm("Set this API key as default?"):
         config.set_default(username)
     click.echo()
-    click.secho("API key successfully configured 🔑!", fg="green", bold=True)
+    click.secho("API key successfully configured!", fg="green", bold=True)
     click.echo()
     click.echo("To add more API keys, rerun `youte config add-key`.")
     click.echo(
@@ -227,7 +227,7 @@ def set_default(name):
     config_file_path = Path(click.get_app_dir("youte")).joinpath("config")
     config = YouteConfig(filename=str(config_file_path))
     config.set_default(name)
-    click.echo("%s is now your default API key 🔑" % config[name]["key"])
+    click.echo("%s is now your default API key" % config[name]["key"])
 
 
 @config.command()

@@ -107,7 +107,7 @@ youte search '"australia zoo"' aussie_zoo.jsonl
 
 #### `OUTPUT`  
 
-Path of the output file where raw JSON responses will be stored. Must have `.jsonl` file endings, or else an `InvalidFileName` will be raised. If the output file already exists, `youte` will **_update_** the existing file, instead of overwriting it.  
+Path of the output file where raw JSON responses will be stored. Must have `.json` file endings. If the output file already exists, `youte` will **_update_** the existing file, instead of overwriting it.  
 
 #### `--from` (optional)  
 

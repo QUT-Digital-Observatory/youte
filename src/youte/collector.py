@@ -175,7 +175,7 @@ class Youte:
 
         self.quota.get_quota()
 
-        page = 1
+        page = 0
 
         history_file = save_to
         _confirm_existing_history(history_file)
@@ -188,6 +188,7 @@ class Youte:
                     break
 
                 for token in tokens:
+                    page += 1
 
                     self.quota.handle_limit(max_quota=self.max_quota)
 
@@ -212,7 +213,6 @@ class Youte:
 
                     # store recorded and unrecorded tokens in config file
                     history.update_token(token)
-                    page += 1
 
             except KeyboardInterrupt:
                 click.echo()
@@ -223,6 +223,7 @@ class Youte:
             f"Total units used: {self.quota.units}",
             fg="bright_green",
         )
+        history.close()
         os.remove(history_file)
 
     def list_items(
@@ -349,9 +350,11 @@ class Youte:
 
                     except KeyboardInterrupt:
                         if history_file.exists():
+                            history.close()
                             os.remove(history_file)
                         sys.exit(1)
 
+                history.close()
                 os.remove(history_file)
 
             click.secho("Completed!", fg="green")

@@ -3,6 +3,7 @@ import logging
 from dateutil import tz
 import time
 from pathlib import Path
+import click
 
 from youte.config import YouteConfig
 from youte.exceptions import InvalidFileName
@@ -109,9 +110,11 @@ class Quota:
         """
         if self.units > max_quota:
             logger.warning("Max quota reached.")
+            click.echo("Max quota reached.")
 
             sleep = _get_reset_remaining(datetime.now(tz=tz.UTC))
             logger.warning(f"Sleeping for {sleep} seconds...")
+            click.echo(f"Sleeping for {sleep} seconds...")
 
             time.sleep(sleep)
             time.sleep(2)

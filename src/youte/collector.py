@@ -216,6 +216,7 @@ class Youte:
 
             except KeyboardInterrupt:
                 click.echo()
+                history.close()
                 _prompt_save_progress(filename=history_file)
 
         click.secho(

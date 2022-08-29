@@ -77,7 +77,6 @@ Options:
   --from TEXT          Start date (YYYY-MM-DD)
   --to TEXT            End date (YYYY-MM-DD)
   --name TEXT          Name of the API key (optional)
-  --get-id             Only retrieve video IDs
   --max-quota INTEGER  Maximum quota allowed  [default: 10000]
   --help               Show this message and exit.
 ```  
@@ -116,10 +115,6 @@ Start date limit for the search results returned - the results returned by the A
 #### `--to` (optional)  
 
 End date limit for the search results returned - the results returned by the API should only contain videos created on or before this date. Has to be in ISO format (YYYY-MM-DD).  
-
-#### `--get-id` (optional)  
-
-Return the video IDs of the search results only, instead of full data. This is useful when all you want is the IDs of the search results for hydration using `youte hydrate`. Currently, `youte tidy` cannot be used on JSON files returned by `--get-id`.  
 
 #### `--name` (optional)  
 

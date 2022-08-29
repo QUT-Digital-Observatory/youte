@@ -43,7 +43,7 @@ def youte():
 @click.option("--from", "from_", help="Start date (YYYY-MM-DD)")
 @click.option("--to", help="End date (YYYY-MM-DD)")
 @click.option("--name", help="Name of the API key (optional)")
-@click.option("--get-id", help="Only retrieve video IDs", is_flag=True)
+# @click.option("--get-id", help="Only retrieve video IDs", is_flag=True)
 @click.option(
     "--max-quota", default=10000, help="Maximum quota allowed", show_default=True
 )
@@ -53,8 +53,8 @@ def search(
     from_: str,
     to: str,
     name: str,
-    max_quota: int,
-    get_id=False,
+    max_quota: int
+    # get_id=False,
 ):
     """Do a YouTube search."""
 

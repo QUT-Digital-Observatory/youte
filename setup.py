@@ -2,8 +2,11 @@ from setuptools import setup, find_packages
 
 setup(
     name="youte",
-    version="0.0.1a1",
+    author="Digital Observatory",
+    authhor_email="digitalobservatory@qut.edu.au",
+    version="0.0.1b",
     description="Command-line tool to collect video metadata and comments from Youtube API",
+    long_description="file: README.md",
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Programming Language :: Pyhon :: 3.8'

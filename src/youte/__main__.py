@@ -203,7 +203,7 @@ def add_key():
         )
         config_file_path.parent.mkdir(parents=True)
 
-    config = YouteConfig(filename=str(config_file_path))
+    config = _set_up_config()
     click.echo(f"Config file is stored at {config_file_path.resolve()}.")
 
     config.add_profile(name=username, key=api_key)
@@ -224,17 +224,38 @@ def add_key():
 def set_default(name):
     """Set default API key"""
     click.echo("Setting %s as default key" % name)
-    config_file_path = Path(click.get_app_dir("youte")).joinpath("config")
-    config = YouteConfig(filename=str(config_file_path))
-    config.set_default(name)
-    click.echo("%s is now your default API key" % config[name]["key"])
+    config = _set_up_config()
+    try:
+        config.set_default(name)
+        click.echo("%s is now your default API key" % config[name]["key"])
+    except KeyError:
+        click.secho(
+            """No such name found.
+            You might not have added this profile or
+            added it under a different name.
+            Run:
+            - `youte init list-keys` to see the list of registered keys.
+            - `youte init add-key to add a new API key.
+            """,
+            fg="red",
+            bold=True
+        )
+
+
+@config.command()
+@click.argument("name")
+def remove(name):
+    """Delete stored API key"""
+    config = _set_up_config()
+    config.delete_profile(name=name)
+    click.echo(f"Profile `{name}` successfully removed!")
 
 
 @config.command()
 def list_keys():
     """Show a list of keys already added"""
     click.echo()
-    config = YouteConfig(filename=get_config_path())
+    config = _set_up_config()
 
     if not Path(get_config_path()).exists():
         click.echo("No API key has been added to config file.")
@@ -259,3 +280,9 @@ def _set_up_collector(api_key, max_quota):
     collector.quota = quota
 
     return collector
+
+
+def _set_up_config(filename=get_config_path()):
+    config_file = YouteConfig(filename=filename)
+
+    return config_file

@@ -63,6 +63,7 @@ class ProgressSaver:
             """,
             (token,),
         )
+        self.conn.commit()
 
     def close(self) -> None:
         self.conn.close()

@@ -18,6 +18,14 @@ class YouteConfig(configobj.ConfigObj):
         self.write()
         logger.info(f"Add key to config file {self.filename}.")
 
+    def delete_profile(self, name):
+        try:
+            del self[name]
+            self.write()
+        except KeyError:
+            raise KeyError(f"{name} not found.")
+
+
     def set_default(self, name):
         for profile in self:
             if "default" in self[profile]:
@@ -28,15 +36,7 @@ class YouteConfig(configobj.ConfigObj):
             self.write()
             logger.info("%s is now the default API key." % name)
         except KeyError:
-            logger.error(
-                """No such name found.
-                You might not have added this profile or
-                added it under a different name.
-                Run:
-                - `youte init list-keys` to see the list of registered keys.
-                - `youte init add-key to add a new API key.
-                """
-            )
+            raise KeyError(f"{name} not found.")
 
 
 def get_api_key(name=None, filename="config"):

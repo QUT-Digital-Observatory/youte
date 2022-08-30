@@ -63,16 +63,16 @@ def search(
     search_collector = _set_up_collector(api_key=api_key, max_quota=max_quota)
 
     meta_data = "kind,etag,nextPageToken,regionCode,pageInfo"
-    fields = f"{meta_data},items/id/videoId" if get_id else "*"
+    # fields = f"{meta_data},items/id/videoId" if get_id else "*"
 
     params = {
         "part": "snippet",
         "maxResults": 50,
         "type": "video",
         "order": "date",
-        "safeSearch": "none",
-        "fields": fields,
+        "safeSearch": "none"
     }
+
     if from_:
         params["publishedAfter"] = from_
     if to:

@@ -12,6 +12,7 @@ import click
 from tqdm import tqdm
 import os
 import sys
+from typing import Union
 
 from youte.quota import Quota
 from youte.utilities import create_utc_datetime_string
@@ -140,7 +141,7 @@ def _prompt_save_progress(filename) -> None:
     if os.path.exists(filename):
         if click.confirm("Do you want to save your " "current progress?"):
             full_path = Path(filename).resolve()
-            click.echo(f"Progress saved at {full_path}.")
+            click.echo(f"Progress saved at {full_path}")
         else:
             os.remove(filename)
     sys.exit()
@@ -152,6 +153,17 @@ def _get_page_token(response: requests.Response, saved_to: ProgressSaver) -> Non
         saved_to.add_token(next_page_token)
     except KeyError:
         logger.info("No more page...")
+
+
+def _get_history_path(outfile: Union[str, Path]) -> Path:
+    history_dir = Path('.youte.history')
+
+    if not history_dir.exists():
+        os.mkdir(history_dir)
+
+    db_file = Path(outfile).with_suffix('.db')
+
+    return history_dir / db_file.name
 
 
 class Youte:
@@ -171,14 +183,14 @@ class Youte:
         else:
             raise TypeError("Has to be a Quota object.")
 
-    def search(self, query, output_path, save_to="history.db", **kwargs):
+    def search(self, query, output_path, **kwargs):
         api_cost = 100
 
         self.quota.get_quota()
 
         page = 0
 
-        history_file = save_to
+        history_file = _get_history_path(output_path)
         _confirm_existing_history(history_file)
 
         while True:
@@ -309,7 +321,7 @@ class Youte:
 
         elif cannot_batch_ids:
 
-            history_file = Path(saved_to)
+            history_file = _get_history_path(output_path)
 
             for each in tqdm(ids):
 

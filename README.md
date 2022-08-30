@@ -8,9 +8,12 @@ A command line utility to get YouTube video metadata from Youtube API.
 
 ```shell  
 git clone git@github.com:QUT-Digital-Observatory/youte.gitcd youte  
+
 # create a virtual environment (Linux)  
 python3 -m venv venvsource venv/bin/activate  
-# other any other ways of creating virtual environments  
+
+# or use your preferred way of creating a virtual environment, for example:
+conda create --name new_env_name
 
 # install package (note the dot "." at the end)  
 pip install -e .
@@ -62,7 +65,7 @@ youte's config file is stored in a central place whose exact location depends on
 
 - Linux/Unix: ~/.config/youte/   
 - Mac OS X: ~/Library/Application Support/youte  
-- Windows: C:\Users\<user>\AppData\Roaming\youte  
+- Windows: C:\Users\\\<user>\\AppData\Roaming\youte  
 
 The config file stores API keys, as well as the quota usage associated with each API key.  
 
@@ -71,11 +74,11 @@ The config file stores API keys, as well as the quota usage associated with each
 ```commandline  
 Usage: youte search [OPTIONS] QUERY OUTPUT
 
-Do a YouTube search.
+Do a YouTube search. OUTPUT should be a filename with a `.json` file ending (e.g., `.json` or `.jsonl`).
 
 Options:
-  --from TEXT          Start date (YYYY-MM-DD)
-  --to TEXT            End date (YYYY-MM-DD)
+  --from TEXT          Start date (YYYY-MM-DD) in UTC time
+  --to TEXT            End date (YYYY-MM-DD) in UTC time
   --name TEXT          Name of the API key (optional)
   --max-quota INTEGER  Maximum quota allowed  [default: 10000]
   --help               Show this message and exit.
@@ -106,15 +109,15 @@ youte search '"australia zoo"' aussie_zoo.jsonl
 
 #### `OUTPUT`  
 
-Path of the output file where raw JSON responses will be stored. Must have `.json` file endings. If the output file already exists, `youte` will **_update_** the existing file, instead of overwriting it.  
+Path of the output file where raw JSON responses will be stored. Must have `.json` file endings (e.g., `.json` or `.jsonl`). If the output file already exists, `youte` will **_update_** the existing file, instead of overwriting it.  
 
 #### `--from` (optional)  
 
-Start date limit for the search results returned - the results returned by the API should only contain videos created on or after this date. Has to be in ISO format (YYYY-MM-DD).  
+Start date limit for the search results returned - the results returned by the API should only contain videos created on or after this date (UTC time, which is the default time zone for the YouTube API). Has to be in ISO format (YYYY-MM-DD).  
 
 #### `--to` (optional)  
 
-End date limit for the search results returned - the results returned by the API should only contain videos created on or before this date. Has to be in ISO format (YYYY-MM-DD).  
+End date limit for the search results returned - the results returned by the API should only contain videos created on or before this date (UTC time, which is the default time zone for the YouTube API). Has to be in ISO format (YYYY-MM-DD).  
 
 #### `--name` (optional)  
 
@@ -124,7 +127,7 @@ The API key name has to be added to the config file first using `youte config ad
 
 #### `--max-quota` (optional)  
 
-Change the maximum quota allowed for your API key. The default value is 10,000, which is the standard quota cap for all Google accounts. Read more about YouTube API's quota system [below](#youtube-api-quota-system-and-youte-handling-of-quota).  
+Change the maximum quota that your API key is allowed to consume. The default value is 10,000, which is the standard quota cap for all Google accounts. Read more about YouTube API's quota system [below](#youtube-api-quota-system-and-youte-handling-of-quota).  
 
 ### Saving search progress  
 
@@ -183,15 +186,15 @@ Options:
 ### Examples  
 
 ```commandline  
-youte hydrate video_ids.csv --output videos.jsonl  
-youte hydrate channel_ids.txt --output channels.jsonl  
+youte hydrate video_ids.csv videos.jsonl  
+youte hydrate channel_ids.txt --channel channels.jsonl  
 ```  
 
 ### Arguments and options  
 
 #### `FILEPATH`  
 
-Path of a text file containing a line-separated list of video or channel IDs.  
+Path of a text file (e.g., `.csv` or `.txt`) containing a line-separated list of video or channel IDs.  
 
 #### `--channel`  
 

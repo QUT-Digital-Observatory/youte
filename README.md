@@ -2,21 +2,12 @@
 
 A command line utility to get YouTube video metadata from Youtube API.  
 
-## Installation  
+## Installation
 
-(for testing purpose only)  
-
-```shell  
-git clone git@github.com:QUT-Digital-Observatory/youte.gitcd youte  
-
-# create a virtual environment (Linux)  
-python3 -m venv venvsource venv/bin/activate  
-
-# or use your preferred way of creating a virtual environment, for example:
-conda create --name new_env_name
-
-# install package (note the dot "." at the end)  
-pip install -e .
+```shell 
+python3 -m pip install youte
+# OR
+pip install youte
 ```  
 
 ## Initial set up  

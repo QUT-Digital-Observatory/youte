@@ -1,15 +1,22 @@
 from setuptools import setup, find_packages
+import pathlib
+
+here = pathlib.Path(__file__).parent.resolve()
+
+# Get the long description from the README file
+long_description = (here / "README.md").read_text(encoding="utf-8")
 
 setup(
     name="youte",
     author="Digital Observatory",
     authhor_email="digitalobservatory@qut.edu.au",
-    version="0.0.1b",
+    version="0.0.1b2",
     description="Command-line tool to collect video metadata and comments from Youtube API",
-    long_description="file: README.md",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     classifiers=[
         'Development Status :: 3 - Alpha',
-        'Programming Language :: Pyhon :: 3.8'
+        'Programming Language :: Python :: 3.8'
         ],
     packages=find_packages(where="src"),
     install_requires=[

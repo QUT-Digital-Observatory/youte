@@ -43,7 +43,18 @@ def youte():
 @click.option("--from", "from_", help="Start date (YYYY-MM-DD)")
 @click.option("--to", help="End date (YYYY-MM-DD)")
 @click.option("--name", help="Name of the API key (optional)")
-# @click.option("--get-id", help="Only retrieve video IDs", is_flag=True)
+@click.option("--order",
+              type=click.Choice(['date', 'rating', 'relevance', 'title'],
+                                case_sensitive=False),
+              help="Sort results",
+              show_default=True,
+              default='date')
+@click.option("--safe-search",
+              type=click.Choice(['none', 'moderate', 'strict'],
+                                case_sensitive=False),
+              help="Include or exclude restricted content",
+              default='none',
+              show_default=True)
 @click.option(
     "--max-quota", default=10000, help="Maximum quota allowed", show_default=True
 )
@@ -53,7 +64,9 @@ def search(
     from_: str,
     to: str,
     name: str,
-    max_quota: int
+    max_quota: int,
+    order,
+    safe_search
     # get_id=False,
 ):
     """Do a YouTube search."""
@@ -69,8 +82,8 @@ def search(
         "part": "snippet",
         "maxResults": 50,
         "type": "video",
-        "order": "date",
-        "safeSearch": "none"
+        "order": order,
+        "safeSearch": safe_search
     }
 
     if from_:

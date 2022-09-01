@@ -1,13 +1,11 @@
 # youte  
 
-A command line utility to get YouTube video metadata from Youtube API.  
+A command line utility to get YouTube video metadata from Youtube API. Currently still in beta development.
 
 ## Installation
 
-```shell 
-python3 -m pip install youte
-# OR
-pip install youte
+```shell
+python -m pip install youte
 ```  
 
 ## Initial set up  
@@ -18,29 +16,29 @@ To get data from YouTube API, you will need a YouTube API key. Follow YouTube [i
 
 ### Set up youte  
 
-youte requires a YouTube API key, stored in a *config* file, to run YouTube searches. To set up your YouTube API key with youte, run:  
+youte requires a YouTube API key to be stored in a *config* file, to run YouTube data collection. To set up your YouTube API key with youte, run:  
 
 ```shell  
 youte config add-key
 ```  
 
-The interactive prompt will ask you to input your API key, as well as a "name" for that key. The key name is used to identify the key, and can be anything you choose.  
+The interactive prompt will ask you to input your API key, as well as a "name" for that key. The name is used to identify the key, and can be anything you choose.
 
-The program will also ask if you want to set the given key as default.  
+The program will also ask if you want to set the given key as default.
 
-When doing a youte search, if you don't specify an API key name, youte will use the default key if there is one, or raise an error if there is not.  
+When doing a youte search, if you don't specify an API key name via `--name`, youte will use the default key if there is one, or raise an error if there is not.  
 
-**Set a key as default**  
+#### Manually set a key as default  
 
 If you want to manually set an existing key as a default, run:  
 
 ```shell  
 youte config set-default <name-of-existing-key>
-```  
+```
 
-Note that what is passed to this command is the _name_ of the API key, not the API key itself. It follows that the API key has to be first added to the config file using `youte config add-key`. If you use `set-default` with a key that has not been added to the config file, an error will be raised.  
+Note that what is passed to this command is the _name_ of the API key, not the API key itself. It follows that the API key has to be first added to the config file using `youte config add-key`. If you pass a name to `set-default` that has not been added to the config file, an error will be raised.  
 
-**See the list of all keys**  
+#### See the list of all keys  
 
 To see the list of all keys, run:  
 
@@ -48,14 +46,22 @@ To see the list of all keys, run:
 youte config list-keys
 ```  
 
-The default key, if there is one, will have an asterisk next to it.  
+The default key, if there is one, will have an asterisk next to it.
+
+#### Delete a key
+
+To remove a stored key, run:
+
+```shell
+youte config remove <name-of-key>
+```
 
 #### About the config file  
 
 youte's config file is stored in a central place whose exact location depends on the running operating system:  
 
 - Linux/Unix: ~/.config/youte/   
-- Mac OS X: ~/Library/Application Support/youte  
+- Mac OS X: ~/Library/Application Support/youte/
 - Windows: C:\Users\\\<user>\\AppData\Roaming\youte  
 
 The config file stores API keys, as well as the quota usage associated with each API key.  
@@ -65,14 +71,19 @@ The config file stores API keys, as well as the quota usage associated with each
 ```commandline  
 Usage: youte search [OPTIONS] QUERY OUTPUT
 
-Do a YouTube search. OUTPUT should be a filename with a `.json` file ending (e.g., `.json` or `.jsonl`).
+  Do a YouTube search.
 
 Options:
-  --from TEXT          Start date (YYYY-MM-DD) in UTC time
-  --to TEXT            End date (YYYY-MM-DD) in UTC time
-  --name TEXT          Name of the API key (optional)
-  --max-quota INTEGER  Maximum quota allowed  [default: 10000]
-  --help               Show this message and exit.
+  --from TEXT                     Start date (YYYY-MM-DD)
+  --to TEXT                       End date (YYYY-MM-DD)
+  --name TEXT                     Name of the API key (optional)
+  --order [date|rating|relevance|title]
+                                  Sort results  [default: date]
+  --safe-search [none|moderate|strict]
+                                  Include or exclude restricted content
+                                  [default: none]
+  --max-quota INTEGER             Maximum quota allowed  [default: 10000]
+  --help                          Show this message and exit.
 ```  
 
 ### Example  
@@ -100,15 +111,15 @@ youte search '"australia zoo"' aussie_zoo.jsonl
 
 #### `OUTPUT`  
 
-Path of the output file where raw JSON responses will be stored. Must have `.json` file endings (e.g., `.json` or `.jsonl`). If the output file already exists, `youte` will **_update_** the existing file, instead of overwriting it.  
+Path of the output file where raw JSON responses will be stored. Must have `.json` file endings (e.g., `.json` or `.jsonl`). If the output file already exists, `youte` will **_update_** the existing file, instead of overwriting it.
 
 #### `--from` (optional)  
 
-Start date limit for the search results returned - the results returned by the API should only contain videos created on or after this date (UTC time, which is the default time zone for the YouTube API). Has to be in ISO format (YYYY-MM-DD).  
+Start date limit for the search results returned - the results returned by the API should only contain videos created on or after this date (UTC time, which is the default time zone for the YouTube API). Has to be in ISO format (YYYY-MM-DD).
 
 #### `--to` (optional)  
 
-End date limit for the search results returned - the results returned by the API should only contain videos created on or before this date (UTC time, which is the default time zone for the YouTube API). Has to be in ISO format (YYYY-MM-DD).  
+End date limit for the search results returned - the results returned by the API should only contain videos created on or before this date (UTC time, which is the default time zone for the YouTube API). Has to be in ISO format (YYYY-MM-DD).
 
 #### `--name` (optional)  
 
@@ -124,7 +135,7 @@ Change the maximum quota that your API key is allowed to consume. The default va
 
 Searching is very expensive in terms of API quota (100 units per search results page). Therefore, `youte` saves the progress of a search so that if you exit the program prematurely, either by accident or on purpose, you can resume the search to avoid wasting valuable quota.
 
-Specifically, when you exit the program in the middle of a search, a prompt will ask if you want to save its progress. If yes, all the recorded plus unrecorded search page tokens are saved in a `history.db` SQLite database in the current directory. If you rerun the same search in the same directory, you can choose to resume the progress from that `history.db` database.  
+Specifically, when you exit the program in the middle of a search, a prompt will ask if you want to save its progress. If yes, all the recorded plus unrecorded search page tokens are saved in a SQLite database in a hidden `.youte.history` folder inside your current directory. The name of the database is what is passed as the `OUTPUT` with the `.json` extension removed. If you rerun the same search in the same directory, you can choose to resume the progress from that database.
 
 Currently, the progress of only **ONE** search can be saved. If you save the progress of a search, then run another different search and choose to resume the progress for this new search, an error will occur and there may be confusion in your final data. Therefore, if a progress `history.db` file exists, and you're unsure which search this saved progress belong to, choose to remove the `history.db` file and start the search anew.  
 

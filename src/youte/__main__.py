@@ -65,10 +65,10 @@ def search(
     to: str,
     name: str,
     max_quota: int,
-    order,
-    safe_search
+    order: str,
+    safe_search: str
     # get_id=False,
-):
+) -> None:
     """Do a YouTube search."""
 
     api_key = get_api_key(name=name)

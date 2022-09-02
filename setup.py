@@ -10,12 +10,12 @@ setup(
     name="youte",
     author="Digital Observatory",
     authhor_email="digitalobservatory@qut.edu.au",
-    version="0.0.1b2",
+    version="0.0.1b",
     description="Command-line tool to collect video metadata and comments from Youtube API",
     long_description=long_description,
     long_description_content_type="text/markdown",
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Programming Language :: Python :: 3.8'
         ],
     packages=find_packages(where="src"),

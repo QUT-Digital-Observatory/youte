@@ -1,11 +1,11 @@
 # youte  
 
-A command line utility to get YouTube video metadata from Youtube API. Currently still in beta development.
+A command line utility to get YouTube video metadata and comments from YouTube API. Currently still in beta development. Any feedback or suggestion is most welcome.
 
 ## Installation
 
 ```shell
-python -m pip install youte
+pip install youte
 ```  
 
 ## Initial set up  
@@ -16,7 +16,7 @@ To get data from YouTube API, you will need a YouTube API key. Follow YouTube [i
 
 ### Set up youte  
 
-youte requires a YouTube API key to be stored in a *config* file, to run YouTube data collection. To set up your YouTube API key with youte, run:  
+`youte` requires a YouTube API key to be stored in a *config* file, to run YouTube data collection. To set up your YouTube API key with youte, run:  
 
 ```shell  
 youte config add-key
@@ -36,7 +36,7 @@ If you want to manually set an existing key as a default, run:
 youte config set-default <name-of-existing-key>
 ```
 
-Note that what is passed to this command is the _name_ of the API key, not the API key itself. It follows that the API key has to be first added to the config file using `youte config add-key`. If you pass a name to `set-default` that has not been added to the config file, an error will be raised.  
+Note that what is passed to this command is the _name_ of the API key, not the API key itself. It follows that the API key has to be first added to the config file using `youte config add-key`. If you use a name that has not been added to the config file, an error will be raised.  
 
 #### See the list of all keys  
 
@@ -90,17 +90,17 @@ Options:
 
 ```commandline  
 youte search 'study with me' --from 2022-08-01 --to 2022-08-07 study_with_me.jsonl
-youte search gaza --from 2022-07-25 --name user_2 --get-id gaza_ids.jsonl
+youte search gaza --from 2022-07-25 --name user_2 --safe-search=moderate --order=title gaza_ids.jsonl
 ```  
 
 ### Arguments and options  
 
 #### `QUERY`  
 
-The terms to search for. You can also use the Boolean NOT (-) and OR (|) operators to exclude videos or to find videos that are associated with one of several search terms. If the terms contain spaces, the entire QUERY value has to be wrapped in single quotes.  
+The terms to search for. You can also use the Boolean NOT (-) and OR (|) operators to exclude videos or to find videos that match one of several search terms. If the terms contain spaces, the entire QUERY value has to be wrapped in quotes.  
 
 ```commandline  
-youte search 'koala|australia zoo -kangaroo' aussie_animals.jsonl
+youte search "koala|australia zoo -kangaroo" aussie_animals.jsonl
 ```  
 
 If you are looking for exact phrases, the exact phrases can be wrapped in double quotes, then wrapped again by single quotes.  
@@ -135,9 +135,7 @@ Change the maximum quota that your API key is allowed to consume. The default va
 
 Searching is very expensive in terms of API quota (100 units per search results page). Therefore, `youte` saves the progress of a search so that if you exit the program prematurely, either by accident or on purpose, you can resume the search to avoid wasting valuable quota.
 
-Specifically, when you exit the program in the middle of a search, a prompt will ask if you want to save its progress. If yes, all the recorded plus unrecorded search page tokens are saved in a SQLite database in a hidden `.youte.history` folder inside your current directory. The name of the database is what is passed as the `OUTPUT` with the `.json` extension removed. If you rerun the same search in the same directory, you can choose to resume the progress from that database.
-
-Currently, the progress of only **ONE** search can be saved. If you save the progress of a search, then run another different search and choose to resume the progress for this new search, an error will occur and there may be confusion in your final data. Therefore, if a progress `history.db` file exists, and you're unsure which search this saved progress belong to, choose to remove the `history.db` file and start the search anew.  
+Specifically, when you exit the program in the middle of a search, a prompt will ask if you want to save its progress. If yes, all the recorded plus unrecorded search page tokens are saved in a SQLite database in a hidden `.youte.history` folder inside your current directory. The name of the database is what is passed as the `OUTPUT` with the `.json` extension removed. If you rerun the same search in the same directory, you can choose to resume the progress from that database. This database will be deleted once all search results have been returned.
 
 ```commandline  
 $youte search taiwan --from 2022-08-08 --output test.jsonl  
@@ -154,21 +152,12 @@ $youte search taiwan --from 2022-08-08 --output test.jsonl
 
 Getting API key from config file.  
 
-        A history file 'history.db' is detected in your current directory.        
+        A history file '.youte.history/taiwan.db' is detected in your current directory.
         Do you want to resume progress from this history file?
-        If you are at all unsure, say No. [y/N]: # y   
-
-# remove saved progress if you're doing a different search  
-$youte search taiwan --from 2022-08-01 --output test.jsonl  
-
-Getting API key from config file.  
-
-        A history file 'history.db' is detected in your current directory.        
-        Do you want to resume progress from this history file?        
-        If you are at all unsure, say No. [y/N]: # N  
+        If you are at all unsure, say No. [y/N]:
 ```  
 
-## Hydrate  
+## Hydrate a list of IDs
 
 ```commandline  
 Usage: youte hydrate [OPTIONS] FILEPATH OUTPUT
@@ -207,12 +196,12 @@ Pass this flag if the IDs to be hydrated are channel IDs and not video IDs.
 ```commandline  
 Usage: youte list-comments [OPTIONS] FILEPATH OUTPUT
 
-  Get YouTube comments from a list of comment/channel/video ids.
+  Get YouTube comments from a list of comment thread or video ids.
 
-  By default, get all comments from a list of comment ids.
+  By default, hydrate all comments from a list of comment ids.
 
 Options:
-  -c, --by-channel     Get all comments for a channel ID
+  -p, --by-parent      Get all replies to a comment thread
   -v, --by-video       Get all comments for a video ID
   --max-quota INTEGER  Maximum quota allowed  [default: 10000]
   --name TEXT          Name of the API key (optional)
@@ -242,7 +231,7 @@ If none of these flags are passed, the `list-comments` command works similarly t
 
 Only one flag can be used in one command.  
 
-## Tidy response JSON  
+## Tidy JSON responses  
 
 ```commandline  
 Usage: youte tidy [OPTIONS] FILEPATH OUTPUT
@@ -253,7 +242,7 @@ Options:
   --help  Show this message and exit.
 ```  
 
-The `tidy` command will detect the type of resources in the JSON file (i.e. video, channel, search results, or comments) and process the data accordingly. It's important that each .jsonl file contains just **one** type of resource.  
+The `tidy` command will detect the type of resources in the JSON file (i.e. video, channel, search results, or comments) and process the data accordingly. It's important that each JSON file contains just **one** type of resource.  
 
 ## YouTube API Quota system and youte handling of quota  
 
@@ -264,7 +253,7 @@ For example:
 - search endpoint costs 100 units per request  
 - video, channel, commentThread, and comment endpoints each costs 1 unit per request  
 
-Free accounts get an API quota cap of 10,000 units per project per day, which resets at midnight Pacific Time. Hence the default maximum quota value is set to be 10,000 in youte.  
+Free accounts get an API quota cap of 10,000 units per project per day, which resets at midnight Pacific Time. Hence the default maximum quota value is set to be 10,000 in `youte`.  
 
 At present, you can only check your quota usage on the [Quotas](https://console.developers.google.com/iam-admin/quotas?pli=1&project=google.com:api-project-314373636293&folder=&organizationId=) page in the API Console. It is not possible to monitor quota usage via metadata returned in the API response.   
 

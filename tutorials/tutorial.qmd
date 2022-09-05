@@ -1,0 +1,368 @@
+---
+title: "Collecting YouTube data with `youte`"
+format:
+  revealjs:
+    code-overflow: wrap
+    code-line-numbers: false
+    css: styling.css
+editor: visual
+---
+
+## Introducing `youte`
+
+A command-line tool to get YouTube video metadata and comments from YouTube API.
+
+**Examples of what you can get with `youte`**:
+
+-   Video and channel titles and descriptions
+-   Video and channel statistics (view count, subscriber count)
+-   Comments on videos
+
+::: notes
+Hello and welcome everyone to this workshop on collecting and analysing YouTube comments. In this first half of the workshop, I'll be showing you how to collect YouTube data using a commandline tool called youte. Then Sam will walk you through analysing YouTube comments collected by youte with discursis.
+
+First of all, what is youte? In short, youte is a utility that you can run in your terminal that collects data from YouTube API. There are a variety of data that you can get with `youte`, like video and channel data such as titles, descriptions, and view statistics. You can also get comments left on a video or replies to a top level comment.
+:::
+
+## Requirements
+
+-   Python 3.8 or above
+
+-   YouTube API key
+
+-   Familiarity with using the terminal
+
+::: notes
+Most of you would have received instructions on installing `youte`. To be able to use `youte`, you'll need Python version 3.8 or above in your machine, a YouTube API key which can be created via Google Cloud Console, and some basic knowledge of using the terminal. Don't worry if you haven't used the command line much, it'll become clearer once we go through the examples.
+:::
+
+## Installing `youte`
+
+``` shell
+$ pip install youte
+```
+
+::: notes
+To install `youte`, simply run `pip install youte` in your terminal.
+:::
+
+## Set up your `youte` profile {.smaller}
+
+::: panel-tabset
+### Code
+
+To run `youte`, you need to first configure and store your API key.
+
+Open the Terminal and type the following command to get the interactive prompt.
+
+``` shell
+$ youte config add-key
+```
+
+::: notes
+Before running any query to get data, you need to configure your API key in `youte`. The `youte config add-key` command lets you store your API key in a config file, which youte then uses to store key metadata such as how many quota units you've used and so on. So if you open your terminal and type youte config add-key, you'll get an interactive prompt that guides you through the process. Here's a demo of how it's done.
+
+When prompted, enter your API key as provided by Google. Then give your API key a name. This is used to easily identify your API key, and can be anything you choose.
+
+You can also set this API key as your default key, in which case you don't need to specify an API key name every time you run `youte`.
+:::
+
+### Demo
+
+![](youte_add_key.webm){height="500" align="center"}
+:::
+
+## Running a YouTube search {.smaller}
+
+![](assets/youtube_search.png){height="600"}
+
+
+::: notes
+Now that's all set up. Let's start with the exciting bit, doing a YouTube search!
+
+Say you want to do a search for videos matching the keyword "study with me", to see what their titles and descriptions are and how many views they get.
+:::
+
+## youte search {.smaller}
+
+::: panel-tabset
+### Code
+
+``` {.shell .larger}
+$ youte search <QUERY> <OUTPUT> --from <YYYY-MM-DD> --to <YYYY-MM-DD> --name <name-of-api-key> --order=date --safe-search=none
+```
+
+-   `QUERY`: the search term to look for in YouTube video titles and descriptions
+
+-   `OUTPUT`: name of the file to store raw JSON responses from the API
+
+-   `--from`, `--to`: specify date range of the search results returned
+
+-   `--name`: name of the API key configured with youte
+
+-   `--order`: sort type
+
+-   `--safe-search`: include or exclude restricted content
+
+::: notes
+The `youte search` command works similarly to doing a YouTube search on a web browser, except that you do it through the command line. It allows you to do a YouTube search matching certain keywords. Here is a format of the command. The pointy brackets indicate your own input.
+
+First you pass the query or keyword to search for, followed by the name of the output file to store the result data. You can also search for videos after or before a certain date by passing the --from and --to options.
+
+The --name argument specifies which API key to use. If you've already set a default API key and want to use it, you don't need to specify this argument.
+
+You can also tell the API to return the results in a certain order, specified by the `--order` argument. The default setting is sorting the results by the videos' upload times.
+
+Finally, you can tell the API to include or exclude restricted content. The default setting is to return all public content. Here is an example of how a search is run.
+:::
+
+### Demo
+
+![](youte_search.webm){height="500" align="center"}
+:::
+
+## Example searches {.smaller}
+
+Search for all videos containing *study with me* within last months:
+
+``` shell
+$ youte search "study with me" search.json --from 2022-08-01 --to 2022-08-31
+```
+
+Return the most relevant videos:
+
+``` shell
+$ youte search "study with me" search.json --order=relevance
+```
+
+Only include moderated content:
+
+``` shell
+$ youte search "study with me" search.json --safe-search=moderate
+```
+
+::: notes
+You can tweak these search options to get the results you want. Here are a few examples of how to use the options.
+:::
+
+##  {.smaller}
+
+Example JSON response:
+
+``` json
+{
+  "kind": "youtube#searchResult",
+  "etag": "B_TxCObncAju-vhnFwKefxRoNRI",
+  "id": {
+    "kind": "youtube#video",
+    "videoId": "SR2Mf27YweM"
+  },
+  "snippet": {
+    "publishedAt": "2022-08-31T00:43:25Z",
+    "channelId": "UCnSc_XzYmAMMSJX4shj7ovw",
+    "title": "30/08/22 :: 9 HOURS STUDY WITH ME [PART-2/2] :: CA: UPSC: PCS: IIT: NEET: SSC: OTHER EXAMS",
+    "description": "Why is this channel ? As we know that to get good marks in any exam ,we have to study hard and for which consistency is ...",
+    "thumbnails": {
+      "default": {
+        "url": "https://i.ytimg.com/vi/SR2Mf27YweM/default.jpg",
+        "width": 120,
+        "height": 90
+      },
+      "medium": {
+        "url": "https://i.ytimg.com/vi/SR2Mf27YweM/mqdefault.jpg",
+        "width": 320,
+        "height": 180
+      },
+      "high": {
+        "url": "https://i.ytimg.com/vi/SR2Mf27YweM/hqdefault.jpg",
+        "width": 480,
+        "height": 360
+      }
+    },
+    "channelTitle": "BE CONSISTENT",
+    "liveBroadcastContent": "none",
+    "publishTime": "2022-08-31T00:43:25Z"
+  }
+}
+```
+
+::: notes
+All responses returned from YouTube API will be in JSON format. Here is a sample JSON response from `youte search`. `youte` also provides a function to transform raw JSON data to tidy or clean tabular format, which I'll talk about in a bit.
+:::
+
+## Hydrate video information {.smaller}
+
+::: panel-tabset
+### Code
+
+``` shell
+$ youte hydrate <ID-FILE> <OUTPUT>
+```
+
+-   `ID-FILE`: a text file containing line-separated video IDs
+-   `OUTPUT`: name of file storing raw JSON data from the API
+
+### Demo
+
+https://www.youtube.com/watch?v=ZEbCz7B2-Eg
+
+![](assets/youte_hydrate.webm){height="450" align="center"}
+:::
+
+::: notes
+The hydrate command is useful if you have a list of video IDs you want to get full data of. A common use of this command is after you run `youte search` to get a list of results first.
+
+`youte search` only returns some data, so if you want to get full data on a set of videos or channels you might need to use `hydrate`.
+
+Put your video IDs to a text or csv file, with each ID on a new line. And run `youte hydrate`.
+:::
+
+## Get comments on a video {.smaller}
+
+![](assets/youtube_comments.png)
+
+
+## Get comments on a video {.smaller}
+
+::: panel-tabset
+### Code
+
+``` shell
+$ youte list-comments <ID-FILE> <OUTPUT> -v
+```
+
+-   `ID-FILE`: a text file containing line-separated video IDs
+-   `OUTPUT`: name of file storing raw JSON data from the API
+-   `-v` or `--by-video`: specify that comments on videos are to be retrieved
+
+### Demo
+
+https://www.youtube.com/watch?v=ZEbCz7B2-Eg
+
+![](youte_list_comments.webm){height="450" align="center"}
+
+:::
+
+::: notes
+To get comments on a video, simply put the video ID in a text file and run the list-comments command. Specify the -v flag to let youte know you want comments on video.
+:::
+
+
+## Get comments on multiple videos {.smaller}
+
+You can add many IDs in the text file - each on a new line - and `youte` will get comments on all of them.
+
+For example, to retrieve comments on three videos, add their IDs to a `video_ids.txt` file:
+
+``` text
+ZEbCz7B2-Eg
+HGl75kurxok&t
+bP9gMpl1gyQ
+```
+
+## Get replies to a comment thread {.smaller}
+
+![](assets/youtube_replies.png){align="center"}
+
+## Get replies to a comment thread {.smaller}
+
+::: panel-tabset
+### Code
+
+``` shell
+$ youte list-comments <ID-FILE> <OUTPUT> -p
+```
+
+-   `ID-FILE`: a text file containing line-separated comment thread IDs
+-   `-p` or `--by-parent`: specify that replies to a comment are to be retrieved
+
+\**Comment thread*: a top-level comment with replies
+
+### Demo
+
+![](youte_list_replies.webm){height="500"}
+:::
+
+## Tidy JSON responses {.smaller}
+
+``` shell
+$ youte tidy <INPUT> <OUTPUT>
+```
+
+-   `INPUT`: raw JSON file to be tidied
+
+-   `OUTPUT`: SQLite database to store tidy data
+
+For example:
+
+```shell
+$ youte tidy raw_data.json cleaned_data.db
+```
+
+::: notes
+`youte` also provides a command to transform raw JSON data to tabular format in a relational SQLite database.
+
+Run the `youte tidy` command with INPUT being the JSON file, and OUTPUT being a SQLite database file.
+:::
+
+## From this ... {.smaller}
+
+``` json
+{
+  "kind": "youtube#searchResult",
+  "etag": "B_TxCObncAju-vhnFwKefxRoNRI",
+  "id": {
+    "kind": "youtube#video",
+    "videoId": "SR2Mf27YweM"
+  },
+  "snippet": {
+    "publishedAt": "2022-08-31T00:43:25Z",
+    "channelId": "UCnSc_XzYmAMMSJX4shj7ovw",
+    "title": "30/08/22 :: 9 HOURS STUDY WITH ME [PART-2/2] :: CA: UPSC: PCS: IIT: NEET: SSC: OTHER EXAMS",
+    "description": "Why is this channel ? As we know that to get good marks in any exam ,we have to study hard and for which consistency is ...",
+    "thumbnails": {
+      "default": {
+        "url": "https://i.ytimg.com/vi/SR2Mf27YweM/default.jpg",
+        "width": 120,
+        "height": 90
+      },
+      "medium": {
+        "url": "https://i.ytimg.com/vi/SR2Mf27YweM/mqdefault.jpg",
+        "width": 320,
+        "height": 180
+      },
+      "high": {
+        "url": "https://i.ytimg.com/vi/SR2Mf27YweM/hqdefault.jpg",
+        "width": 480,
+        "height": 360
+      }
+    },
+    "channelTitle": "BE CONSISTENT",
+    "liveBroadcastContent": "none",
+    "publishTime": "2022-08-31T00:43:25Z"
+  }
+}
+```
+
+## To this ... {.smaller}
+
+```{r}
+if (!require("pacman")) install.packages("pacman")
+
+pacman::p_load(DBI, RSQLite, magrittr, dplyr, knitr)
+
+con <- DBI::dbConnect(RSQLite::SQLite(),
+                  "comments.db")
+data <- DBI::dbReadTable(con, "comments")
+data %<>% select(comment_id, video_id, text_original, reply_count, like_count, author_name, everything())
+
+kable(head(data, 8), format="html")
+```
+
+## Additional help
+
+-   https://github.com/QUT-Digital-Observatory/youte
+
+::: notes
+For further help, refer to `youte` documentation on our Github page. `youte` is still early in its development so any feedback is welcome. And we aim to expand on its functionalities in the future.
+::: 

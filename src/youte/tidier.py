@@ -132,8 +132,8 @@ def tidy_video(filepath: str, output: Union[str, Path]) -> None:
     db = connect_db(output)
 
     db.execute("begin")
-
     db.execute(mappings.video_sql_table["create"])
+    db.execute("commit")
 
     items = _get_items(filepath=filepath)
     for item in tqdm(items):
@@ -190,8 +190,8 @@ def tidy_video(filepath: str, output: Union[str, Path]) -> None:
         )
         video_mapping["recording_location"] = str(recording.get("location"))
 
+        db.execute("begin")
         db.execute(mappings.video_sql_table["insert"], video_mapping)
-
         db.execute("commit")
 
     db.close()
@@ -202,6 +202,7 @@ def tidy_channel(filepath: str, output: Union[str, Path]) -> None:
 
     db.execute("begin")
     db.execute(mappings.channel_sql_table["create"])
+    db.execute("commit")
 
     items = _get_items(filepath=filepath)
     for item in tqdm(items):
@@ -255,9 +256,9 @@ def tidy_channel(filepath: str, output: Union[str, Path]) -> None:
         channel_mapping["content_owner"] = owner.get("contentOwner")
         channel_mapping["time_linked"] = owner.get("timeLinked")
 
+        db.execute("begin")
         db.execute(mappings.channel_sql_table["insert"], channel_mapping)
-
-    db.execute("commit")
+        db.execute("commit")
 
     db.close()
 
@@ -267,6 +268,7 @@ def tidy_comments(filepath, output: Union[str, Path]) -> None:
 
     db.execute("begin")
     db.execute(mappings.comment_sql_table["create"])
+    db.execute("commit")
 
     items = _get_items(filepath=filepath)
     for item in tqdm(items):
@@ -296,8 +298,8 @@ def tidy_comments(filepath, output: Union[str, Path]) -> None:
         comment_mapping["published_at"] = snippet["publishedAt"]
         comment_mapping["updated_at"] = snippet["updatedAt"]
 
+        db.execute("begin")
         db.execute(mappings.comment_sql_table["insert"], comment_mapping)
-
-    db.execute("commit")
+        db.execute("commit")
 
     db.close()

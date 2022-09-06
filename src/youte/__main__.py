@@ -103,7 +103,9 @@ def search(
     default=None
 )
 @click.option(
-    "-p", "--by-parent", help="Get all replies to a parent comment",
+    "-t", "--by-thread",
+    "by_parent",
+    help="Get all replies to a parent comment",
     is_flag=True
 )
 @click.option("-v", "--by-video", help="Get all comments for a video ID",
@@ -114,18 +116,21 @@ def search(
 )
 @click.option("--name", help="Name of the API key (optional)")
 def list_comments(
-        items,
+        items: Sequence[str],
         output: str,
         max_quota: int,
         name: str,
         file_path: str,
-        by_video,
-        by_parent,
+        by_video: bool,
+        by_parent: bool,
 ) -> None:
     """
     Get YouTube comments from a list of comment/channel/video ids.
-
     By default, get all comments from a list of comment ids.
+
+    OUTPUT: name of JSON file to store output
+
+    ITEMS: ID(s) of item as provided by YouTube
     """
 
     api_key = get_api_key(name=name)
@@ -169,11 +174,20 @@ def list_comments(
     "--max-quota", default=10000, help="Maximum quota allowed",
     show_default=True
 )
-def hydrate(items, output, channel, file_path, name, max_quota):
+def hydrate(items: Sequence[str],
+            output: str,
+            channel: str,
+            file_path: str,
+            name: str,
+            max_quota: int) -> None:
     """Hydrate video or channel ids.
 
     Get all metadata for a list of video or channel IDs.
     By default, the function hydrates video IDs.
+
+    OUTPUT: name of JSON file to store output
+
+    ITEMS: ID(s) of item as provided by YouTube
     """
 
     api_key = get_api_key(name=name)

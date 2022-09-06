@@ -4,9 +4,9 @@ Author: Boyd Nguyen <thaihoang.nguyen@qut.edu.au>
 """
 import logging
 import sys
-
 import click
 from pathlib import Path
+from typing import Sequence, List
 
 from youte.collector import Youte
 from youte.config import YouteConfig, get_api_key, get_config_path
@@ -96,8 +96,12 @@ def search(
 
 
 @youte.command()
-@click.argument("filepath", required=True)
 @click.argument("output", required=True)
+@click.argument("items", nargs=-1, required=False)
+@click.option(
+    "-f", "--file-path", help="Get IDs from file",
+    default=None
+)
 @click.option(
     "-p", "--by-parent", help="Get all replies to a parent comment",
     is_flag=True
@@ -110,8 +114,13 @@ def search(
 )
 @click.option("--name", help="Name of the API key (optional)")
 def list_comments(
-        filepath: str, output: str, max_quota: int, name: str, by_video,
-        by_parent
+        items,
+        output: str,
+        max_quota: int,
+        name: str,
+        file_path: str,
+        by_video,
+        by_parent,
 ) -> None:
     """
     Get YouTube comments from a list of comment/channel/video ids.
@@ -120,11 +129,9 @@ def list_comments(
     """
 
     api_key = get_api_key(name=name)
-
     collector = _set_up_collector(api_key=api_key, max_quota=max_quota)
 
-    with open(filepath, mode="r") as filepath:
-        ids = [row.rstrip() for row in filepath.readlines()]
+    ids = _get_ids(string=items, file=file_path)
 
     if by_video and by_parent:
         click.secho(
@@ -148,8 +155,12 @@ def list_comments(
 
 
 @youte.command()
-@click.argument("filepath", required=True)
 @click.argument("output", required=True)
+@click.argument("items", nargs=-1, required=False)
+@click.option(
+    "-f", "--file-path", help="Get IDs from file",
+    default=None
+)
 @click.option(
     "--channel", help="Hydrate channel IDs instead of video IDs", is_flag=True
 )
@@ -158,7 +169,7 @@ def list_comments(
     "--max-quota", default=10000, help="Maximum quota allowed",
     show_default=True
 )
-def hydrate(filepath, output, channel, name, max_quota):
+def hydrate(items, output, channel, file_path, name, max_quota):
     """Hydrate video or channel ids.
 
     Get all metadata for a list of video or channel IDs.
@@ -169,8 +180,7 @@ def hydrate(filepath, output, channel, name, max_quota):
 
     collector = _set_up_collector(api_key=api_key, max_quota=max_quota)
 
-    with open(filepath, mode="r") as filepath:
-        ids = [row.rstrip() for row in filepath.readlines()]
+    ids = _get_ids(string=items, file=file_path)
 
     item_type = "channels" if channel else "videos"
     collector.list_items(item_type=item_type, ids=ids, output_path=output)
@@ -298,7 +308,7 @@ def list_keys():
         click.echo()
 
 
-def _set_up_collector(api_key, max_quota):
+def _set_up_collector(api_key: str, max_quota: int) -> Youte:
     quota = Quota(api_key=api_key, config_path=get_config_path())
     collector = Youte(api_key=api_key, max_quota=max_quota)
     collector.quota = quota
@@ -310,3 +320,25 @@ def _set_up_config(filename=get_config_path()) -> YouteConfig:
     config_file = YouteConfig(filename=filename)
 
     return config_file
+
+
+def _get_ids(string: Sequence[str] = None, file: str = None) -> List[str]:
+    _raise_no_item_error(items=string, file_path=file)
+
+    if string:
+        ids = list(string)
+
+    if file:
+        with open(file, mode="r") as f:
+            ids = [row.rstrip() for row in f.readlines()]
+
+    return ids
+
+
+def _raise_no_item_error(items: Sequence[str], file_path: str) -> None:
+    if not (items or file_path):
+        click.secho("No item ID is specified. Pass some item IDs or specify "
+                    "a file.",
+                    fg="red",
+                    bold=True)
+        sys.exit(1)

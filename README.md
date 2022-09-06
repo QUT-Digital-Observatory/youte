@@ -159,75 +159,113 @@ Getting API key from config file.
 
 ## Hydrate a list of IDs
 
+`youte hydrate` takes a list of video or channel IDs and get the full data associated with them. This is useful when you want extra information on videos found from a search.
+
 ```commandline  
-Usage: youte hydrate [OPTIONS] FILEPATH OUTPUT
+Usage: youte hydrate [OPTIONS] OUTPUT [ITEMS]...
 
   Hydrate video or channel ids.
 
   Get all metadata for a list of video or channel IDs. By default, the
   function hydrates video IDs.
 
+  OUTPUT: name of JSON file to store output
+
+  ITEMS: ID(s) of item as provided by YouTube
+
 Options:
-  --channel            Hydrate channel IDs instead of video IDs
-  --name TEXT          Name of the API key (optional)
-  --max-quota INTEGER  Maximum quota allowed  [default: 10000]
-  --help               Show this message and exit.
+  -f, --file-path TEXT  Get IDs from file
+  --channel             Hydrate channel IDs instead of video IDs
+  --name TEXT           Name of the API key (optional)
+  --max-quota INTEGER   Maximum quota allowed  [default: 10000]
+  --help                Show this message and exit.
 ```  
 
 ### Examples  
 
-```commandline  
-youte hydrate video_ids.csv videos.jsonl  
-youte hydrate channel_ids.txt --channel channels.jsonl  
-```  
+```commandline
+# one video
+youte hydrate videos.jsonl _KrKdj50mPk
+
+# two video
+youte hydrate video_hydrate.json _KrKdj50mPk hpwPciW74b8
+
+# hydrate channel information and use IDs from a text file
+youte hydrate --channel channels.jsonl -f channel_ids.txt  
+```
 
 ### Arguments and options  
 
-#### `FILEPATH`  
+#### `ITEMS`
 
-Path of a text file (e.g., `.csv` or `.txt`) containing a line-separated list of video or channel IDs.  
+Video or channel IDs (unique identifiers provided by YouTube). If there are multiple IDs, separate each one with a space.
 
-#### `--channel`  
+The IDs should all belong to one type, i.e. either video or channel. You cannot mix both video AND comment thread IDs in one command.
+
+#### `-f` or `--file-path`  
+
+If you want to use IDs from a text file, specify this option with the path to the text file (e.g., `.csv` or `.txt`). The text file should contain a line-separated list of video or channel IDs. 
+
+One file should contain one type of IDs (i.e. either video or channel). You cannot add both video and channel IDs in the same file.
+
+#### `--channel` 
 
 Pass this flag if the IDs to be hydrated are channel IDs and not video IDs.  
 
 ## Get all comments of a video or all replies to a top-level comment thread  
 
 ```commandline  
-Usage: youte list-comments [OPTIONS] FILEPATH OUTPUT
+Usage: youte list-comments [OPTIONS] OUTPUT [ITEMS]...
 
-  Get YouTube comments from a list of comment thread or video ids.
+  Get YouTube comments from a list of comment/channel/video ids. By default,
+  get all comments from a list of comment ids.
 
-  By default, hydrate all comments from a list of comment ids.
+  OUTPUT: name of JSON file to store output
+
+  ITEMS: ID(s) of item as provided by YouTube
 
 Options:
-  -p, --by-parent      Get all replies to a comment thread
-  -v, --by-video       Get all comments for a video ID
-  --max-quota INTEGER  Maximum quota allowed  [default: 10000]
-  --name TEXT          Name of the API key (optional)
-  --help               Show this message and exit.
+  -f, --file-path TEXT  Get IDs from file
+  -t, --by-thread       Get all replies to a parent comment
+  -v, --by-video        Get all comments for a video ID
+  --max-quota INTEGER   Maximum quota allowed  [default: 10000]
+  --name TEXT           Name of the API key (optional)
+  --help                Show this message and exit.
 ```  
 
 ### Example  
 
 ```  
-youte list-comments video_ids.csv -v comments_for_videos.jsonl  
-youte list-comments comment_ids.csv comments.jsonl  
-youte list-comments comment_ids.csv -p replies_to_comments.jsonl  
+# get comments on a video
+youte list-comments -v comments_for_videos.json WOoQOd33ZTY
+
+# hydrate comment ID
+youte list-comments comments.json UgxkjPsKbo2pUEAJju94AaABAg
+
+# get replies to a thread
+youte list-comments -t replies.json UgxkjPsKbo2pUEAJju94AaABAg
 ```  
 
 ### Arguments and options  
 
-#### `FILEPATH`  
+#### `ITEMS`
 
-Path of a text file containing a line-separated list of videos, channels, or comments IDs.  
+Video or comment thread IDs (unique identifiers provided by YouTube). If there are multiple IDs, separate each one with a space.
 
-#### `--by-parent`, `--by-video`  
+The IDs should all belong to one type, i.e. either video or comment thread. You cannot mix both video AND comment thread IDs in one command.
 
-- Get all replies to a parent comment (`--by-parent`, `-p`)  
-- Get all comments under a video (`--by-video`, `-v`)  
+#### `-f` or `--file-path`  
 
-If none of these flags are passed, the `list-comments` command works similarly to `hydrate` - getting full data for a list of comment IDs.   
+If you want to use IDs from a text file, specify this option with the path to the text file (e.g., `.csv` or `.txt`). The text file should contain a line-separated list of IDs.
+
+One file should contain one type of IDs (i.e. either video or comment thread). You cannot add both video and comment thread IDs in the same file.
+
+#### `--by-thread`, `--by-video`  
+
+- Get all replies to a comment thread (`--by-thread`, `-t`)  
+- Get all comments on a video (`--by-video`, `-v`)  
+
+If none of these flags are passed, the `list-comments` command works similarly to `hydrate` - getting full data for a list of comment IDs.
 
 Only one flag can be used in one command.  
 

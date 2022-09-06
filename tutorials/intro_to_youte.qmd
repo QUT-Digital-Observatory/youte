@@ -1,0 +1,122 @@
+---
+title: "Introduction to youte"
+author: "Digital Observatory"
+format: html
+editor: visual
+---
+
+YouTube is the second most visited website in the world \[[1](https://www.semrush.com/website/top/)\], with 81% of Internet users having used the site \[[2](https://blog.hootsuite.com/youtube-stats-marketers/)\]. That's nearly everyone! On average, over 500 hours of videos are uploaded. This makes YouTube an invaluable source of social media data for the research community. There is much to be studied not only in the video content itself, but also in the metadata such as video titles, descriptions, and comments.
+
+A body of research has done analyses using YouTube data, with topics ranging from cyber influence to misinformation. Here are few examples:
+
+-   https://ieeexplore.ieee.org/document/8508766
+
+-   https://www.sciencedirect.com/science/article/pii/S0167923617300994
+
+-   https://link.springer.com/chapter/10.1007/978-3-030-67044-3_5
+
+-   https://www.frontiersin.org/articles/10.3389/fcomm.2019.00036/full
+
+-   https://dl.acm.org/doi/pdf/10.1145/3359196
+
+`youte` was developed with the aim to help researchers or anyone to collect YouTube data quickly and easily.
+
+## Introduction to youte
+
+`youte` is a helper library that interacts with YouTube Data API. Effectively, it makes working with YouTube API and collecting YouTube metadata and comments easy and intuitive.
+
+`youte` is a command-line tool that runs in the Terminal and can be installed in any operating system.
+
+### About YouTube Data API
+
+For those unfamiliar with the acronym, API or Application Programming Interface is a set of communication protocols that help two programs or applications talk with each other.
+
+YouTube Data API allows you to work with YouTube data. You make a request for data to the API, and in return it sends you a response which contains the data requested.
+
+#### What kind of data does YouTube Data API give?
+
+With YouTube Data API you can get information on a variety of **resources**. A YouTube resource is an entity that makes up the YouTube experience. Some common resources include videos, channels, comments, playlists, and search results.
+
+### Command-line
+
+We mentioned that `youte` is a command-line tool. So what is a command line? A command line, or the shell, is an interface that takes textual, keyboard commands and passes them to your computer to carry them out.
+
+Examples in OS:
+
+-   Windows: cmd, Powershell, Git Bash
+
+-   Linux & Mac OS: bash or zsh terminal
+
+Explaining how code is displayed in this tutorial.
+
+## Using youte
+
+### Installing youte
+
+-   Requirements
+
+-   Code
+
+### Set up
+
+-   YouTube API key
+
+-   youte config add-key
+
+-   youte config list-keys
+
+### Running a search
+
+What does a search do?
+
+Example: searching for videos matching "offgrid".
+
+Results returned are in JSON format.
+
+JSON format?
+
+-   What?
+
+-   Why?
+
+-   How to use?
+
+Need to transform to tidy data format --\> youte tidy.
+
+### Hydrate
+
+What does it do? Use case
+
+What are IDs? How to get them?
+
+### Get comments on a video
+
+What does it do?
+
+Explain the tag
+
+Common issue: videos don't allow comments.
+
+### Get replies to comments
+
+What does it do
+
+Explain the tag
+
+Common issue: comments don't have replies
+
+### Tidy
+
+JSON is hard. DB is easier.
+
+What is database? What's SQLite database? Why?
+
+youte tidy does what?
+
+How to read db file in R or Python
+
+## Wrapping up
+
+Comments or feedback?
+
+Extra help doc

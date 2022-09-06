@@ -76,7 +76,6 @@ You can also set this API key as your default key, in which case you don't need 
 
 ![](assets/youtube_search.png){height="600"}
 
-
 ::: notes
 Now that's all set up. Let's start with the exciting bit, doing a YouTube search!
 
@@ -221,7 +220,6 @@ Put your video IDs to a text or csv file, with each ID on a new line. And run `y
 
 ![](assets/youtube_comments.png)
 
-
 ## Get comments on a video {.smaller}
 
 ::: panel-tabset
@@ -240,13 +238,11 @@ $ youte list-comments <ID-FILE> <OUTPUT> -v
 https://www.youtube.com/watch?v=ZEbCz7B2-Eg
 
 ![](youte_list_comments.webm){height="450" align="center"}
-
 :::
 
 ::: notes
 To get comments on a video, simply put the video ID in a text file and run the list-comments command. Specify the -v flag to let youte know you want comments on video.
 :::
-
 
 ## Get comments on multiple videos {.smaller}
 
@@ -295,7 +291,7 @@ $ youte tidy <INPUT> <OUTPUT>
 
 For example:
 
-```shell
+``` shell
 $ youte tidy raw_data.json cleaned_data.db
 ```
 
@@ -365,4 +361,4 @@ kable(head(data, 8), format="html")
 
 ::: notes
 For further help, refer to `youte` documentation on our Github page. `youte` is still early in its development so any feedback is welcome. And we aim to expand on its functionalities in the future.
-::: 
+:::

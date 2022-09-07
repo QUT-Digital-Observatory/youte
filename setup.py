@@ -10,7 +10,7 @@ setup(
     name="youte",
     author="Digital Observatory",
     authhor_email="digitalobservatory@qut.edu.au",
-    version="0.0.1b",
+    version="0.0.2",
     description="Command-line tool to collect video metadata and comments from Youtube API",
     long_description=long_description,
     long_description_content_type="text/markdown",

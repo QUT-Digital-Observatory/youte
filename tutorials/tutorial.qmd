@@ -8,15 +8,31 @@ format:
 editor: visual
 ---
 
+##  {.none}
+
+<img src="assets/yt_logo_rgb_light.png" height="100">
+<br>
+
+- The second most visited website in the world
+- 81% of Internet users have used YouTube
+- Over 500 hours of videos are uploaded every minute
+
+::: footnotes
+- https://www.semrush.com/website/top/
+- https://blog.hootsuite.com/youtube-stats-marketers/
+:::
+
 ## Introducing `youte`
 
-A command-line tool to get YouTube video metadata and comments from YouTube API.
+A helper library that interacts with YouTube Data API.
 
-**Examples of what you can get with `youte`**:
+Helps make collecting data from YouTube easy and intuitive.
 
--   Video and channel titles and descriptions
--   Video and channel statistics (view count, subscriber count)
--   Comments on videos
+**What you can do with `youte`**:
+
+-   Search for public videos
+-   Get public video and channel metadata and comments
+-   Tidy YouTube data
 
 ::: notes
 Hello and welcome everyone to this workshop on collecting and analysing YouTube comments. In this first half of the workshop, I'll be showing you how to collect YouTube data using a commandline tool called youte. Then Sam will walk you through analysing YouTube comments collected by youte with discursis.
@@ -24,17 +40,24 @@ Hello and welcome everyone to this workshop on collecting and analysing YouTube 
 First of all, what is youte? In short, youte is a utility that you can run in your terminal that collects data from YouTube API. There are a variety of data that you can get with `youte`, like video and channel data such as titles, descriptions, and view statistics. You can also get comments left on a video or replies to a top level comment.
 :::
 
-## Requirements
+## API: A recap
 
--   Python 3.8 or above
+Application Programming Interface (API) is a set of protocols that help two programs/application "talk" to each other.
 
--   YouTube API key
+![](assets/api-request.svg)
 
--   Familiarity with using the terminal
+## YouTube Data API
 
-::: notes
-Most of you would have received instructions on installing `youte`. To be able to use `youte`, you'll need Python version 3.8 or above in your machine, a YouTube API key which can be created via Google Cloud Console, and some basic knowledge of using the terminal. Don't worry if you haven't used the command line much, it'll become clearer once we go through the examples.
-:::
+An API that allows you to work with YouTube data.
+
+Retrieves information of YouTube **resources** (entities that make up the YouTube experience):
+
+- videos
+- channels
+- comments
+- playlists
+
+Uses a quota system: there is a limit of how much data you can retrieve in a day.
 
 ## Installing `youte`
 
@@ -343,16 +366,16 @@ Run the `youte tidy` command with INPUT being the JSON file, and OUTPUT being a 
 ## To this ... {.smaller}
 
 ```{r}
-if (!require("pacman")) install.packages("pacman")
-
-pacman::p_load(DBI, RSQLite, magrittr, dplyr, knitr)
-
-con <- DBI::dbConnect(RSQLite::SQLite(),
-                  "comments.db")
-data <- DBI::dbReadTable(con, "comments")
-data %<>% select(comment_id, video_id, text_original, reply_count, like_count, author_name, everything())
-
-kable(head(data, 8), format="html")
+# if (!require("pacman")) install.packages("pacman")
+# 
+# pacman::p_load(DBI, RSQLite, magrittr, dplyr, knitr)
+# 
+# con <- DBI::dbConnect(RSQLite::SQLite(),
+#                   "comments.db")
+# data <- DBI::dbReadTable(con, "comments")
+# data %<>% select(comment_id, video_id, text_original, reply_count, like_count, author_name, everything())
+# 
+# kable(head(data, 8), format="html")
 ```
 
 ## Additional help

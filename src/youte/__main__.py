@@ -229,7 +229,7 @@ def add_key():
     )
     click.echo()
     click.echo("To obtain an API key, follow the steps in")
-    click.echo("https://developers.google.com/youtube/v3/getting-started.")
+    click.echo("https://developers.google.com/youtube/v3/getting-started")
     click.echo()
     click.echo(
         "Once you have an API key, run `youte configure add-key` to start.")

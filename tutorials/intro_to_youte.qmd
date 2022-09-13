@@ -7,7 +7,7 @@ format:
 editor: visual
 ---
 
-YouTube is the second most visited website in the world \[[1](https://www.semrush.com/website/top/)\], with 81% of Internet users having used the site \[[2](https://blog.hootsuite.com/youtube-stats-marketers/)\]. That's nearly everyone! On average, over 500 hours of videos are uploaded. This makes YouTube an invaluable source of social media data for the research community. There is much to be studied not only in the video content itself, but also in the metadata such as video titles, descriptions, and comments.
+YouTube is the second most visited website in the world \[[1](https://www.semrush.com/website/top/)\], with 81% of Internet users having used the site \[[2](https://blog.hootsuite.com/youtube-stats-marketers/)\]. That's nearly everyone! On average, over 500 hours of videos are uploaded every minute. This makes YouTube an invaluable source of social media data for the research community. There is much to be studied not only in the video content itself, but also in the metadata such as video titles, descriptions, and comments.
 
 A body of research has done analyses using YouTube data, with topics ranging from cyber influence to misinformation. Here are a few examples:
 
@@ -94,7 +94,7 @@ Similarly to doing a YouTube search, `youte search` allows you to do get a list 
 Here is the format of `youte search` command:
 
 ``` shell
-youte search <QUERY> <OUTPUT> --from <YYYY-MM-DD> --to <YYYY-MM-DD> --name <name-of-api-key> --order=date --safe-search=none
+youte search <QUERY> <OUTPUT> --from <YYYY-MM-DD> --to <YYYY-MM-DD> --name <name-of-api-key> --order=<date|rating|relevance|title> --safe-search=<none|moderate|strict>
 ```
 
 -   `QUERY`: the search term to look for in YouTube video titles and descriptions
@@ -105,9 +105,9 @@ youte search <QUERY> <OUTPUT> --from <YYYY-MM-DD> --to <YYYY-MM-DD> --name <name
 
 -   `--name`: name of the API key configured with youte. This is optional if you already have a default API key set up.
 
--   `--order`: sort type. The default is sort the results by date of upload.
+-   `--order`: sort type. The default (date) will sort the results by date of upload.
 
--   `--safe-search`: include or exclude restricted content. The default is to include all public content.
+-   `--safe-search`: include or exclude restricted content. The default (none) will include all public content.
 
 As an example, let's search for videos matching "offgrid" from last month.
 
@@ -172,7 +172,7 @@ Here is an example of a JSON file.
 }
 ```
 
-Everything inside a curly braces belongs an object. An object is basically a thing or an entity. Within that object you can have object properties or attributes, represented by key-value pairs. You can have objects nested within objects as well.
+Everything inside a curly braces belongs to an object. An object is basically a thing or an entity. Within that object you can have object properties or attributes, represented by key-value pairs. You can have objects nested within objects as well.
 
 There are many tools to view and work with JSON files. Here I'm using `jq` (https://stedolan.github.io/jq/) which is a commandline tool, to view the JSON.
 

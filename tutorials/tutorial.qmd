@@ -57,7 +57,7 @@ Retrieves information of YouTube **resources** (entities that make up the YouTub
 - comments
 - playlists
 
-Uses a quota system: there is a limit of how much data you can retrieve in a day.
+Uses a **quota system**: there is a limit of how much data you can retrieve in a day.
 
 ## Installing `youte`
 
@@ -69,10 +69,7 @@ $ pip install youte
 To install `youte`, simply run `pip install youte` in your terminal.
 :::
 
-## Set up your `youte` profile {.smaller}
-
-::: panel-tabset
-### Code
+## Set up your `youte` profile
 
 To run `youte`, you need to first configure and store your API key.
 
@@ -90,11 +87,6 @@ When prompted, enter your API key as provided by Google. Then give your API key 
 You can also set this API key as your default key, in which case you don't need to specify an API key name every time you run `youte`.
 :::
 
-### Demo
-
-![](youte_add_key.webm){height="500" align="center"}
-:::
-
 ## Running a YouTube search {.smaller}
 
 ![](assets/youtube_search.png){height="600"}
@@ -107,10 +99,7 @@ Say you want to do a search for videos matching the keyword "study with me", to 
 
 ## youte search {.smaller}
 
-::: panel-tabset
-### Code
-
-``` {.shell .larger}
+``` {.shell}
 $ youte search <QUERY> <OUTPUT> --from <YYYY-MM-DD> --to <YYYY-MM-DD> --name <name-of-api-key> --order=date --safe-search=none
 ```
 
@@ -136,11 +125,6 @@ The --name argument specifies which API key to use. If you've already set a defa
 You can also tell the API to return the results in a certain order, specified by the `--order` argument. The default setting is sorting the results by the videos' upload times.
 
 Finally, you can tell the API to include or exclude restricted content. The default setting is to return all public content. Here is an example of how a search is run.
-:::
-
-### Demo
-
-![](youte_search.webm){height="500" align="center"}
 :::
 
 ## Example searches {.smaller}

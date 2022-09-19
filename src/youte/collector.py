@@ -237,6 +237,7 @@ class Youte:
             f"Total units used: {self.quota.units}",
             fg="bright_green",
         )
+        click.secho(f"File saved in {output_path}", fg="green")
         history.close()
         os.remove(history_file)
 

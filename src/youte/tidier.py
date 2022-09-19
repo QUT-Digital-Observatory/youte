@@ -6,6 +6,7 @@ import re
 from tqdm import tqdm
 import logging
 from pathlib import Path
+import click
 
 from youte.utilities import validate_file, check_file_overwrite
 import youte.table_mappings as mappings
@@ -92,6 +93,7 @@ def tidy_search(filepath: str, output: Union[str, Path]) -> None:
     )
 
     items = _get_items(filepath=filepath)
+    total = 0
 
     for item in tqdm(items):
         kind = item["id"]["kind"]
@@ -123,9 +125,13 @@ def tidy_search(filepath: str, output: Union[str, Path]) -> None:
             ),
         )
 
+        total += 1
+
     db.execute("commit")
 
     db.close()
+    click.echo(f"{total} items processed.")
+    click.echo(f"Data stored in {output} in `search_results` table.")
 
 
 def tidy_video(filepath: str, output: Union[str, Path]) -> None:
@@ -136,6 +142,8 @@ def tidy_video(filepath: str, output: Union[str, Path]) -> None:
     db.execute("commit")
 
     items = _get_items(filepath=filepath)
+    total = 0
+
     for item in tqdm(items):
         video_mapping = {}
 
@@ -194,7 +202,11 @@ def tidy_video(filepath: str, output: Union[str, Path]) -> None:
         db.execute(mappings.video_sql_table["insert"], video_mapping)
         db.execute("commit")
 
+        total += 1
+
     db.close()
+    click.echo(f"{total} items processed.")
+    click.echo(f"Data stored in {output} in `videos` table.")
 
 
 def tidy_channel(filepath: str, output: Union[str, Path]) -> None:
@@ -205,6 +217,8 @@ def tidy_channel(filepath: str, output: Union[str, Path]) -> None:
     db.execute("commit")
 
     items = _get_items(filepath=filepath)
+    total = 0
+
     for item in tqdm(items):
         channel_mapping = {}
 
@@ -260,7 +274,11 @@ def tidy_channel(filepath: str, output: Union[str, Path]) -> None:
         db.execute(mappings.channel_sql_table["insert"], channel_mapping)
         db.execute("commit")
 
+        total += 1
+
     db.close()
+    click.echo(f"{total} items processed.")
+    click.echo(f"Data stored in {output} in `channels` table.")
 
 
 def tidy_comments(filepath, output: Union[str, Path]) -> None:
@@ -271,6 +289,8 @@ def tidy_comments(filepath, output: Union[str, Path]) -> None:
     db.execute("commit")
 
     items = _get_items(filepath=filepath)
+    total = 0
+
     for item in tqdm(items):
         comment_mapping = {}
 
@@ -302,4 +322,8 @@ def tidy_comments(filepath, output: Union[str, Path]) -> None:
         db.execute(mappings.comment_sql_table["insert"], comment_mapping)
         db.execute("commit")
 
+        total += 1
+
     db.close()
+    click.echo(f"{total} items processed.")
+    click.echo(f"Data stored in {output} in `comments` table.")

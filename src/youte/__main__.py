@@ -176,7 +176,7 @@ def list_comments(
 )
 def hydrate(items: Sequence[str],
             output: str,
-            channel: str,
+            channel: bool,
             file_path: str,
             name: str,
             max_quota: int) -> None:

@@ -10,16 +10,15 @@ editor: visual
 
 ##  {.none}
 
-<img src="assets/yt_logo_rgb_light.png" height="100">
-<br>
+<img src="assets/yt_logo_rgb_light.png" height="100"/> <br>
 
-- The second most visited website in the world
-- 81% of Internet users have used YouTube
-- Over 500 hours of videos are uploaded every minute
+-   The second most visited website in the world
+-   81% of Internet users have used YouTube
+-   Over 500 hours of videos are uploaded every minute
 
 ::: footnotes
-- https://www.semrush.com/website/top/
-- https://blog.hootsuite.com/youtube-stats-marketers/
+-   https://www.semrush.com/website/top/
+-   https://blog.hootsuite.com/youtube-stats-marketers/
 :::
 
 ## Introducing `youte`
@@ -52,17 +51,17 @@ An API that allows you to work with YouTube data.
 
 Retrieves information of YouTube **resources** (entities that make up the YouTube experience):
 
-- videos
-- channels
-- comments
-- playlists
+-   videos
+-   channels
+-   comments
+-   playlists
 
 Uses a **quota system**: there is a limit of how much data you can retrieve in a day.
 
 ## Installing `youte`
 
 ``` shell
-$ pip install youte
+ pip install youte
 ```
 
 ::: notes
@@ -76,7 +75,7 @@ To run `youte`, you need to first configure and store your API key.
 Open the Terminal and type the following command to get the interactive prompt.
 
 ``` shell
-$ youte config add-key
+ youte config add-key
 ```
 
 ::: notes
@@ -99,8 +98,13 @@ Say you want to do a search for videos matching the keyword "study with me", to 
 
 ## youte search {.smaller}
 
-``` {.shell}
-$ youte search <QUERY> <OUTPUT> --from <YYYY-MM-DD> --to <YYYY-MM-DD> --name <name-of-api-key> --order=date --safe-search=none
+``` shell
+ youte search <QUERY> <OUTPUT> \
+      --from <YYYY-MM-DD> \
+      --to <YYYY-MM-DD> \
+      --name <name-of-api-key> \ 
+      --order=<date|rating|relevance|title> \
+      --safe-search=<none|moderate|strict>
 ```
 
 -   `QUERY`: the search term to look for in YouTube video titles and descriptions
@@ -132,19 +136,19 @@ Finally, you can tell the API to include or exclude restricted content. The defa
 Search for all videos containing *study with me* within last months:
 
 ``` shell
-$ youte search "study with me" search.json --from 2022-08-01 --to 2022-08-31
+ youte search "study with me" search.json --from 2022-08-01 --to 2022-08-31
 ```
 
 Return the most relevant videos:
 
 ``` shell
-$ youte search "study with me" search.json --order=relevance
+ youte search "study with me" search.json --order=relevance
 ```
 
 Only include moderated content:
 
 ``` shell
-$ youte search "study with me" search.json --safe-search=moderate
+ youte search "study with me" search.json --safe-search=moderate
 ```
 
 ::: notes
@@ -198,22 +202,14 @@ All responses returned from YouTube API will be in JSON format. Here is a sample
 
 ## Hydrate video information {.smaller}
 
-::: panel-tabset
-### Code
+https://www.youtube.com/watch?v=**ZEbCz7B2-Eg**
 
 ``` shell
-$ youte hydrate <ID-FILE> <OUTPUT>
+ youte hydrate <OUTPUT> [ITEMS]...
 ```
 
--   `ID-FILE`: a text file containing line-separated video IDs
 -   `OUTPUT`: name of file storing raw JSON data from the API
-
-### Demo
-
-https://www.youtube.com/watch?v=ZEbCz7B2-Eg
-
-![](assets/youte_hydrate.webm){height="450" align="center"}
-:::
+-   `[ITEMS]`: one or many video IDs
 
 ::: notes
 The hydrate command is useful if you have a list of video IDs you want to get full data of. A common use of this command is after you run `youte search` to get a list of results first.
@@ -223,45 +219,32 @@ The hydrate command is useful if you have a list of video IDs you want to get fu
 Put your video IDs to a text or csv file, with each ID on a new line. And run `youte hydrate`.
 :::
 
+## Using text file containing IDs
+
+``` shell
+ youte hydrate <OUTPUT> -f item_ids.csv
+```
+
+-   Use IDs in a text file instead of entering them directly into the shell
+-   The text file contains a list of IDs, each on a new line, with no heading
+
 ## Get comments on a video {.smaller}
 
 ![](assets/youtube_comments.png)
 
-## Get comments on a video {.smaller}
-
-::: panel-tabset
-### Code
+## Get comments on a video
 
 ``` shell
-$ youte list-comments <ID-FILE> <OUTPUT> -v
+ youte list-comments -v <OUTPUT> [ITEMS]...
 ```
 
--   `ID-FILE`: a text file containing line-separated video IDs
 -   `OUTPUT`: name of file storing raw JSON data from the API
 -   `-v` or `--by-video`: specify that comments on videos are to be retrieved
-
-### Demo
-
-https://www.youtube.com/watch?v=ZEbCz7B2-Eg
-
-![](youte_list_comments.webm){height="450" align="center"}
-:::
+-   `[ITEMS]`: one or many video IDs
 
 ::: notes
-To get comments on a video, simply put the video ID in a text file and run the list-comments command. Specify the -v flag to let youte know you want comments on video.
+To get comments on a video, simply put the video ID in a text file and run the list-comments command. Specify the -v flag to let `youte` know you want comments on video.
 :::
-
-## Get comments on multiple videos {.smaller}
-
-You can add many IDs in the text file - each on a new line - and `youte` will get comments on all of them.
-
-For example, to retrieve comments on three videos, add their IDs to a `video_ids.txt` file:
-
-``` text
-ZEbCz7B2-Eg
-HGl75kurxok&t
-bP9gMpl1gyQ
-```
 
 ## Get replies to a comment thread {.smaller}
 
@@ -269,27 +252,30 @@ bP9gMpl1gyQ
 
 ## Get replies to a comment thread {.smaller}
 
-::: panel-tabset
-### Code
-
 ``` shell
-$ youte list-comments <ID-FILE> <OUTPUT> -p
+ youte list-comments -t OUTPUT [ITEMS]...
 ```
 
--   `ID-FILE`: a text file containing line-separated comment thread IDs
--   `-p` or `--by-parent`: specify that replies to a comment are to be retrieved
+-   `-t` or `--by-thread`: specify that replies to a comment thread are to be retrieved
 
 \**Comment thread*: a top-level comment with replies
 
-### Demo
+## YouTube quota system
 
-![](youte_list_replies.webm){height="500"}
-:::
+-   Each request costs a number of *units*
+
+-   **10,000** units per day, reset at midnight Pacific Time
+
+-   Each endpoint has a different unit cost:
+
+    -   Search: 100 units
+
+    -   Video, channel, comment: 1 unit
 
 ## Tidy JSON responses {.smaller}
 
 ``` shell
-$ youte tidy <INPUT> <OUTPUT>
+ youte tidy <INPUT> <OUTPUT>
 ```
 
 -   `INPUT`: raw JSON file to be tidied
@@ -299,7 +285,7 @@ $ youte tidy <INPUT> <OUTPUT>
 For example:
 
 ``` shell
-$ youte tidy raw_data.json cleaned_data.db
+ youte tidy raw_data.json cleaned_data.db
 ```
 
 ::: notes
@@ -308,59 +294,46 @@ $ youte tidy raw_data.json cleaned_data.db
 Run the `youte tidy` command with INPUT being the JSON file, and OUTPUT being a SQLite database file.
 :::
 
-## From this ... {.smaller}
+## Relational databases
 
-``` json
-{
-  "kind": "youtube#searchResult",
-  "etag": "B_TxCObncAju-vhnFwKefxRoNRI",
-  "id": {
-    "kind": "youtube#video",
-    "videoId": "SR2Mf27YweM"
-  },
-  "snippet": {
-    "publishedAt": "2022-08-31T00:43:25Z",
-    "channelId": "UCnSc_XzYmAMMSJX4shj7ovw",
-    "title": "30/08/22 :: 9 HOURS STUDY WITH ME [PART-2/2] :: CA: UPSC: PCS: IIT: NEET: SSC: OTHER EXAMS",
-    "description": "Why is this channel ? As we know that to get good marks in any exam ,we have to study hard and for which consistency is ...",
-    "thumbnails": {
-      "default": {
-        "url": "https://i.ytimg.com/vi/SR2Mf27YweM/default.jpg",
-        "width": 120,
-        "height": 90
-      },
-      "medium": {
-        "url": "https://i.ytimg.com/vi/SR2Mf27YweM/mqdefault.jpg",
-        "width": 320,
-        "height": 180
-      },
-      "high": {
-        "url": "https://i.ytimg.com/vi/SR2Mf27YweM/hqdefault.jpg",
-        "width": 480,
-        "height": 360
-      }
-    },
-    "channelTitle": "BE CONSISTENT",
-    "liveBroadcastContent": "none",
-    "publishTime": "2022-08-31T00:43:25Z"
-  }
-}
+-   Tables (schemas) of columns and rows
+-   Each row represents an entity/record
+-   Each column represents an attribute/property
+
+### SQLite
+
+-   Light-weight database engine
+-   Stores an entire database in a `.db` file
+-   You use SQL to work with databases
+
+## Working with databases in R {.smaller}
+
+::: panel-tabset
+### Code
+
+``` r
+library(DBI)
+library(RSQLite)
+
+con <- DBI::dbConnect(RSQLite::SQLite(), "comments.db")
+data <- DBI::dbReadTable(con, "comments")
+
+head(data)
 ```
 
-## To this ... {.smaller}
+### Results
 
 ```{r}
-# if (!require("pacman")) install.packages("pacman")
-# 
-# pacman::p_load(DBI, RSQLite, magrittr, dplyr, knitr)
-# 
-# con <- DBI::dbConnect(RSQLite::SQLite(),
-#                   "comments.db")
-# data <- DBI::dbReadTable(con, "comments")
-# data %<>% select(comment_id, video_id, text_original, reply_count, like_count, author_name, everything())
-# 
-# kable(head(data, 8), format="html")
+if (!require("pacman")) install.packages("pacman")
+
+pacman::p_load(DBI, RSQLite, magrittr, dplyr, knitr)
+
+con <- DBI::dbConnect(RSQLite::SQLite(),
+                  "comments.db")
+data <- DBI::dbReadTable(con, "comments")
+kable(head(data, 5), format="html")
 ```
+:::
 
 ## Additional help
 

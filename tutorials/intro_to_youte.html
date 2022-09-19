@@ -125,7 +125,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 </header>
 
-<p>YouTube is the second most visited website in the world [<a href="https://www.semrush.com/website/top/">1</a>], with 81% of Internet users having used the site [<a href="https://blog.hootsuite.com/youtube-stats-marketers/">2</a>]. That’s nearly everyone! On average, over 500 hours of videos are uploaded. This makes YouTube an invaluable source of social media data for the research community. There is much to be studied not only in the video content itself, but also in the metadata such as video titles, descriptions, and comments.</p>
+<p>YouTube is the second most visited website in the world [<a href="https://www.semrush.com/website/top/">1</a>], with 81% of Internet users having used the site [<a href="https://blog.hootsuite.com/youtube-stats-marketers/">2</a>]. That’s nearly everyone! On average, over 500 hours of videos are uploaded every minute. This makes YouTube an invaluable source of social media data for the research community. There is much to be studied not only in the video content itself, but also in the metadata such as video titles, descriptions, and comments.</p>
 <p>A body of research has done analyses using YouTube data, with topics ranging from cyber influence to misinformation. Here are a few examples:</p>
 <ul>
 <li><p>https://ieeexplore.ieee.org/document/8508766</p></li>
@@ -183,14 +183,14 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>Now, onto the exciting part. Let’s run a search!</p>
 <p>Similarly to doing a YouTube search, <code>youte search</code> allows you to do get a list of videos matching keywords and other specified criteria. Of course you will not get the video content itself, but the metadata such as video titles and descriptions.</p>
 <p>Here is the format of <code>youte search</code> command:</p>
-<pre class="shell"><code>youte search &lt;QUERY&gt; &lt;OUTPUT&gt; --from &lt;YYYY-MM-DD&gt; --to &lt;YYYY-MM-DD&gt; --name &lt;name-of-api-key&gt; --order=date --safe-search=none</code></pre>
+<pre class="shell"><code>youte search &lt;QUERY&gt; &lt;OUTPUT&gt; --from &lt;YYYY-MM-DD&gt; --to &lt;YYYY-MM-DD&gt; --name &lt;name-of-api-key&gt; --order=&lt;date|rating|relevance|title&gt; --safe-search=&lt;none|moderate|strict&gt;</code></pre>
 <ul>
 <li><p><code>QUERY</code>: the search term to look for in YouTube video titles and descriptions</p></li>
 <li><p><code>OUTPUT</code>: name of the file to store raw JSON responses from the API</p></li>
 <li><p><code>--from</code>, <code>--to</code>: specify date range of the search results returned. These are optional.</p></li>
 <li><p><code>--name</code>: name of the API key configured with youte. This is optional if you already have a default API key set up.</p></li>
-<li><p><code>--order</code>: sort type. The default is sort the results by date of upload.</p></li>
-<li><p><code>--safe-search</code>: include or exclude restricted content. The default is to include all public content.</p></li>
+<li><p><code>--order</code>: sort type. The default (date) will sort the results by date of upload.</p></li>
+<li><p><code>--safe-search</code>: include or exclude restricted content. The default (none) will include all public content.</p></li>
 </ul>
 <p>As an example, let’s search for videos matching “offgrid” from last month.</p>
 <pre class="shell"><code>youte search "offgrid" results.json --from 2022-08-01 --to 2022-08-31</code></pre>
@@ -236,7 +236,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>    <span class="dt">"publishTime"</span><span class="fu">:</span> <span class="st">"2022-08-31T00:43:25Z"</span></span>
 <span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
 <span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Everything inside a curly braces belongs an object. An object is basically a thing or an entity. Within that object you can have object properties or attributes, represented by key-value pairs. You can have objects nested within objects as well.</p>
+<p>Everything inside a curly braces belongs to an object. An object is basically a thing or an entity. Within that object you can have object properties or attributes, represented by key-value pairs. You can have objects nested within objects as well.</p>
 <p>There are many tools to view and work with JSON files. Here I’m using <code>jq</code> (https://stedolan.github.io/jq/) which is a commandline tool, to view the JSON.</p>
 <p>As you can see, the JSON format is great for data exchange, but not for data analysis, for which you’ll probably need something closer to a table or spreadsheet. I’ll talk about transforming JSON to a tabular format in <code>youte</code> later on.</p>
 </section>

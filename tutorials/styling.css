@@ -44,3 +44,37 @@ table {
 .reveal li:first-child {
   margin-top: 0% !important;
 }
+
+.reveal .column {
+  flex: 50%;
+  padding: 5px;
+}
+
+
+.reveal .row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#footer-logo {
+  position: fixed;
+  bottom: 10%;
+  left: 90%;
+  right: 0;
+}
+
+.reveal .center {
+  padding: 15% 0;
+  text-align: center;
+}
+
+.no-footer > #footer-logo, #title-slide > #footer-logo {
+  visibility: hidden;
+}
+
+@media print{
+  .reveal .footnotes {
+    visibility: hidden;
+  }
+}

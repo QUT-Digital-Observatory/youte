@@ -5,12 +5,39 @@ format:
     code-overflow: wrap
     code-line-numbers: false
     css: styling.css
+    self-contained: true
+    # include-after-body: logo-footer.html
 editor: visual
 ---
 
+## {.logo .no-footer}
+
+<div class="row">
+<div class="column">
+<img src="assets/ado-logo.png" style="width:100%">
+  
+</div>
+
+<div class="column">
+
+<img src="assets/atap.png" style="width:100%">
+  
+</div>
+</div>
+
+## {.none}
+
+<div class="center">
+
+We acknowledge the Traditional Custodians of country throughout Australia and their connections to land, sea and community. We pay our respect to their Elders past and present and extend that respect to all Aboriginal and Torres Strait Islander peoples today.
+
+</div>
+
 ##  {.none}
 
-<img src="assets/yt_logo_rgb_light.png" height="100"/> <br>
+<img src="assets/yt_logo_rgb_light.png" height="100"/>
+
+<br>
 
 -   The second most visited website in the world
 -   81% of Internet users have used YouTube
@@ -34,9 +61,13 @@ Helps make collecting data from YouTube easy and intuitive.
 -   Tidy YouTube data
 
 ::: notes
-Hello and welcome everyone to this workshop on collecting and analysing YouTube comments. In this first half of the workshop, I'll be showing you how to collect YouTube data using a commandline tool called youte. Then Sam will walk you through analysing YouTube comments collected by youte with discursis.
+-   helper library
 
-First of all, what is youte? In short, youte is a utility that you can run in your terminal that collects data from YouTube API. There are a variety of data that you can get with `youte`, like video and channel data such as titles, descriptions, and view statistics. You can also get comments left on a video or replies to a top level comment.
+-   interact with API
+
+-   command line tool
+
+-   get and tidy YouTube data
 :::
 
 ## API: A recap
@@ -64,10 +95,6 @@ Uses a **quota system**: there is a limit of how much data you can retrieve in a
  pip install youte
 ```
 
-::: notes
-To install `youte`, simply run `pip install youte` in your terminal.
-:::
-
 ## Set up your `youte` profile
 
 To run `youte`, you need to first configure and store your API key.
@@ -79,21 +106,17 @@ Open the Terminal and type the following command to get the interactive prompt.
 ```
 
 ::: notes
-Before running any query to get data, you need to configure your API key in `youte`. The `youte config add-key` command lets you store your API key in a config file, which youte then uses to store key metadata such as how many quota units you've used and so on. So if you open your terminal and type youte config add-key, you'll get an interactive prompt that guides you through the process. Here's a demo of how it's done.
+-   config saves key + quota usage
 
-When prompted, enter your API key as provided by Google. Then give your API key a name. This is used to easily identify your API key, and can be anything you choose.
+-   spares the trouble of entering it every time you run a query
 
-You can also set this API key as your default key, in which case you don't need to specify an API key name every time you run `youte`.
-:::
+-   what's a shell?
 
-## Running a YouTube search {.smaller}
+-   add-key: API key name is just a name you choose
 
-![](assets/youtube_search.png){height="600"}
+-   set default
 
-::: notes
-Now that's all set up. Let's start with the exciting bit, doing a YouTube search!
-
-Say you want to do a search for videos matching the keyword "study with me", to see what their titles and descriptions are and how many views they get.
+-   list-keys
 :::
 
 ## youte search {.smaller}
@@ -120,15 +143,13 @@ Say you want to do a search for videos matching the keyword "study with me", to 
 -   `--safe-search`: include or exclude restricted content
 
 ::: notes
-The `youte search` command works similarly to doing a YouTube search on a web browser, except that you do it through the command line. It allows you to do a YouTube search matching certain keywords. Here is a format of the command. The pointy brackets indicate your own input.
+-   Arguments vs optional params
 
-First you pass the query or keyword to search for, followed by the name of the output file to store the result data. You can also search for videos after or before a certain date by passing the --from and --to options.
+-   \--name is not needed if there's a default key
 
-The --name argument specifies which API key to use. If you've already set a default API key and want to use it, you don't need to specify this argument.
+-   File structure in shell (pwd, ls, cd)
 
-You can also tell the API to return the results in a certain order, specified by the `--order` argument. The default setting is sorting the results by the videos' upload times.
-
-Finally, you can tell the API to include or exclude restricted content. The default setting is to return all public content. Here is an example of how a search is run.
+-   JSON
 :::
 
 ## Example searches {.smaller}
@@ -196,10 +217,6 @@ Example JSON response:
 }
 ```
 
-::: notes
-All responses returned from YouTube API will be in JSON format. Here is a sample JSON response from `youte search`. `youte` also provides a function to transform raw JSON data to tidy or clean tabular format, which I'll talk about in a bit.
-:::
-
 ## Hydrate video information {.smaller}
 
 https://www.youtube.com/watch?v=**ZEbCz7B2-Eg**
@@ -211,14 +228,6 @@ https://www.youtube.com/watch?v=**ZEbCz7B2-Eg**
 -   `OUTPUT`: name of file storing raw JSON data from the API
 -   `[ITEMS]`: one or many video IDs
 
-::: notes
-The hydrate command is useful if you have a list of video IDs you want to get full data of. A common use of this command is after you run `youte search` to get a list of results first.
-
-`youte search` only returns some data, so if you want to get full data on a set of videos or channels you might need to use `hydrate`.
-
-Put your video IDs to a text or csv file, with each ID on a new line. And run `youte hydrate`.
-:::
-
 ## Using text file containing IDs
 
 ``` shell
@@ -227,10 +236,6 @@ Put your video IDs to a text or csv file, with each ID on a new line. And run `y
 
 -   Use IDs in a text file instead of entering them directly into the shell
 -   The text file contains a list of IDs, each on a new line, with no heading
-
-## Get comments on a video {.smaller}
-
-![](assets/youtube_comments.png)
 
 ## Get comments on a video
 
@@ -242,18 +247,10 @@ Put your video IDs to a text or csv file, with each ID on a new line. And run `y
 -   `-v` or `--by-video`: specify that comments on videos are to be retrieved
 -   `[ITEMS]`: one or many video IDs
 
-::: notes
-To get comments on a video, simply put the video ID in a text file and run the list-comments command. Specify the -v flag to let `youte` know you want comments on video.
-:::
-
-## Get replies to a comment thread {.smaller}
-
-![](assets/youtube_replies.png){align="center"}
-
 ## Get replies to a comment thread {.smaller}
 
 ``` shell
- youte list-comments -t OUTPUT [ITEMS]...
+ youte list-comments -t <OUTPUT> [ITEMS]...
 ```
 
 -   `-t` or `--by-thread`: specify that replies to a comment thread are to be retrieved
@@ -337,7 +334,9 @@ kable(head(data, 5), format="html")
 
 ## Additional help
 
--   https://github.com/QUT-Digital-Observatory/youte
+- https://github.com/QUT-Digital-Observatory/youte
+
+- Joint office hours: https://research.qut.edu.au/digitalobservatory/office-hours/
 
 ::: notes
 For further help, refer to `youte` documentation on our Github page. `youte` is still early in its development so any feedback is welcome. And we aim to expand on its functionalities in the future.

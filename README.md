@@ -282,6 +282,19 @@ Options:
 
 The `tidy` command will detect the type of resources in the JSON file (i.e. video, channel, search results, or comments) and process the data accordingly. It's important that each JSON file contains just **one** type of resource.  
 
+
+## Database schemas
+
+`youte tidy` processes JSON data into different schemas depending on the type of resource in the JSON file. Here are all the schemas with their corresponding YouTube resources.
+
+| Resource                             | Schema         |
+|--------------------------------------|----------------|
+| Search results (from `youte search`) | search_results |
+| Videos                               | videos         |
+| Channels                             | channels       |
+| Comment threads (top-level comments) | comments       |
+| Replies to comment threads           | comments       |
+
 ## YouTube API Quota system and youte handling of quota  
 
 Most often, there is a limit to how many requests you can make to YouTube API per day. YouTube API uses a quota system in which each request costs a number of units depending on the endpoint the request is made to.  

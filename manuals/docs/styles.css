@@ -1,0 +1,20 @@
+/* css styles */
+pre.shell code {
+  border-radius: 25px;
+  padding: 2%;
+  background-color: rgba(233,236,239,.65);
+  color: #003B4F;
+  line-height: 120%;
+  overflow: auto;
+}
+
+@media print {
+  @page {
+      margin: 2cm;
+      background-color: white;
+      body {
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+  }
+}

@@ -3,6 +3,7 @@ Copyright: Digital Observatory 2022 <digitalobservatory@qut.edu.au>
 Author: Boyd Nguyen <thaihoang.nguyen@qut.edu.au>
 """
 import logging
+import os.path
 import sys
 import click
 from pathlib import Path
@@ -12,6 +13,7 @@ from youte.collector import Youte
 from youte.config import YouteConfig, get_api_key, get_config_path
 from youte.quota import Quota
 from youte import tidier
+from youte.utilities import validate_file, check_file_overwrite
 
 # Logging
 logger = logging.getLogger()
@@ -71,9 +73,10 @@ def search(
         # get_id=False,
 ) -> None:
     """Do a YouTube search."""
+    output = validate_file(output)
+    output = check_file_overwrite(output)
 
     api_key = get_api_key(name=name)
-
     search_collector = _set_up_collector(api_key=api_key, max_quota=max_quota)
 
     meta_data = "kind,etag,nextPageToken,regionCode,pageInfo"
@@ -132,6 +135,8 @@ def list_comments(
 
     ITEMS: ID(s) of item as provided by YouTube
     """
+    output = validate_file(output)
+    output = check_file_overwrite(output)
 
     api_key = get_api_key(name=name)
     collector = _set_up_collector(api_key=api_key, max_quota=max_quota)
@@ -152,8 +157,6 @@ def list_comments(
         by = "video"
     elif by_parent:
         by = "parent"
-    else:
-        by = None
 
     collector.list_items(item_type=item_type, ids=ids, output_path=output,
                          by=by)
@@ -189,9 +192,10 @@ def hydrate(items: Sequence[str],
 
     ITEMS: ID(s) of item as provided by YouTube
     """
+    output = validate_file(output)
+    output = check_file_overwrite(output)
 
     api_key = get_api_key(name=name)
-
     collector = _set_up_collector(api_key=api_key, max_quota=max_quota)
 
     ids = _get_ids(string=items, file=file_path)

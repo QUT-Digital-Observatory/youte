@@ -1,4 +1,9 @@
 /* css styles */
+pre code {
+  background-color: #D3D3D3;
+  overflow: auto;
+ }
+
 pre.shell code {
   border-radius: 25px;
   padding: 2%;

@@ -356,6 +356,55 @@ con = sqlite3.connect("cleaned.db")   # connect to cleaned.db
 data = pandas.read_sql_query("SELECT * FROM comments", con=con)  # read all data from table "comments" to a pandas DataFrame
 ```
 
+## YouTube API Quota system
+
+Most often, there is a limit to how many requests you can make to YouTube API per day. YouTube API uses a quota system in which each request costs a number of units depending on the operation requested.
+
+For example:
+
+- searching costs 100 units per request
+
+- hydrating videos, channels, and comments each costs 1 unit per request
+
+Free accounts get an API quota cap of 10,000 units per project per day, which resets at midnight Pacific Time. Hence the default maximum quota value is set to be 10,000 in `youte`.
+
+### `youte`'s handling of quota usage
+
+At present, you can only check your quota usage on the [Quotas](https://console.cloud.google.com/iam-admin/quotas) page in the API Console. It is not possible to monitor quota usage via metadata returned in the API responses.
+
+Therefore, `youte` manually monitors quota by keeping counts of requests made and logging their quota usage to the config file. If the maximum quota has been reached, youte handles it by putting the program to sleep until quota reset time (midnight Pacific) before re-running the collector. This is a makeshift approach and does not guarantee perfectly accurate data, especially when you try to collect data on multiple computers using the same API key.
+
+### Saving search progress
+
+As you have seen above, searching is very "expensive" in terms of quota usage. Therefore, you can select to save the progress of a search so that if you exit the program prematurely, either by accident or on purpose, you can resume the search from where it stopped to avoid wasting valuable quota units.
+
+When you exit the program in the middle of a search (i.e. by pressing Ctrl+C), you will get a prompt asking to save progress. 
+
+If you select Yes, search progress is saved in a SQLite database in a hidden *.youte.history* folder inside your current directory. The name of the database is what is passed as the OUTPUT file with the `.json` extension removed. If you rerun the same search in the same directory, you can choose to resume the progress from that database. This database will be deleted once all search results have been returned.
+
+``` shell
+$ youte search "offgrid living" search.json
+```
+
+When you press Ctrl+C to exit the program midway through and then press `y` after the prompt you will see:
+
+```
+Do you want to save your current progress? [y/N]:
+
+Progress saved at /home/boyd/Documents/demo/.youte.history/search.db
+```
+
+To resume the search, type the same command in the same directory:
+
+``` shell
+$ youte search "offgrid living" search.json
+```
+
+```
+A history file '.youte.history/search.db' is detected in your current directory.
+Do you want to resume progress from this history file?
+If you are at all unsure, say No. [y/N]:
+```
 
 ## Feedback is welcome!
 

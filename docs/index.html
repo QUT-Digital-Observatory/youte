@@ -189,6 +189,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
   <li><a href="#json-format" id="toc-json-format" class="nav-link" data-scroll-target="#json-format">JSON format</a></li>
   <li><a href="#working-with-databases-in-r-and-python" id="toc-working-with-databases-in-r-and-python" class="nav-link" data-scroll-target="#working-with-databases-in-r-and-python">Working with databases in R and Python</a></li>
   </ul></li>
+  <li><a href="#youtube-api-quota-system" id="toc-youtube-api-quota-system" class="nav-link" data-scroll-target="#youtube-api-quota-system">YouTube API Quota system</a>
+  <ul class="collapse">
+  <li><a href="#youtes-handling-of-quota-usage" id="toc-youtes-handling-of-quota-usage" class="nav-link" data-scroll-target="#youtes-handling-of-quota-usage"><code>youte</code>’s handling of quota usage</a></li>
+  <li><a href="#saving-search-progress-1" id="toc-saving-search-progress-1" class="nav-link" data-scroll-target="#saving-search-progress-1">Saving search progress</a></li>
+  </ul></li>
   <li><a href="#feedback-is-welcome" id="toc-feedback-is-welcome" class="nav-link" data-scroll-target="#feedback-is-welcome">Feedback is welcome!</a></li>
   </ul>
 </nav>
@@ -442,6 +447,37 @@ Getting API key from config file.
 <span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>con <span class="op">=</span> sqlite3.<span class="ex">connect</span>(<span class="st">"cleaned.db"</span>)   <span class="co"># connect to cleaned.db</span></span>
 <span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pandas.read_sql_query(<span class="st">"SELECT * FROM comments"</span>, con<span class="op">=</span>con)  <span class="co"># read all data from table "comments" to a pandas DataFrame</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
+</section>
+</section>
+<section id="youtube-api-quota-system" class="level2">
+<h2 class="anchored" data-anchor-id="youtube-api-quota-system">YouTube API Quota system</h2>
+<p>Most often, there is a limit to how many requests you can make to YouTube API per day. YouTube API uses a quota system in which each request costs a number of units depending on the operation requested.</p>
+<p>For example:</p>
+<ul>
+<li><p>searching costs 100 units per request</p></li>
+<li><p>hydrating videos, channels, and comments each costs 1 unit per request</p></li>
+</ul>
+<p>Free accounts get an API quota cap of 10,000 units per project per day, which resets at midnight Pacific Time. Hence the default maximum quota value is set to be 10,000 in <code>youte</code>.</p>
+<section id="youtes-handling-of-quota-usage" class="level3">
+<h3 class="anchored" data-anchor-id="youtes-handling-of-quota-usage"><code>youte</code>’s handling of quota usage</h3>
+<p>At present, you can only check your quota usage on the <a href="https://console.cloud.google.com/iam-admin/quotas">Quotas</a> page in the API Console. It is not possible to monitor quota usage via metadata returned in the API responses.</p>
+<p>Therefore, <code>youte</code> manually monitors quota by keeping counts of requests made and logging their quota usage to the config file. If the maximum quota has been reached, youte handles it by putting the program to sleep until quota reset time (midnight Pacific) before re-running the collector. This is a makeshift approach and does not guarantee perfectly accurate data, especially when you try to collect data on multiple computers using the same API key.</p>
+</section>
+<section id="saving-search-progress-1" class="level3">
+<h3 class="anchored" data-anchor-id="saving-search-progress-1">Saving search progress</h3>
+<p>As you have seen above, searching is very “expensive” in terms of quota usage. Therefore, you can select to save the progress of a search so that if you exit the program prematurely, either by accident or on purpose, you can resume the search from where it stopped to avoid wasting valuable quota units.</p>
+<p>When you exit the program in the middle of a search (i.e.&nbsp;by pressing Ctrl+C), you will get a prompt asking to save progress.</p>
+<p>If you select Yes, search progress is saved in a SQLite database in a hidden <em>.youte.history</em> folder inside your current directory. The name of the database is what is passed as the OUTPUT file with the <code>.json</code> extension removed. If you rerun the same search in the same directory, you can choose to resume the progress from that database. This database will be deleted once all search results have been returned.</p>
+<pre class="shell"><code>$ youte search "offgrid living" search.json</code></pre>
+<p>When you press Ctrl+C to exit the program midway through and then press <code>y</code> after the prompt you will see:</p>
+<pre><code>Do you want to save your current progress? [y/N]:
+
+Progress saved at /home/boyd/Documents/demo/.youte.history/search.db</code></pre>
+<p>To resume the search, type the same command in the same directory:</p>
+<pre class="shell"><code>$ youte search "offgrid living" search.json</code></pre>
+<pre><code>A history file '.youte.history/search.db' is detected in your current directory.
+Do you want to resume progress from this history file?
+If you are at all unsure, say No. [y/N]:</code></pre>
 </section>
 </section>
 <section id="feedback-is-welcome" class="level2">

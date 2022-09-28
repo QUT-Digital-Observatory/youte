@@ -388,7 +388,7 @@ $ youte search "offgrid living" search.json
 
 When you press Ctrl+C to exit the program midway through and then press `y` after the prompt you will see:
 
-```
+``` text
 Do you want to save your current progress? [y/N]:
 
 Progress saved at /home/boyd/Documents/demo/.youte.history/search.db
@@ -400,7 +400,7 @@ To resume the search, type the same command in the same directory:
 $ youte search "offgrid living" search.json
 ```
 
-```
+``` text
 A history file '.youte.history/search.db' is detected in your current directory.
 Do you want to resume progress from this history file?
 If you are at all unsure, say No. [y/N]:

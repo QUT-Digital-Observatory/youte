@@ -470,12 +470,12 @@ Getting API key from config file.
 <p>If you select Yes, search progress is saved in a SQLite database in a hidden <em>.youte.history</em> folder inside your current directory. The name of the database is what is passed as the OUTPUT file with the <code>.json</code> extension removed. If you rerun the same search in the same directory, you can choose to resume the progress from that database. This database will be deleted once all search results have been returned.</p>
 <pre class="shell"><code>$ youte search "offgrid living" search.json</code></pre>
 <p>When you press Ctrl+C to exit the program midway through and then press <code>y</code> after the prompt you will see:</p>
-<pre><code>Do you want to save your current progress? [y/N]:
+<pre class="text"><code>Do you want to save your current progress? [y/N]:
 
 Progress saved at /home/boyd/Documents/demo/.youte.history/search.db</code></pre>
 <p>To resume the search, type the same command in the same directory:</p>
 <pre class="shell"><code>$ youte search "offgrid living" search.json</code></pre>
-<pre><code>A history file '.youte.history/search.db' is detected in your current directory.
+<pre class="text"><code>A history file '.youte.history/search.db' is detected in your current directory.
 Do you want to resume progress from this history file?
 If you are at all unsure, say No. [y/N]:</code></pre>
 </section>

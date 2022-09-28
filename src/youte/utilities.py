@@ -16,11 +16,11 @@ def validate_file(file_name, suffix=None):
 
 def check_file_overwrite(file_path: Path) -> Path:
     if file_path.exists():
-        flag = click.confirm("Database already exists. Overwrite?")
+        flag = click.confirm(f"{file_path} already exists. Keep writing to it?")
         if flag:
-            logger.info(f"Updating existing database {file_path.resolve()}...")
+            logger.info(f"Updating existing file {file_path.resolve()}...")
         else:
-            file_name = input("Input new database name: ")
+            file_name = input("Input new file name: ")
             file_path = Path(file_name)
 
     return file_path

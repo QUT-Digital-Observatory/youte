@@ -112,8 +112,6 @@ def _request_with_error_handling(url: str, params: Mapping) -> requests.Response
                 logger.error(json.dumps(response.json()))
                 sys.exit(1)
 
-    time.sleep(1)
-
     return response
 
 
@@ -250,6 +248,11 @@ class Youte:
         saved_to="history.db",
         **kwargs,
     ):
+        valid_type = ['videos', 'channels', 'comments', 'comment_threads']
+
+        if item_type not in valid_type:
+            raise ValueError(f"`item_type` must be one of {valid_type}")
+
         request_info = _get_endpoint(item_type)
         url = request_info["url"]
         api_cost_unit = request_info["api_cost_unit"]
@@ -273,14 +276,14 @@ class Youte:
         if by and by not in valid_by_values:
             raise ValueError("`by` must be `parent` or `video`")
 
-        is_channel_video = item_type in ["channels", "videos"]
-        get_comments_only = (item_type == "comment_threads") and (
+        not_comments = item_type in ["channels", "videos"]
+        get_comments_only = (item_type == "comments") and (
             not (by == "parent" or by == "video")
         )
         get_by_parents = (item_type == "comments") and by == "parent"
         get_by_video_channel = (item_type == "comment_threads") and (by == "video")
 
-        can_batch_ids = is_channel_video or get_comments_only
+        can_batch_ids = not_comments or get_comments_only
         cannot_batch_ids = get_by_parents or get_by_video_channel
 
         if get_comments_only:

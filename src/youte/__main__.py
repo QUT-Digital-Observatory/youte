@@ -3,7 +3,6 @@ Copyright: Digital Observatory 2022 <digitalobservatory@qut.edu.au>
 Author: Boyd Nguyen <thaihoang.nguyen@qut.edu.au>
 """
 import logging
-import os.path
 import sys
 import click
 from pathlib import Path
@@ -13,7 +12,7 @@ from youte.collector import Youte
 from youte.config import YouteConfig, get_api_key, get_config_path
 from youte.quota import Quota
 from youte import tidier
-from youte.utilities import validate_file, check_file_overwrite
+from youte.utilities import validate_file, check_file_overwrite, validate_date_string
 
 # Logging
 logger = logging.getLogger()
@@ -41,7 +40,7 @@ def youte():
 
 @youte.command()
 @click.argument("query", required=True)
-@click.argument("output", required=True)
+@click.argument("output", type=click.Path(), required=True)
 @click.option("--from", "from_", help="Start date (YYYY-MM-DD)")
 @click.option("--to", help="End date (YYYY-MM-DD)")
 @click.option("--name", help="Name of the API key (optional)")
@@ -76,6 +75,11 @@ def search(
     output = validate_file(output)
     output = check_file_overwrite(output)
 
+    for date in (from_, to):
+        if date:
+            if not validate_date_string(date):
+                raise click.BadParameter("Date not in correct format (YYYY-MM-DD)")
+
     api_key = get_api_key(name=name)
     search_collector = _set_up_collector(api_key=api_key, max_quota=max_quota)
 
@@ -99,24 +103,18 @@ def search(
 
 
 @youte.command()
-@click.argument("output", required=True)
+@click.argument("output", type=click.Path(), required=True)
 @click.argument("items", nargs=-1, required=False)
-@click.option(
-    "-f", "--file-path", help="Get IDs from file",
-    default=None
-)
-@click.option(
-    "-t", "--by-thread",
-    "by_parent",
-    help="Get all replies to a parent comment",
-    is_flag=True
-)
+@click.option("-f", "--file-path", help="Get IDs from file", default=None)
+@click.option("-t", "--by-thread", "by_parent",
+              help="Get all replies to a parent comment",
+              is_flag=True)
 @click.option("-v", "--by-video", help="Get all comments for a video ID",
               is_flag=True)
-@click.option(
-    "--max-quota", default=10000, help="Maximum quota allowed",
-    show_default=True
-)
+@click.option("--max-quota",
+              default=10000,
+              help="Maximum quota allowed",
+              show_default=True)
 @click.option("--name", help="Name of the API key (optional)")
 def list_comments(
         items: Sequence[str],
@@ -163,15 +161,18 @@ def list_comments(
 
 
 @youte.command()
-@click.argument("output", required=True)
+@click.argument("output", type=click.Path(), required=True)
 @click.argument("items", nargs=-1, required=False)
 @click.option(
     "-f", "--file-path", help="Get IDs from file",
     default=None
 )
-@click.option(
-    "--channel", help="Hydrate channel IDs instead of video IDs", is_flag=True
-)
+@click.option("--kind",
+              type=click.Choice(['videos', 'channels', 'comments'],
+                                case_sensitive=False),
+              help="Sort results",
+              show_default=True,
+              default='videos')
 @click.option("--name", help="Name of the API key (optional)")
 @click.option(
     "--max-quota", default=10000, help="Maximum quota allowed",
@@ -179,7 +180,7 @@ def list_comments(
 )
 def hydrate(items: Sequence[str],
             output: str,
-            channel: bool,
+            kind: str,
             file_path: str,
             name: str,
             max_quota: int) -> None:
@@ -200,13 +201,12 @@ def hydrate(items: Sequence[str],
 
     ids = _get_ids(string=items, file=file_path)
 
-    item_type = "channels" if channel else "videos"
-    collector.list_items(item_type=item_type, ids=ids, output_path=output)
+    collector.list_items(item_type=kind, ids=ids, output_path=output)
 
 
 @youte.command()
-@click.argument("filepath", required=True)
-@click.argument("output", required=True)
+@click.argument("filepath", type=click.Path(), required=True)
+@click.argument("output", type=click.Path(), required=True)
 def tidy(filepath, output):
     """Tidy raw JSON response into relational SQLite databases"""
     tidier.master_tidy(filepath=filepath, output=output)

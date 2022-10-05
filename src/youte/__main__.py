@@ -28,6 +28,13 @@ file_handler.setFormatter(file_formatter)
 logger.addHandler(file_handler)
 
 
+def _validate_date(ctx, param, value):
+    if validate_date_string(value):
+        return value
+    else:
+        raise click.BadParameter("Date not in correct format (YYYY-MM-DD)")
+
+
 # CLI argument set up:
 @click.group()
 def youte():
@@ -41,8 +48,10 @@ def youte():
 @youte.command()
 @click.argument("query", required=True)
 @click.argument("output", type=click.Path(), required=True)
-@click.option("--from", "from_", help="Start date (YYYY-MM-DD)")
-@click.option("--to", help="End date (YYYY-MM-DD)")
+@click.option("--from", "from_", help="Start date (YYYY-MM-DD)",
+              callback=_validate_date)
+@click.option("--to", help="End date (YYYY-MM-DD)",
+              callback=_validate_date)
 @click.option("--name", help="Name of the API key (optional)")
 @click.option("--order",
               type=click.Choice(['date', 'rating', 'relevance', 'title'],
@@ -74,11 +83,6 @@ def search(
     """Do a YouTube search."""
     output = validate_file(output)
     output = check_file_overwrite(output)
-
-    for date in (from_, to):
-        if date:
-            if not validate_date_string(date):
-                raise click.BadParameter("Date not in correct format (YYYY-MM-DD)")
 
     api_key = get_api_key(name=name)
     search_collector = _set_up_collector(api_key=api_key, max_quota=max_quota)

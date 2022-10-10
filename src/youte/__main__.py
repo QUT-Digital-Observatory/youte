@@ -80,7 +80,11 @@ def search(
         safe_search: str
         # get_id=False,
 ) -> None:
-    """Do a YouTube search."""
+    """Do a YouTube search.
+
+    QUERY: search query\n
+    OUTPUT: name of json file to store output data
+    """
     output = validate_file(output)
     output = check_file_overwrite(output)
 

@@ -1,20 +1,19 @@
 import logging
 import sqlite3
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil import tz
 import random
 import json
 import time
 from typing import List, Tuple, Mapping
 from pathlib import Path
-import click
 from tqdm import tqdm
 import os
 import sys
 from typing import Union
+import click
 
-from youte.quota import Quota
 from youte.utilities import create_utc_datetime_string
 
 logger = logging.getLogger(__name__)
@@ -52,7 +51,8 @@ class ProgressSaver:
 
     def update_token(self, token: str) -> None:
         self.conn.execute(
-            "REPLACE INTO history VALUES (?,?)", (token, datetime.now(tz=tz.UTC))
+            "REPLACE INTO history VALUES (?,?)",
+            (token, datetime.now(tz=tz.UTC))
         )
         self.conn.commit()
 
@@ -70,18 +70,6 @@ class ProgressSaver:
         self.conn.close()
 
 
-def _confirm_existing_history(filename: str) -> None:
-    if os.path.exists(filename):
-        confirm_text = f"""
-        A history file '{filename}' is detected in your current directory.
-        Do you want to resume progress from this history file?
-        If you are at all unsure, say No."""
-        confirm_prompt = click.confirm(confirm_text)
-
-        if not confirm_prompt:
-            os.remove(filename)
-
-
 def _load_page_token(filename) -> Tuple[List, ProgressSaver]:
     history = ProgressSaver(path=filename)
     tokens = history.load_token()
@@ -89,26 +77,32 @@ def _load_page_token(filename) -> Tuple[List, ProgressSaver]:
     return tokens, history
 
 
-def _request_with_error_handling(url: str, params: Mapping) -> requests.Response:
+def _request_with_error_handling(url: str,
+                                 params: Mapping) -> requests.Response:
     response = requests.get(url, params=params)
     logger.info(f"Getting {response.url}.\nStatus: {response.status_code}.")
 
     if response.status_code in [403, 400, 404]:
-        logger.error(f"Error: {response.url}")
-        logger.error(f"Error: {params}")
-
         errors = response.json()["error"]["errors"]
+
+        logger.error(f"Error: {response.url}")
+        logger.error(json.dumps(errors))
+
         for error in errors:
             # ignore if comment is disabled
             if error["reason"] == "commentsDisabled":
-                click.secho("WARNING:", fg="bright_red", bold=True)
-                click.secho(error["reason"], fg="bright_red", bold=True)
+                logger.warning(error["reason"])
+            elif 'quotaExceeded' in error["reason"]:
+                # wait until reset time if quota exceeded
+                until_reset = _get_reset_remaining(datetime.now(tz=tz.UTC))
+
+                logger.error(error["reason"])
+                logger.warning(
+                    f"Sleeping for {until_reset} seconds til reset time")
+                time.sleep(until_reset)
+                _request_with_error_handling(url, **params)
             else:
-                click.secho("ERROR:", fg="red", bold=True)
-                click.secho(
-                    "An error has occurred in making the request.", fg="red", bold=True
-                )
-                click.secho(f"Reason: {error['message']}", fg="red", bold=True)
+                logger.error(f"Reason: {error['message']}")
                 logger.error(json.dumps(response.json()))
                 sys.exit(1)
 
@@ -137,7 +131,7 @@ def _get_params(**kwargs) -> dict:
 
 def _prompt_save_progress(filename) -> None:
     if os.path.exists(filename):
-        if click.confirm("Do you want to save your " "current progress?"):
+        if click.confirm("Do you want to save your current progress?"):
             full_path = Path(filename).resolve()
             click.echo(f"Progress saved at {full_path}")
         else:
@@ -145,7 +139,8 @@ def _prompt_save_progress(filename) -> None:
     sys.exit()
 
 
-def _get_page_token(response: requests.Response, saved_to: ProgressSaver) -> None:
+def _get_page_token(response: requests.Response,
+                    saved_to: ProgressSaver) -> None:
     try:
         next_page_token = response.json()["nextPageToken"]
         saved_to.add_token(next_page_token)
@@ -164,35 +159,32 @@ def _get_history_path(outfile: Union[str, Path]) -> Path:
     return history_dir / db_file.name
 
 
+def _get_reset_remaining(current: datetime) -> int:
+    next_reset = datetime.now(tz=tz.gettz("US/Pacific")) + timedelta(days=1)
+    next_reset = next_reset.replace(hour=0, minute=0, second=0, microsecond=0)
+    reset_remaining = next_reset - current
+
+    return reset_remaining.seconds + 1
+
+
 class Youte:
-    def __init__(self, api_key: str, max_quota: int = 10000):
+    def __init__(self, api_key: str):
         self.api_key = api_key
-        self._quota = None
-        self.max_quota = max_quota
 
-    @property
-    def quota(self):
-        return self._quota
-
-    @quota.setter
-    def quota(self, quota: Quota):
-        if isinstance(quota, Quota):
-            self._quota = quota
-        else:
-            raise TypeError("Has to be a Quota object.")
-
-    def search(self, query, output_path, **kwargs):
-        api_cost = 100
-
-        self.quota.get_quota()
+    def search(self,
+               query: str,
+               save_progress_to: Union[str, Path] = None,
+               **kwargs) -> dict:
 
         page = 0
 
-        history_file = _get_history_path(output_path)
-        _confirm_existing_history(history_file)
+        if not save_progress_to:
+            save_progress_to = f"search_history_{int(time.time())}.db"
 
-        while True:
-            try:
+        history_file = _get_history_path(save_progress_to)
+
+        try:
+            while True:
                 tokens, history = _load_page_token(history_file)
 
                 if not tokens:
@@ -200,8 +192,6 @@ class Youte:
 
                 for token in tokens:
                     page += 1
-
-                    self.quota.handle_limit(max_quota=self.max_quota)
 
                     url = "https://www.googleapis.com/youtube/v3/search"
 
@@ -214,39 +204,25 @@ class Youte:
 
                     r = _request_with_error_handling(url=url, params=params)
 
-                    self.quota.add_quota(api_cost, datetime.now(tz=tz.UTC))
-
-                    logger.info(f"Quota used: {self.quota.units}.")
-
                     _get_page_token(response=r, saved_to=history)
-
-                    _write_output_to_jsonl(output_path=output_path, json_rec=r.json())
 
                     # store recorded and unrecorded tokens in config file
                     history.update_token(token)
 
-            except KeyboardInterrupt:
-                click.echo()
-                history.close()
-                _prompt_save_progress(filename=history_file)
+                    yield r.json()
+        finally:
+            history.close()
+            os.remove(history_file)
 
-        click.secho(
-            f"Complete! {page} pages of search results collected.\n"
-            f"Total units used: {self.quota.units}",
-            fg="bright_green",
-        )
-        click.secho(f"File saved in {output_path}", fg="green")
-        history.close()
-        os.remove(history_file)
 
     def list_items(
-        self,
-        item_type,
-        ids: List,
-        output_path,
-        by=None,
-        saved_to="history.db",
-        **kwargs,
+            self,
+            item_type,
+            ids: List,
+            output_path,
+            by=None,
+            saved_to="history.db",
+            **kwargs,
     ):
         valid_type = ['videos', 'channels', 'comments', 'comment_threads']
 
@@ -281,7 +257,8 @@ class Youte:
             not (by == "parent" or by == "video")
         )
         get_by_parents = (item_type == "comments") and by == "parent"
-        get_by_video_channel = (item_type == "comment_threads") and (by == "video")
+        get_by_video_channel = (item_type == "comment_threads") and (
+                by == "video")
 
         can_batch_ids = not_comments or get_comments_only
         cannot_batch_ids = get_by_parents or get_by_video_channel
@@ -314,7 +291,8 @@ class Youte:
                 self.quota.add_quota(api_cost_unit, datetime.now(tz=tz.UTC))
                 logger.info(f"Quota used: {self.quota.units}.")
 
-                _write_output_to_jsonl(output_path=output_path, json_rec=r.json())
+                _write_output_to_jsonl(output_path=output_path,
+                                       json_rec=r.json())
 
                 batch_no += 1
 
@@ -352,9 +330,11 @@ class Youte:
                                 logger.info("Adding page token...")
                                 params["pageToken"] = token
 
-                            r = _request_with_error_handling(url=url, params=params)
+                            r = _request_with_error_handling(url=url,
+                                                             params=params)
 
-                            self.quota.add_quota(api_cost_unit, datetime.now(tz=tz.UTC))
+                            self.quota.add_quota(api_cost_unit,
+                                                 datetime.now(tz=tz.UTC))
                             logger.info(f"Quota used: {self.quota.units}.")
 
                             _get_page_token(response=r, saved_to=history)
@@ -405,7 +385,7 @@ def _get_endpoint(endpoint) -> dict:
             "api_cost_unit": 1,
             "params": {
                 "part": "snippet,statistics,topicDetails,status,"
-                "contentDetails,recordingDetails,id",
+                        "contentDetails,recordingDetails,id",
                 "id": None,
                 "maxResults": 50,
                 "key": None,
@@ -416,7 +396,7 @@ def _get_endpoint(endpoint) -> dict:
             "api_cost_unit": 1,
             "params": {
                 "part": "snippet,statistics,topicDetails,status,"
-                "contentDetails,brandingSettings,contentOwnerDetails",
+                        "contentDetails,brandingSettings,contentOwnerDetails",
                 "id": None,
                 "maxResults": 50,
                 "key": None,

@@ -7,12 +7,14 @@ import sys
 import click
 from pathlib import Path
 from typing import Sequence, List
+import json
+import os
 
 from youte.collector import Youte
 from youte.config import YouteConfig, get_api_key, get_config_path
-from youte.quota import Quota
 from youte import tidier
 from youte.utilities import validate_file, check_file_overwrite, validate_date_string
+from youte.exceptions import StopCollector
 
 # Logging
 logger = logging.getLogger()
@@ -29,10 +31,11 @@ logger.addHandler(file_handler)
 
 
 def _validate_date(ctx, param, value):
-    if validate_date_string(value):
-        return value
-    else:
-        raise click.BadParameter("Date not in correct format (YYYY-MM-DD)")
+    if value:
+        if validate_date_string(value):
+            return value
+        else:
+            raise click.BadParameter("Date not in correct format (YYYY-MM-DD)")
 
 
 # CLI argument set up:
@@ -47,12 +50,15 @@ def youte():
 
 @youte.command()
 @click.argument("query", required=True)
-@click.argument("output", type=click.Path(), required=True)
-@click.option("--from", "from_", help="Start date (YYYY-MM-DD)",
+@click.argument("output", type=click.File(mode='w'), required=False)
+@click.option("--from", "from_",
+              help="Start date (YYYY-MM-DD)",
               callback=_validate_date)
-@click.option("--to", help="End date (YYYY-MM-DD)",
+@click.option("--to",
+              help="End date (YYYY-MM-DD)",
               callback=_validate_date)
-@click.option("--name", help="Name of the API key (optional)")
+@click.option("--name", help="Specify an API name added to youte config")
+@click.option("--key", help="Specify a YouTube API key")
 @click.option("--order",
               type=click.Choice(['date', 'rating', 'relevance', 'title'],
                                 case_sensitive=False),
@@ -65,41 +71,49 @@ def youte():
               help="Include or exclude restricted content",
               default='none',
               show_default=True)
-@click.option(
-    "--max-quota", default=10000, help="Maximum quota allowed",
-    show_default=True
-)
+@click.option("--video-duration",
+              type=click.Choice(['any', 'long', 'medium', 'short']),
+              default='any')
+@click.option("--max-results",
+              type=click.IntRange(0, 50),
+              help="Maximum number of results returned per page",
+              default=50,
+              show_default=True)
+@click.option("--resume", help="Resume progress from this file")
 def search(
         query: str,
         output: str,
         from_: str,
         to: str,
         name: str,
-        max_quota: int,
+        key: str,
         order: str,
-        safe_search: str
-        # get_id=False,
+        video_duration: str,
+        safe_search: str,
+        resume: str,
+        max_results: int
 ) -> None:
     """Do a YouTube search.
 
     QUERY: search query\n
     OUTPUT: name of json file to store output data
     """
-    output = validate_file(output)
-    output = check_file_overwrite(output)
+    # output = validate_file(output)
+    # output = check_file_overwrite(output)
 
-    api_key = get_api_key(name=name)
-    search_collector = _set_up_collector(api_key=api_key, max_quota=max_quota)
+    api_key = key if key else get_api_key(name=name)
+    search_collector = _set_up_collector(api_key=api_key)
 
-    meta_data = "kind,etag,nextPageToken,regionCode,pageInfo"
+    # meta_data = "kind,etag,nextPageToken,regionCode,pageInfo"
     # fields = f"{meta_data},items/id/videoId" if get_id else "*"
 
     params = {
         "part": "snippet",
-        "maxResults": 50,
+        "maxResults": max_results,
         "type": "video",
         "order": order,
-        "safeSearch": safe_search
+        "safeSearch": safe_search,
+        "videoDuration": video_duration
     }
 
     if from_:
@@ -107,7 +121,22 @@ def search(
     if to:
         params["publishedBefore"] = to
 
-    search_collector.search(query=query, output_path=output, **params)
+    try:
+        if resume:
+            results = search_collector.search(query=query,
+                                              save_progress_to=resume,
+                                              **params)
+        else:
+            results = search_collector.search(query=query, **params)
+
+        for result in results:
+            click.echo(json.dumps(result), file=output)
+
+        if output:
+            click.echo(f"Results are stored in {output}")
+
+    except StopCollector:
+        _prompt_save_progress(search_collector.history_file)
 
 
 @youte.command()
@@ -273,7 +302,7 @@ def add_key():
     click.echo()
     click.echo("To add more API keys, rerun `youte config add-key`.")
     click.echo(
-        "To set an API key as default, run `youte config set-default" " <name-of-key>"
+        "To set a default key, run `youte config set-default <name-of-key>`"
     )
 
 
@@ -334,10 +363,8 @@ def list_keys():
         click.echo()
 
 
-def _set_up_collector(api_key: str, max_quota: int) -> Youte:
-    quota = Quota(api_key=api_key, config_path=get_config_path())
-    collector = Youte(api_key=api_key, max_quota=max_quota)
-    collector.quota = quota
+def _set_up_collector(api_key: str) -> Youte:
+    collector = Youte(api_key=api_key)
 
     return collector
 
@@ -368,3 +395,17 @@ def _raise_no_item_error(items: Sequence[str], file_path: str) -> None:
                     fg="red",
                     bold=True)
         sys.exit(1)
+
+
+def _prompt_save_progress(filename) -> None:
+    if click.confirm("Do you want to save your current progress?"):
+        full_path = Path(filename).resolve()
+        click.echo(f"Progress saved at {full_path}")
+        click.echo(f"To resume progress, run the same youte search command "
+                   f"and add `--resume {full_path.stem}`")
+    else:
+        try:
+            os.remove(filename)
+        except FileNotFoundError:
+            pass
+    sys.exit(0)

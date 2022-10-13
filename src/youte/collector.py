@@ -15,6 +15,7 @@ from typing import Union
 import click
 
 from youte.utilities import create_utc_datetime_string
+from youte.exceptions import StopCollector
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +98,10 @@ def _request_with_error_handling(url: str,
                 until_reset = _get_reset_remaining(datetime.now(tz=tz.UTC))
 
                 logger.error(error["reason"])
+                click.echo(error["reason"])
                 logger.warning(
+                    f"Sleeping for {until_reset} seconds til reset time")
+                click.echo(
                     f"Sleeping for {until_reset} seconds til reset time")
                 time.sleep(until_reset)
                 _request_with_error_handling(url, **params)
@@ -170,6 +174,7 @@ def _get_reset_remaining(current: datetime) -> int:
 class Youte:
     def __init__(self, api_key: str):
         self.api_key = api_key
+        self.history_file = None
 
     def search(self,
                query: str,
@@ -179,9 +184,10 @@ class Youte:
         page = 0
 
         if not save_progress_to:
-            save_progress_to = f"search_history_{int(time.time())}.db"
+            save_progress_to = f"search_{int(time.time())}.db"
 
         history_file = _get_history_path(save_progress_to)
+        self.history_file = history_file
 
         try:
             while True:
@@ -210,10 +216,13 @@ class Youte:
                     history.update_token(token)
 
                     yield r.json()
+
+        except KeyboardInterrupt:
+            raise StopCollector()
+
         finally:
             history.close()
             os.remove(history_file)
-
 
     def list_items(
             self,

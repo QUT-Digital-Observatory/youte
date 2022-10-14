@@ -69,11 +69,14 @@ def youte():
               type=click.Choice(['none', 'moderate', 'strict'],
                                 case_sensitive=False),
               help="Include or exclude restricted content",
-              default='none',
+              default="none",
               show_default=True)
 @click.option("--video-duration",
               type=click.Choice(['any', 'long', 'medium', 'short']),
               default='any')
+@click.option("--type", "type_",
+              default="video",
+              help="Type of resource to search for")
 @click.option("--max-results",
               type=click.IntRange(0, 50),
               help="Maximum number of results returned per page",
@@ -89,6 +92,7 @@ def search(
         key: str,
         order: str,
         video_duration: str,
+        type_: str,
         safe_search: str,
         resume: str,
         max_results: int
@@ -113,7 +117,8 @@ def search(
         "type": "video",
         "order": order,
         "safeSearch": safe_search,
-        "videoDuration": video_duration
+        "videoDuration": video_duration,
+        "type": type_
     }
 
     if from_:

@@ -33,9 +33,10 @@ def test_config_add(config_path):
 
 @pytest.fixture()
 def youte_obj(config_path) -> Youte:
-    youte = Youte(api_key=API_KEY)
-
-    return youte
+    youte_obj = Youte(api_key=API_KEY)
+    yield youte_obj
+    if os.path.exists(".youte.history"):
+        os.rmdir(".youte.history")
 
 
 @pytest.fixture()
@@ -70,6 +71,7 @@ def test_search(youte_obj):
         page += 1
 
     assert 50 < total_responses < 200
+    assert youte_obj.history_file.exists()
 
 
 @pytest.fixture()
@@ -104,7 +106,9 @@ def search_params() -> dict:
                         "--from", "2021-01-01",
                         "--safe-search", "moderate",
                         "--video-duration", "long",
-                        "--key", API_KEY]
+                        "--key", API_KEY],
+        "no-query": ['search', '--from', '2022-08-01',
+                     '--key', API_KEY]
     }
 
     return params
@@ -112,15 +116,10 @@ def search_params() -> dict:
 
 @pytest.mark.parametrize("command",
                          ["wrong-date-format",
-                          "wrong-order-option"])
+                          "wrong-order-option",
+                          "no-query"])
 def test_cli_search_fail(runner, search_params, command):
     results = runner.invoke(youte, search_params[command])
-    assert results.exception
-
-
-def test_cli_search_no_query(runner):
-    results = runner.invoke(youte, ['search', '--from', '2022-08-01',
-                                    '--key', API_KEY])
     assert results.exception
 
 
@@ -145,4 +144,3 @@ def test_cli_search_output(runner, tmp_path, search_params):
             r = json.loads(row)
 
             assert len(r["items"]) > 10
-

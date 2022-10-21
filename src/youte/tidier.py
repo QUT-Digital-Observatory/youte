@@ -1,7 +1,8 @@
+import csv
 import sqlite3
 import html
 import json
-from typing import Iterable, Mapping, Union
+from typing import Iterable, Mapping, Union, Sequence
 import re
 from tqdm import tqdm
 import logging
@@ -74,8 +75,7 @@ def _normalise_name(string):
 def tidy_search(filepath: str, output: Union[str, Path]) -> None:
     db = connect_db(output)
 
-    db.execute("begin")
-
+    db.execute("BEGIN")
     db.execute(
         """
         CREATE TABLE IF NOT EXISTS search_results(
@@ -91,7 +91,6 @@ def tidy_search(filepath: str, output: Union[str, Path]) -> None:
              );
         """
     )
-
     items = _get_items(filepath=filepath)
     total = 0
 
@@ -109,9 +108,9 @@ def tidy_search(filepath: str, output: Union[str, Path]) -> None:
 
         db.execute(
             """
-                    REPLACE INTO search_results
-                    VALUES (?,?,?,?,?,?,?,?,?)
-                    """,
+            REPLACE INTO search_results
+            VALUES (?,?,?,?,?,?,?,?,?)
+            """,
             (
                 video_id,
                 kind,
@@ -132,6 +131,52 @@ def tidy_search(filepath: str, output: Union[str, Path]) -> None:
     db.close()
     click.echo(f"{total} items processed.")
     click.echo(f"Data stored in {output} in `search_results` table.")
+
+
+def _get_mapping(item: dict, resource_kind) -> dict:
+    valid_kinds = ["search", "channel", "video", "comment"]
+
+    if resource_kind not in valid_kinds:
+        raise ValueError(f"resource_kind must be one of {str(valid_kinds)}")
+
+    mapping = dict()
+
+    if resource_kind == "search":
+        mapping["kind"] = item["id"]["kind"]
+        mapping["video_id"] = item["id"]["videoId"]
+        snippet = item["snippet"]
+        mapping["channel_id"] = snippet["channelId"]
+        mapping["published_at"] = snippet["publishedAt"]
+        mapping["title"] = html.unescape(snippet["title"])
+        mapping["description"] = snippet["description"]
+        mapping["thumbnail"] = json.dumps(snippet["thumbnails"])
+        mapping["channel_title"] = snippet["channelTitle"]
+        mapping["live_broadcast_content"] = snippet["liveBroadcastContent"]
+
+    return mapping
+
+
+def write_csv(source: Sequence[Mapping], outfile: Union[str, Path]) -> None:
+    fieldnames = source[0].keys()
+
+    with open(outfile, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+
+        if f.tell() == 0:
+            writer.writeheader()
+        writer.writerows(source)
+
+
+def tidy_to_csv(items: Iterable[Mapping],
+                output: Union[str, Path],
+                resource_kind: str) -> None:
+    to_write = []
+
+    for item in tqdm(items):
+        mapping = _get_mapping(item, resource_kind="search")
+        to_write.append(mapping)
+
+    write_csv(source=to_write, outfile=output)
 
 
 def tidy_video(filepath: str, output: Union[str, Path]) -> None:

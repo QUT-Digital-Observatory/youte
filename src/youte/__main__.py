@@ -10,7 +10,7 @@ from typing import Sequence, List
 import json
 import os
 
-from youte.collector import Youte
+from youte.collector import Youte, _get_history_path
 from youte.config import YouteConfig, get_api_key, get_config_path
 from youte import tidier
 from youte.utilities import validate_file, check_file_overwrite, validate_date_string
@@ -60,7 +60,8 @@ def youte():
 @click.option("--name", help="Specify an API name added to youte config")
 @click.option("--key", help="Specify a YouTube API key")
 @click.option("--order",
-              type=click.Choice(['date', 'rating', 'relevance', 'title'],
+              type=click.Choice(['date', 'rating', 'relevance', 'title',
+                                 'videoCount', 'viewCount'],
                                 case_sensitive=False),
               help="Sort results",
               show_default=True,
@@ -77,12 +78,26 @@ def youte():
 @click.option("--type", "type_",
               default="video",
               help="Type of resource to search for")
+@click.option("--channel-type",
+              type=click.Choice(['any', 'show']),
+              help="Restrict search to a particular type of channel")
+@click.option("--caption",
+              type=click.Choice(['any', 'closedCaption', 'none']),
+              help="Filter videos based on if they have captions")
+@click.option("--definition", "--video-definition", "video_definition",
+              type=click.Choice(['any', 'high', 'standard']),
+              help="Include videos by definition")
+@click.option("--dimension", "--video-dimension", "video_dimension",
+              type=click.Choice(['any', '2d', '3d']),
+              help="Search 2D or 3D videos")
 @click.option("--max-results",
               type=click.IntRange(0, 50),
               help="Maximum number of results returned per page",
               default=50,
               show_default=True)
 @click.option("--resume", help="Resume progress from this file")
+@click.option("--to-csv", type=click.Path(),
+              help="Tidy data to CSV file")
 def search(
         query: str,
         output: str,
@@ -93,9 +108,14 @@ def search(
         order: str,
         video_duration: str,
         type_: str,
+        channel_type: str,
+        caption: str,
+        video_definition: str,
+        video_dimension: str,
         safe_search: str,
         resume: str,
-        max_results: int
+        to_csv: str,
+        max_results: int,
 ) -> None:
     """Do a YouTube search.
 
@@ -108,17 +128,17 @@ def search(
     api_key = key if key else get_api_key(name=name)
     search_collector = _set_up_collector(api_key=api_key)
 
-    # meta_data = "kind,etag,nextPageToken,regionCode,pageInfo"
-    # fields = f"{meta_data},items/id/videoId" if get_id else "*"
-
     params = {
         "part": "snippet",
         "maxResults": max_results,
-        "type": "video",
         "order": order,
         "safeSearch": safe_search,
         "videoDuration": video_duration,
-        "type": type_
+        "type": type_,
+        "channelType": channel_type,
+        "videoCaption": caption,
+        "videoDefinition": video_definition,
+        "videoDimension": video_dimension
     }
 
     if from_:
@@ -126,19 +146,42 @@ def search(
     if to:
         params["publishedBefore"] = to
 
+    # if channel_type:
+    #     if "channel" not in type_:
+    #         raise click.BadOptionUsage("--channel-type",
+    #                                    "'channel' not specified in --type")
+    #     else:
+    #         params["channelType"] = channel_type
+    #
+    # if caption:
+    #     if type_ != "video":
+    #         raise click.BadOptionUsage("--type",
+    #                                    "--type has to be 'video'")
+    #     else:
+    #         params["videoCaption"] = caption
+
     try:
         if resume:
-            results = search_collector.search(query=query,
-                                              save_progress_to=resume,
-                                              **params)
-        else:
-            results = search_collector.search(query=query, **params)
+            if not _get_history_path(resume).exists():
+                raise click.BadParameter("No such history file found")
+
+        results = search_collector.search(query=query,
+                                          save_progress_to=resume,
+                                          **params)
+
+        click.echo(params)
 
         for result in results:
             click.echo(json.dumps(result), file=output)
 
+            if to_csv:
+                items = result["items"]
+                tidier.tidy_to_csv(items=items,
+                                   output=to_csv,
+                                   resource_kind="search")
+
         if output:
-            click.echo(f"Results are stored in {output}")
+            click.echo(f"Results are stored in {output.name}")
 
     except StopCollector:
         _prompt_save_progress(search_collector.history_file)
@@ -252,6 +295,20 @@ def hydrate(items: Sequence[str],
 def tidy(filepath, output):
     """Tidy raw JSON response into relational SQLite databases"""
     tidier.master_tidy(filepath=filepath, output=output)
+
+
+@youte.command()
+def list_history():
+    """List resumable history files"""
+    if not os.path.exists(".youte.history"):
+        click.echo("No history file found")
+
+    files = os.listdir(".youte.history")
+    if not files:
+        click.echo("No history file found")
+    else:
+        for file in files:
+            click.echo(file.removesuffix(".db"))
 
 
 @youte.group()

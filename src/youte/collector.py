@@ -28,23 +28,23 @@ class ProgressSaver:
     def load_token(self) -> List:
         self.conn.executescript(
             """
-                CREATE TABLE IF NOT EXISTS history (
-                    next_page_token PRIMARY KEY,
-                    retrieval_time
-                    );
+            CREATE TABLE IF NOT EXISTS history (
+                next_page_token PRIMARY KEY,
+                retrieval_time
+                );
 
-                INSERT OR IGNORE INTO history(next_page_token)
-                VALUES ("");
-                """
+            INSERT OR IGNORE INTO history(next_page_token)
+            VALUES ("");
+            """
         )
 
         tokens = [
             row[0]
             for row in self.conn.execute(
                 """
-                    SELECT next_page_token FROM history
-                    WHERE retrieval_time IS NULL
-                    """
+                SELECT next_page_token FROM history
+                WHERE retrieval_time IS NULL
+                """
             )
         ]
 
@@ -217,12 +217,14 @@ class Youte:
 
                     yield r.json()
 
+            history.close()
+            os.remove(history_file)
+
         except KeyboardInterrupt:
             raise StopCollector()
 
         finally:
             history.close()
-            os.remove(history_file)
 
     def list_items(
             self,

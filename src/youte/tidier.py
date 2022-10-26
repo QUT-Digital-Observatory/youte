@@ -134,7 +134,7 @@ def tidy_search(filepath: str, output: Union[str, Path]) -> None:
 
 
 def _get_mapping(item: dict, resource_kind) -> dict:
-    valid_kinds = ["search", "channel", "video", "comment"]
+    valid_kinds = ["search", "channels", "videos", "comments"]
 
     if resource_kind not in valid_kinds:
         raise ValueError(f"resource_kind must be one of {str(valid_kinds)}")
@@ -143,7 +143,9 @@ def _get_mapping(item: dict, resource_kind) -> dict:
 
     if resource_kind == "search":
         mapping["kind"] = item["id"]["kind"]
-        mapping["video_id"] = item["id"]["videoId"]
+        for elem in item["id"]:
+            if "id" in elem or "Id" in elem:
+                mapping["id"] = item["id"][elem]
         snippet = item["snippet"]
         mapping["channel_id"] = snippet["channelId"]
         mapping["published_at"] = snippet["publishedAt"]
@@ -153,10 +155,92 @@ def _get_mapping(item: dict, resource_kind) -> dict:
         mapping["channel_title"] = snippet["channelTitle"]
         mapping["live_broadcast_content"] = snippet["liveBroadcastContent"]
 
+    if resource_kind == "comments":
+        if "topLevelComment" in item["snippet"]:
+            snippet = item["snippet"]["topLevelComment"]["snippet"]
+            mapping["reply_count"] = item["snippet"].get("totalReplyCount")
+            mapping["can_reply"] = item["snippet"].get("canReply")
+        else:
+            mapping["reply_count"] = None
+            mapping["can_reply"] = None
+            snippet = item["snippet"]
+
+        mapping["comment_id"] = item["id"]
+        mapping["video_id"] = snippet.get("videoId")
+        mapping["channel_id"] = snippet.get("channelId")
+        mapping["parent_id"] = snippet.get("parentId")
+        mapping["text_display"] = html.unescape(snippet["textDisplay"])
+        mapping["text_original"] = snippet["textOriginal"]
+        mapping["author_name"] = snippet["authorDisplayName"]
+        mapping["author_channel_url"] = snippet["authorChannelUrl"]
+        mapping["author_channel_id"] = snippet["authorChannelId"]["value"]
+        mapping["can_rate"] = snippet["canRate"]
+        mapping["viewer_rating"] = snippet["viewerRating"]
+        mapping["like_count"] = snippet["likeCount"]
+        mapping["published_at"] = snippet["publishedAt"]
+        mapping["updated_at"] = snippet["updatedAt"]
+
+    if resource_kind == "videos":
+        snippet = item["snippet"]
+        content_details = item["contentDetails"]
+        status = item["status"]
+        statistics = item["statistics"]
+        topic_details = item.get("topicDetails")
+        content_rating = content_details["contentRating"]
+        recording = item["recordingDetails"]
+        region_restriction = content_details.get("regionRestriction")
+
+        mapping["video_id"] = item["id"]
+        mapping["published_at"] = snippet["publishedAt"]
+        mapping["channel_id"] = snippet["channelId"]
+        mapping["title"] = snippet["title"]
+        mapping["description"] = snippet["description"]
+        mapping["thumbnails"] = json.dumps(snippet["thumbnails"])
+        mapping["channel_title"] = snippet["channelTitle"]
+        mapping["category_id"] = snippet["categoryId"]
+        mapping["live_broadcast_content"] = snippet[
+            "liveBroadcastContent"]
+        mapping["localized_title"] = snippet["localized"]["title"]
+        mapping["localized_description"] = snippet["localized"][
+            "description"]
+        mapping["duration"] = content_details["duration"]
+        mapping["dimension"] = content_details["dimension"]
+        mapping["definition"] = content_details["definition"]
+        mapping["caption"] = content_details["caption"]
+        mapping["licensed_content"] = content_details["licensedContent"]
+        mapping["upload_status"] = status["uploadStatus"]
+        mapping["privacy_status"] = status["privacyStatus"]
+        mapping["license"] = status["license"]
+        mapping["public_stats_viewable"] = status["publicStatsViewable"]
+        mapping["made_for_kids"] = status["madeForKids"]
+
+        # optional properties
+        mapping["default_language"] = snippet.get("defaultLanguage")
+        mapping["default_audio_language"] = snippet.get(
+            "defaultAudioLanguage")
+        mapping["rejection_reason"] = status.get("rejectionReason")
+        mapping["region_allowed"] = (
+            str(region_restriction.get(
+                "allowed")) if region_restriction else None
+        )
+        mapping["region_blocked"] = (
+            str(region_restriction.get(
+                "blocked")) if region_restriction else None
+        )
+        mapping["yt_rating"] = content_rating.get("ytRating")
+        mapping["tags"] = str(snippet.get("tags"))
+        mapping["view_count"] = statistics.get("viewCount")
+        mapping["like_count"] = statistics.get("likeCount")
+        mapping["comment_count"] = statistics.get("commentCount")
+        mapping["topic_categories"] = (
+            str(topic_details["topicCategories"]) if topic_details else None
+        )
+        mapping["recording_location"] = str(recording.get("location"))
+
     return mapping
 
 
-def write_csv(source: Sequence[Mapping], outfile: Union[str, Path]) -> None:
+def _write_csv(source: Sequence[Mapping], outfile: Union[str, Path]) -> None:
     fieldnames = source[0].keys()
 
     with open(outfile, "a", newline="") as f:
@@ -173,17 +257,17 @@ def tidy_to_csv(items: Iterable[Mapping],
     to_write = []
 
     for item in tqdm(items):
-        mapping = _get_mapping(item, resource_kind="search")
+        mapping = _get_mapping(item, resource_kind=resource_kind)
         to_write.append(mapping)
 
-    write_csv(source=to_write, outfile=output)
+    _write_csv(source=to_write, outfile=output)
 
 
 def tidy_video(filepath: str, output: Union[str, Path]) -> None:
     db = connect_db(output)
 
     db.execute("begin")
-    db.execute(mappings.video_sql_table["create"])
+    db.execute(mappings.VIDEO_SQL_TABLE["create"])
     db.execute("commit")
 
     items = _get_items(filepath=filepath)
@@ -244,7 +328,7 @@ def tidy_video(filepath: str, output: Union[str, Path]) -> None:
         video_mapping["recording_location"] = str(recording.get("location"))
 
         db.execute("begin")
-        db.execute(mappings.video_sql_table["insert"], video_mapping)
+        db.execute(mappings.VIDEO_SQL_TABLE["insert"], video_mapping)
         db.execute("commit")
 
         total += 1
@@ -258,7 +342,7 @@ def tidy_channel(filepath: str, output: Union[str, Path]) -> None:
     db = connect_db(output)
 
     db.execute("begin")
-    db.execute(mappings.channel_sql_table["create"])
+    db.execute(mappings.CHANNEL_SQL_TABLE["create"])
     db.execute("commit")
 
     items = _get_items(filepath=filepath)
@@ -316,7 +400,7 @@ def tidy_channel(filepath: str, output: Union[str, Path]) -> None:
         channel_mapping["time_linked"] = owner.get("timeLinked")
 
         db.execute("begin")
-        db.execute(mappings.channel_sql_table["insert"], channel_mapping)
+        db.execute(mappings.CHANNEL_SQL_TABLE["insert"], channel_mapping)
         db.execute("commit")
 
         total += 1
@@ -330,7 +414,7 @@ def tidy_comments(filepath, output: Union[str, Path]) -> None:
     db = connect_db(output)
 
     db.execute("begin")
-    db.execute(mappings.comment_sql_table["create"])
+    db.execute(mappings.COMMENT_SQL_TABLE["create"])
     db.execute("commit")
 
     items = _get_items(filepath=filepath)
@@ -364,7 +448,7 @@ def tidy_comments(filepath, output: Union[str, Path]) -> None:
         comment_mapping["updated_at"] = snippet["updatedAt"]
 
         db.execute("begin")
-        db.execute(mappings.comment_sql_table["insert"], comment_mapping)
+        db.execute(mappings.COMMENT_SQL_TABLE["insert"], comment_mapping)
         db.execute("commit")
 
         total += 1

@@ -1,4 +1,4 @@
-video_sql_table = {
+VIDEO_SQL_TABLE = {
     "create": """
         CREATE TABLE IF NOT EXISTS videos (
             video_id PRIMARY KEY,
@@ -76,7 +76,7 @@ video_sql_table = {
               """,
 }
 
-channel_sql_table = {
+CHANNEL_SQL_TABLE = {
     "create": """
         CREATE TABLE IF NOT EXISTS channels(
             channel_id PRIMARY KEY,
@@ -141,7 +141,7 @@ channel_sql_table = {
               """,
 }
 
-comment_sql_table = {
+COMMENT_SQL_TABLE = {
     "create": """
         CREATE TABLE IF NOT EXISTS comments(
             comment_id PRIMARY KEY,
@@ -183,4 +183,34 @@ comment_sql_table = {
             :updated_at
             )
             """,
+}
+
+SEARCH_SQL_TABLE = {
+    "create": """
+        CREATE TABLE IF NOT EXISTS search_results(
+             id primary key,
+             kind,
+             published_at,
+             title,
+             description,
+             thumbnails,
+             channel_title,
+             channel_id,
+             live_broadcast_content
+             );
+        """,
+    "insert": """
+        INSERT OR REPLACE INTO search_results
+        VALUES (
+             :id,
+             :kind,
+             :published_at,
+             :title,
+             :description,
+             :thumbnails,
+             :channel_title,
+             :channel_id,
+             :live_broadcast_content
+             );
+        """
 }

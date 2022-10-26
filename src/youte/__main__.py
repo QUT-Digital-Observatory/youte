@@ -57,6 +57,10 @@ def youte():
 @click.option("--to",
               help="End date (YYYY-MM-DD)",
               callback=_validate_date)
+@click.option("--type", "type_",
+              default="video",
+              help="Type of resource to search for",
+              show_default=True)
 @click.option("--name", help="Specify an API name added to youte config")
 @click.option("--key", help="Specify a YouTube API key")
 @click.option("--order",
@@ -74,13 +78,13 @@ def youte():
               show_default=True)
 @click.option("--video-duration",
               type=click.Choice(['any', 'long', 'medium', 'short']),
-              default='any')
-@click.option("--type", "type_",
-              default="video",
-              help="Type of resource to search for")
+              help="Include videos of a certain duration")
 @click.option("--channel-type",
               type=click.Choice(['any', 'show']),
               help="Restrict search to a particular type of channel")
+@click.option("--video-type",
+              type=click.Choice(['any', 'episode', 'movie']),
+              help="Search a particular type of videos")
 @click.option("--caption",
               type=click.Choice(['any', 'closedCaption', 'none']),
               help="Filter videos based on if they have captions")
@@ -90,14 +94,19 @@ def youte():
 @click.option("--dimension", "--video-dimension", "video_dimension",
               type=click.Choice(['any', '2d', '3d']),
               help="Search 2D or 3D videos")
+@click.option("--embeddable", "--video-embeddable", "video_embeddable",
+              type=click.Choice(['any', 'true']),
+              help="Search only embeddable videos")
+@click.option("--license", "--video-license", "video_license",
+              type=click.Choice(['any', 'creativeCommon', 'youtube']),
+              help="Include videos with a certain license")
 @click.option("--max-results",
               type=click.IntRange(0, 50),
               help="Maximum number of results returned per page",
               default=50,
               show_default=True)
 @click.option("--resume", help="Resume progress from this file")
-@click.option("--to-csv", type=click.Path(),
-              help="Tidy data to CSV file")
+@click.option("--to-csv", type=click.Path(), help="Tidy data to CSV file")
 def search(
         query: str,
         output: str,
@@ -109,9 +118,12 @@ def search(
         video_duration: str,
         type_: str,
         channel_type: str,
+        video_type: str,
         caption: str,
         video_definition: str,
         video_dimension: str,
+        video_embeddable: str,
+        video_license: str,
         safe_search: str,
         resume: str,
         to_csv: str,
@@ -122,9 +134,6 @@ def search(
     QUERY: search query\n
     OUTPUT: name of json file to store output data
     """
-    # output = validate_file(output)
-    # output = check_file_overwrite(output)
-
     api_key = key if key else get_api_key(name=name)
     search_collector = _set_up_collector(api_key=api_key)
 
@@ -138,27 +147,16 @@ def search(
         "channelType": channel_type,
         "videoCaption": caption,
         "videoDefinition": video_definition,
-        "videoDimension": video_dimension
+        "videoDimension": video_dimension,
+        "videoEmbeddable": video_embeddable,
+        "videoLicense": video_license,
+        "videoType": video_type
     }
 
     if from_:
         params["publishedAfter"] = from_
     if to:
         params["publishedBefore"] = to
-
-    # if channel_type:
-    #     if "channel" not in type_:
-    #         raise click.BadOptionUsage("--channel-type",
-    #                                    "'channel' not specified in --type")
-    #     else:
-    #         params["channelType"] = channel_type
-    #
-    # if caption:
-    #     if type_ != "video":
-    #         raise click.BadOptionUsage("--type",
-    #                                    "--type has to be 'video'")
-    #     else:
-    #         params["videoCaption"] = caption
 
     try:
         if resume:
@@ -188,27 +186,26 @@ def search(
 
 
 @youte.command()
-@click.argument("output", type=click.Path(), required=True)
 @click.argument("items", nargs=-1, required=False)
+@click.option("-o", "--output", type=click.File(mode='w'), required=False)
 @click.option("-f", "--file-path", help="Get IDs from file", default=None)
 @click.option("-t", "--by-thread", "by_parent",
               help="Get all replies to a parent comment",
               is_flag=True)
 @click.option("-v", "--by-video", help="Get all comments for a video ID",
               is_flag=True)
-@click.option("--max-quota",
-              default=10000,
-              help="Maximum quota allowed",
-              show_default=True)
-@click.option("--name", help="Name of the API key (optional)")
-def list_comments(
+@click.option("--name", help="Specify an API name added to youte config")
+@click.option("--key", help="Specify a YouTube API key")
+@click.option("--to-csv", type=click.Path(), help="Tidy data to CSV file")
+def get_comments(
         items: Sequence[str],
         output: str,
-        max_quota: int,
         name: str,
+        key: str,
         file_path: str,
         by_video: bool,
         by_parent: bool,
+        to_csv,
 ) -> None:
     """
     Get YouTube comments from a list of comment/channel/video ids.
@@ -218,11 +215,8 @@ def list_comments(
 
     ITEMS: ID(s) of item as provided by YouTube
     """
-    output = validate_file(output)
-    output = check_file_overwrite(output)
-
-    api_key = get_api_key(name=name)
-    collector = _set_up_collector(api_key=api_key, max_quota=max_quota)
+    api_key = key if key else get_api_key(name=name)
+    collector = _set_up_collector(api_key=api_key)
 
     ids = _get_ids(string=items, file=file_path)
 
@@ -241,34 +235,43 @@ def list_comments(
     elif by_parent:
         by = "parent"
 
-    collector.list_items(item_type=item_type, ids=ids, output_path=output,
-                         by=by)
+    results = collector.list_items(item_type=item_type,
+                                   ids=ids,
+                                   by=by)
+
+    for result in results:
+        click.echo(json.dumps(result), file=output)
+
+        if to_csv:
+            items = result["items"]
+            tidier.tidy_to_csv(items=items,
+                               output=to_csv,
+                               resource_kind="comments")
+
+    if output:
+        click.echo(f"Results are stored in {output.name}")
 
 
 @youte.command()
-@click.argument("output", type=click.Path(), required=True)
 @click.argument("items", nargs=-1, required=False)
-@click.option(
-    "-f", "--file-path", help="Get IDs from file",
-    default=None
-)
+@click.option("-o", "--output", type=click.File(mode='w'), required=False)
+@click.option("-f", "--file-path", help="Get IDs from file", default=None)
 @click.option("--kind",
               type=click.Choice(['videos', 'channels', 'comments'],
                                 case_sensitive=False),
               help="Sort results",
               show_default=True,
               default='videos')
-@click.option("--name", help="Name of the API key (optional)")
-@click.option(
-    "--max-quota", default=10000, help="Maximum quota allowed",
-    show_default=True
-)
+@click.option("--name", help="Specify an API name added to youte config")
+@click.option("--key", help="Specify a YouTube API key")
+@click.option("--to-csv", type=click.Path(), help="Tidy data to CSV file")
 def hydrate(items: Sequence[str],
             output: str,
             kind: str,
             file_path: str,
             name: str,
-            max_quota: int) -> None:
+            key: str,
+            to_csv) -> None:
     """Hydrate video or channel ids.
 
     Get all metadata for a list of video or channel IDs.
@@ -278,15 +281,24 @@ def hydrate(items: Sequence[str],
 
     ITEMS: ID(s) of item as provided by YouTube
     """
-    output = validate_file(output)
-    output = check_file_overwrite(output)
-
-    api_key = get_api_key(name=name)
-    collector = _set_up_collector(api_key=api_key, max_quota=max_quota)
+    api_key = key if key else get_api_key(name=name)
+    collector = _set_up_collector(api_key=api_key)
 
     ids = _get_ids(string=items, file=file_path)
 
-    collector.list_items(item_type=kind, ids=ids, output_path=output)
+    results = collector.list_items(item_type=kind, ids=ids)
+
+    for result in results:
+        click.echo(json.dumps(result), file=output)
+
+        if to_csv:
+            items = result["items"]
+            tidier.tidy_to_csv(items=items,
+                               output=to_csv,
+                               resource_kind=kind)
+
+    if output:
+        click.echo(f"Results are stored in {output.name}")
 
 
 @youte.command()

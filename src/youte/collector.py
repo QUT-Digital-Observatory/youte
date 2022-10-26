@@ -230,9 +230,8 @@ class Youte:
             self,
             item_type,
             ids: List,
-            output_path,
             by=None,
-            saved_to="history.db",
+            save_progress_to: Union[str, Path] = "history.db",
             **kwargs,
     ):
         valid_type = ['videos', 'channels', 'comments', 'comment_threads']
@@ -242,7 +241,6 @@ class Youte:
 
         request_info = _get_endpoint(item_type)
         url = request_info["url"]
-        api_cost_unit = request_info["api_cost_unit"]
         params = request_info["params"]
         params["key"] = self.api_key
 
@@ -250,8 +248,6 @@ class Youte:
             params[key] = value
 
         ids = list(set(ids))
-
-        self.quota.get_quota()
 
         # SET COLLECTOR TYPE
         # YouTube endpoints fall into 2 categories:
@@ -279,7 +275,6 @@ class Youte:
 
         if can_batch_ids:
             logger.info("Batching ids")
-            batch_no = 0
             click.secho("Getting data")
             while ids:
                 if len(ids) <= 50:
@@ -294,27 +289,12 @@ class Youte:
                         ids.remove(elm)
 
                 params["id"] = ids_string
-
-                self.quota.handle_limit(max_quota=self.max_quota)
-
                 r = _request_with_error_handling(url=url, params=params)
-
-                self.quota.add_quota(api_cost_unit, datetime.now(tz=tz.UTC))
-                logger.info(f"Quota used: {self.quota.units}.")
-
-                _write_output_to_jsonl(output_path=output_path,
-                                       json_rec=r.json())
-
-                batch_no += 1
-
-            click.echo(
-                f"{batch_no} pages collected.\n"
-                f"Total quota used: {self.quota.units}."
-            )
+                yield r.json()
 
         elif cannot_batch_ids:
 
-            history_file = _get_history_path(output_path)
+            history_file = _get_history_path(save_progress_to)
 
             for each in tqdm(ids):
 
@@ -323,8 +303,8 @@ class Youte:
                 elif by == "video":
                     params["videoId"] = each
 
-                while True:
-                    try:
+                try:
+                    while True:
                         if "pageToken" in params:
                             del params["pageToken"]
 
@@ -335,7 +315,6 @@ class Youte:
                             break
 
                         for token in tokens:
-                            self.quota.handle_limit(max_quota=self.max_quota)
 
                             if token != "":
                                 logger.info("Adding page token...")
@@ -344,30 +323,22 @@ class Youte:
                             r = _request_with_error_handling(url=url,
                                                              params=params)
 
-                            self.quota.add_quota(api_cost_unit,
-                                                 datetime.now(tz=tz.UTC))
-                            logger.info(f"Quota used: {self.quota.units}.")
-
                             _get_page_token(response=r, saved_to=history)
-
-                            _write_output_to_jsonl(
-                                output_path=output_path, json_rec=r.json()
-                            )
 
                             # store recorded and unrecorded tokens
                             history.update_token(token)
 
-                    except KeyboardInterrupt:
-                        if history_file.exists():
-                            history.close()
-                            os.remove(history_file)
-                        sys.exit(1)
+                            yield r.json()
 
-                history.close()
-                os.remove(history_file)
+                except KeyboardInterrupt:
+                    if history_file.exists():
+                        history.close()
+                        os.remove(history_file)
+                    sys.exit(1)
 
-            click.secho("Completed!", fg="green")
-            click.secho(f"File saved in {output_path}", fg="green")
+                finally:
+                    history.close()
+                    os.remove(history_file)
 
 
 def _get_endpoint(endpoint) -> dict:

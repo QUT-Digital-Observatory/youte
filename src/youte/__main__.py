@@ -13,7 +13,7 @@ import os
 from youte.collector import Youte, _get_history_path
 from youte.config import YouteConfig, get_api_key, get_config_path
 from youte import tidier
-from youte.utilities import validate_file, check_file_overwrite, validate_date_string
+from youte.utilities import validate_date_string
 from youte.exceptions import StopCollector
 
 # Logging
@@ -299,6 +299,22 @@ def hydrate(items: Sequence[str],
 
     if output:
         click.echo(f"Results are stored in {output.name}")
+
+
+@youte.command()
+@click.argument("infile", type=click.Path())
+@click.option("-o", "--output",
+              type=click.File(mode='w'),
+              help="Output text file to store IDs in")
+def dehydrate(infile, output: str) -> None:
+    """Extract an ID list from a file of YouTube resources
+
+    INFILE: File of YouTube resources
+    """
+    items = tidier.get_items(infile)
+    ids = tidier.get_id(items)
+    for id_ in ids:
+        click.echo(id_, file=output)
 
 
 @youte.command()

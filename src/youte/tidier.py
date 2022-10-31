@@ -38,7 +38,7 @@ def master_tidy(filepath: str, output: Union[str, Path]) -> None:
         tidy_search(filepath, output)
 
 
-def _get_items(filepath: str) -> Iterable:
+def get_items(filepath: str) -> Iterable[dict]:
     with open(filepath, mode="r") as file:
         responses = (row.rstrip() for row in file.readlines())
         for response in responses:
@@ -91,7 +91,7 @@ def tidy_search(filepath: str, output: Union[str, Path]) -> None:
              );
         """
     )
-    items = _get_items(filepath=filepath)
+    items = get_items(filepath=filepath)
     total = 0
 
     for item in tqdm(items):
@@ -270,66 +270,16 @@ def tidy_video(filepath: str, output: Union[str, Path]) -> None:
     db.execute(mappings.VIDEO_SQL_TABLE["create"])
     db.execute("commit")
 
-    items = _get_items(filepath=filepath)
+    items = get_items(filepath=filepath)
     total = 0
 
     for item in tqdm(items):
-        video_mapping = {}
 
-        snippet = item["snippet"]
-        content_details = item["contentDetails"]
-        status = item["status"]
-        statistics = item["statistics"]
-        topic_details = item.get("topicDetails")
-        content_rating = content_details["contentRating"]
-        recording = item["recordingDetails"]
-        region_restriction = content_details.get("regionRestriction")
+        video_mapping = _get_mapping(item, "videos")
 
-        video_mapping["video_id"] = item["id"]
-        video_mapping["published_at"] = snippet["publishedAt"]
-        video_mapping["channel_id"] = snippet["channelId"]
-        video_mapping["title"] = snippet["title"]
-        video_mapping["description"] = snippet["description"]
-        video_mapping["thumbnails"] = json.dumps(snippet["thumbnails"])
-        video_mapping["channel_title"] = snippet["channelTitle"]
-        video_mapping["category_id"] = snippet["categoryId"]
-        video_mapping["live_broadcast_content"] = snippet["liveBroadcastContent"]
-        video_mapping["localized_title"] = snippet["localized"]["title"]
-        video_mapping["localized_description"] = snippet["localized"]["description"]
-        video_mapping["duration"] = content_details["duration"]
-        video_mapping["dimension"] = content_details["dimension"]
-        video_mapping["definition"] = content_details["definition"]
-        video_mapping["caption"] = content_details["caption"]
-        video_mapping["licensed_content"] = content_details["licensedContent"]
-        video_mapping["upload_status"] = status["uploadStatus"]
-        video_mapping["privacy_status"] = status["privacyStatus"]
-        video_mapping["license"] = status["license"]
-        video_mapping["public_stats_viewable"] = status["publicStatsViewable"]
-        video_mapping["made_for_kids"] = status["madeForKids"]
-
-        # optional properties
-        video_mapping["default_language"] = snippet.get("defaultLanguage")
-        video_mapping["default_audio_language"] = snippet.get("defaultAudioLanguage")
-        video_mapping["rejection_reason"] = status.get("rejectionReason")
-        video_mapping["region_allowed"] = (
-            str(region_restriction.get("allowed")) if region_restriction else None
-        )
-        video_mapping["region_blocked"] = (
-            str(region_restriction.get("blocked")) if region_restriction else None
-        )
-        video_mapping["yt_rating"] = content_rating.get("ytRating")
-        video_mapping["tags"] = str(snippet.get("tags"))
-        video_mapping["view_count"] = statistics.get("viewCount")
-        video_mapping["like_count"] = statistics.get("likeCount")
-        video_mapping["comment_count"] = statistics.get("commentCount")
-        video_mapping["topic_categories"] = (
-            str(topic_details["topicCategories"]) if topic_details else None
-        )
-        video_mapping["recording_location"] = str(recording.get("location"))
-
-        db.execute("begin")
+        db.execute("BEGIN")
         db.execute(mappings.VIDEO_SQL_TABLE["insert"], video_mapping)
-        db.execute("commit")
+        db.execute("COMMIT")
 
         total += 1
 
@@ -345,7 +295,7 @@ def tidy_channel(filepath: str, output: Union[str, Path]) -> None:
     db.execute(mappings.CHANNEL_SQL_TABLE["create"])
     db.execute("commit")
 
-    items = _get_items(filepath=filepath)
+    items = get_items(filepath=filepath)
     total = 0
 
     for item in tqdm(items):
@@ -417,7 +367,7 @@ def tidy_comments(filepath, output: Union[str, Path]) -> None:
     db.execute(mappings.COMMENT_SQL_TABLE["create"])
     db.execute("commit")
 
-    items = _get_items(filepath=filepath)
+    items = get_items(filepath=filepath)
     total = 0
 
     for item in tqdm(items):
@@ -456,3 +406,13 @@ def tidy_comments(filepath, output: Union[str, Path]) -> None:
     db.close()
     click.echo(f"{total} items processed.")
     click.echo(f"Data stored in {output} in `comments` table.")
+
+
+def get_id(items: Iterable[dict]) -> Iterable[str]:
+    for item in items:
+        id_ = item["id"]
+        if isinstance(id_, dict):
+            for elem in id_:
+                if "id" in elem or "Id" in elem:
+                    id_ = id_[elem]
+        yield id_

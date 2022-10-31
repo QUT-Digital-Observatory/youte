@@ -212,5 +212,5 @@ SEARCH_SQL_TABLE = {
              :channel_id,
              :live_broadcast_content
              );
-        """
+        """,
 }

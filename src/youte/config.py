@@ -25,7 +25,6 @@ class YouteConfig(configobj.ConfigObj):
         except KeyError:
             raise KeyError(f"{name} not found.")
 
-
     def set_default(self, name):
         for profile in self:
             if "default" in self[profile]:

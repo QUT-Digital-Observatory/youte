@@ -52,8 +52,7 @@ class ProgressSaver:
 
     def update_token(self, token: str) -> None:
         self.conn.execute(
-            "REPLACE INTO history VALUES (?,?)",
-            (token, datetime.now(tz=tz.UTC))
+            "REPLACE INTO history VALUES (?,?)", (token, datetime.now(tz=tz.UTC))
         )
         self.conn.commit()
 
@@ -78,8 +77,7 @@ def _load_page_token(filename) -> Tuple[List, ProgressSaver]:
     return tokens, history
 
 
-def _request_with_error_handling(url: str,
-                                 params: Mapping) -> requests.Response:
+def _request_with_error_handling(url: str, params: Mapping) -> requests.Response:
     response = requests.get(url, params=params)
     logger.info(f"Getting {response.url}.\nStatus: {response.status_code}.")
 
@@ -93,16 +91,14 @@ def _request_with_error_handling(url: str,
             # ignore if comment is disabled
             if error["reason"] == "commentsDisabled":
                 logger.warning(error["reason"])
-            elif 'quotaExceeded' in error["reason"]:
+            elif "quotaExceeded" in error["reason"]:
                 # wait until reset time if quota exceeded
                 until_reset = _get_reset_remaining(datetime.now(tz=tz.UTC))
 
                 logger.error(error["reason"])
                 click.echo(error["reason"])
-                logger.warning(
-                    f"Sleeping for {until_reset} seconds til reset time")
-                click.echo(
-                    f"Sleeping for {until_reset} seconds til reset time")
+                logger.warning(f"Sleeping for {until_reset} seconds til reset time")
+                click.echo(f"Sleeping for {until_reset} seconds til reset time")
                 time.sleep(until_reset)
                 _request_with_error_handling(url, **params)
             else:
@@ -143,8 +139,7 @@ def _prompt_save_progress(filename) -> None:
     sys.exit()
 
 
-def _get_page_token(response: requests.Response,
-                    saved_to: ProgressSaver) -> None:
+def _get_page_token(response: requests.Response, saved_to: ProgressSaver) -> None:
     try:
         next_page_token = response.json()["nextPageToken"]
         saved_to.add_token(next_page_token)
@@ -153,12 +148,12 @@ def _get_page_token(response: requests.Response,
 
 
 def _get_history_path(outfile: Union[str, Path]) -> Path:
-    history_dir = Path('.youte.history')
+    history_dir = Path(".youte.history")
 
     if not history_dir.exists():
         os.mkdir(history_dir)
 
-    db_file = Path(outfile).with_suffix('.db')
+    db_file = Path(outfile).with_suffix(".db")
 
     return history_dir / db_file.name
 
@@ -176,10 +171,9 @@ class Youte:
         self.api_key = api_key
         self.history_file = None
 
-    def search(self,
-               query: str,
-               save_progress_to: Union[str, Path] = None,
-               **kwargs) -> dict:
+    def search(
+        self, query: str, save_progress_to: Union[str, Path] = None, **kwargs
+    ) -> dict:
 
         page = 0
 
@@ -227,14 +221,14 @@ class Youte:
             history.close()
 
     def list_items(
-            self,
-            item_type,
-            ids: List,
-            by=None,
-            save_progress_to: Union[str, Path] = "history.db",
-            **kwargs,
+        self,
+        item_type,
+        ids: List,
+        by=None,
+        save_progress_to: Union[str, Path] = "history.db",
+        **kwargs,
     ):
-        valid_type = ['videos', 'channels', 'comments', 'comment_threads']
+        valid_type = ["videos", "channels", "comments", "comment_threads"]
 
         if item_type not in valid_type:
             raise ValueError(f"`item_type` must be one of {valid_type}")
@@ -264,8 +258,7 @@ class Youte:
             not (by == "parent" or by == "video")
         )
         get_by_parents = (item_type == "comments") and by == "parent"
-        get_by_video_channel = (item_type == "comment_threads") and (
-                by == "video")
+        get_by_video_channel = (item_type == "comment_threads") and (by == "video")
 
         can_batch_ids = not_comments or get_comments_only
         cannot_batch_ids = get_by_parents or get_by_video_channel
@@ -320,8 +313,7 @@ class Youte:
                                 logger.info("Adding page token...")
                                 params["pageToken"] = token
 
-                            r = _request_with_error_handling(url=url,
-                                                             params=params)
+                            r = _request_with_error_handling(url=url, params=params)
 
                             _get_page_token(response=r, saved_to=history)
 
@@ -367,7 +359,7 @@ def _get_endpoint(endpoint) -> dict:
             "api_cost_unit": 1,
             "params": {
                 "part": "snippet,statistics,topicDetails,status,"
-                        "contentDetails,recordingDetails,id",
+                "contentDetails,recordingDetails,id",
                 "id": None,
                 "maxResults": 50,
                 "key": None,
@@ -378,7 +370,7 @@ def _get_endpoint(endpoint) -> dict:
             "api_cost_unit": 1,
             "params": {
                 "part": "snippet,statistics,topicDetails,status,"
-                        "contentDetails,brandingSettings,contentOwnerDetails",
+                "contentDetails,brandingSettings,contentOwnerDetails",
                 "id": None,
                 "maxResults": 50,
                 "key": None,

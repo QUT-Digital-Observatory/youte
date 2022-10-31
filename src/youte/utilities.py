@@ -17,8 +17,7 @@ def validate_file(file_name: str, suffix=None):
 
 def check_file_overwrite(file_path: Path) -> Path:
     if file_path.exists():
-        flag = click.confirm(
-            f"{file_path} already exists. Keep writing to it?")
+        flag = click.confirm(f"{file_path} already exists. Keep writing to it?")
         if flag:
             logger.info(f"Updating existing file {file_path.resolve()}...")
         else:

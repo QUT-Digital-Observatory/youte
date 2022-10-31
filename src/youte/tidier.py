@@ -198,11 +198,9 @@ def _get_mapping(item: dict, resource_kind) -> dict:
         mapping["thumbnails"] = json.dumps(snippet["thumbnails"])
         mapping["channel_title"] = snippet["channelTitle"]
         mapping["category_id"] = snippet["categoryId"]
-        mapping["live_broadcast_content"] = snippet[
-            "liveBroadcastContent"]
+        mapping["live_broadcast_content"] = snippet["liveBroadcastContent"]
         mapping["localized_title"] = snippet["localized"]["title"]
-        mapping["localized_description"] = snippet["localized"][
-            "description"]
+        mapping["localized_description"] = snippet["localized"]["description"]
         mapping["duration"] = content_details["duration"]
         mapping["dimension"] = content_details["dimension"]
         mapping["definition"] = content_details["definition"]
@@ -216,16 +214,13 @@ def _get_mapping(item: dict, resource_kind) -> dict:
 
         # optional properties
         mapping["default_language"] = snippet.get("defaultLanguage")
-        mapping["default_audio_language"] = snippet.get(
-            "defaultAudioLanguage")
+        mapping["default_audio_language"] = snippet.get("defaultAudioLanguage")
         mapping["rejection_reason"] = status.get("rejectionReason")
         mapping["region_allowed"] = (
-            str(region_restriction.get(
-                "allowed")) if region_restriction else None
+            str(region_restriction.get("allowed")) if region_restriction else None
         )
         mapping["region_blocked"] = (
-            str(region_restriction.get(
-                "blocked")) if region_restriction else None
+            str(region_restriction.get("blocked")) if region_restriction else None
         )
         mapping["yt_rating"] = content_rating.get("ytRating")
         mapping["tags"] = str(snippet.get("tags"))
@@ -251,9 +246,9 @@ def _write_csv(source: Sequence[Mapping], outfile: Union[str, Path]) -> None:
         writer.writerows(source)
 
 
-def tidy_to_csv(items: Iterable[Mapping],
-                output: Union[str, Path],
-                resource_kind: str) -> None:
+def tidy_to_csv(
+    items: Iterable[Mapping], output: Union[str, Path], resource_kind: str
+) -> None:
     to_write = []
 
     for item in tqdm(items):

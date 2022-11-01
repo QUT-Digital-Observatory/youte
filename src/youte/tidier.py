@@ -232,6 +232,55 @@ def _get_mapping(item: dict, resource_kind) -> dict:
         )
         mapping["recording_location"] = str(recording.get("location"))
 
+    if resource_kind == "channels":
+        snippet = item["snippet"]
+        content_details = item["contentDetails"]
+        related_playlists = content_details.get("relatedPlaylists")
+        status = item["status"]
+        statistics = item["statistics"]
+        topic_details = item.get("topicDetails")
+        branding = item.get("brandingSettings")
+        owner = item["contentOwnerDetails"]
+
+        mapping["channel_id"] = item["id"]
+        mapping["title"] = snippet["title"]
+        mapping["description"] = snippet["description"]
+        mapping["published_at"] = snippet["publishedAt"]
+        mapping["custom_url"] = snippet.get("customUrl")
+        mapping["thumbnails"] = json.dumps(snippet["thumbnails"])
+        mapping["default_language"] = snippet.get("defaultLanguage")
+        mapping["country"] = snippet.get("country")
+        mapping["localized_title"] = snippet["localized"]["title"]
+        mapping["localized_description"] = snippet["localized"]["description"]
+        mapping["related_playlists_likes"] = (
+            related_playlists.get("likes") if related_playlists else None
+        )
+        mapping["related_playlists_uploads"] = (
+            related_playlists.get("uploads") if related_playlists else None
+        )
+        mapping["view_count"] = statistics.get("viewCount")
+        mapping["subscriber_count"] = statistics.get("subscriberCount")
+        mapping["video_count"] = statistics.get("videoCount")
+        mapping["hidden_subscriber_count"] = statistics["hiddenSubscriberCount"]
+        mapping["topic_ids"] = (
+            str(topic_details.get("topicIds")) if topic_details else None
+        )
+        mapping["topic_categories"] = (
+            str(topic_details.get("topicCategories")) if topic_details else None
+        )
+        mapping["privacy_status"] = status["privacyStatus"]
+        mapping["is_linked"] = status.get("isLinked")
+        mapping["made_for_kids"] = status.get("madeForKids")
+        mapping["keywords"] = branding["channel"].get("keywords")
+        mapping["moderate_comments"] = branding["channel"].get(
+            "moderateComments"
+        )
+        mapping["unsubscribed_trailer"] = branding["channel"].get(
+            "unsubscribedTrailer"
+        )
+        mapping["content_owner"] = owner.get("contentOwner")
+        mapping["time_linked"] = owner.get("timeLinked")
+
     return mapping
 
 
@@ -294,7 +343,7 @@ def tidy_channel(filepath: str, output: Union[str, Path]) -> None:
     total = 0
 
     for item in tqdm(items):
-        channel_mapping = {}
+        channel_mapping = _get_mapping(item, "channels")
 
         snippet = item["snippet"]
         content_details = item["contentDetails"]
@@ -366,35 +415,11 @@ def tidy_comments(filepath, output: Union[str, Path]) -> None:
     total = 0
 
     for item in tqdm(items):
-        comment_mapping = {}
+        comment_mapping = _get_mapping(item, "comments")
 
-        if "topLevelComment" in item["snippet"]:
-            snippet = item["snippet"]["topLevelComment"]["snippet"]
-            comment_mapping["reply_count"] = item["snippet"].get("totalReplyCount")
-            comment_mapping["can_reply"] = item["snippet"].get("canReply")
-        else:
-            comment_mapping["reply_count"] = None
-            comment_mapping["can_reply"] = None
-            snippet = item["snippet"]
-
-        comment_mapping["comment_id"] = item["id"]
-        comment_mapping["video_id"] = snippet.get("videoId")
-        comment_mapping["channel_id"] = snippet.get("channelId")
-        comment_mapping["parent_id"] = snippet.get("parentId")
-        comment_mapping["text_display"] = html.unescape(snippet["textDisplay"])
-        comment_mapping["text_original"] = snippet["textOriginal"]
-        comment_mapping["author_name"] = snippet["authorDisplayName"]
-        comment_mapping["author_channel_url"] = snippet["authorChannelUrl"]
-        comment_mapping["author_channel_id"] = snippet["authorChannelId"]["value"]
-        comment_mapping["can_rate"] = snippet["canRate"]
-        comment_mapping["viewer_rating"] = snippet["viewerRating"]
-        comment_mapping["like_count"] = snippet["likeCount"]
-        comment_mapping["published_at"] = snippet["publishedAt"]
-        comment_mapping["updated_at"] = snippet["updatedAt"]
-
-        db.execute("begin")
+        db.execute("BEGIN")
         db.execute(mappings.COMMENT_SQL_TABLE["insert"], comment_mapping)
-        db.execute("commit")
+        db.execute("COMMIT")
 
         total += 1
 

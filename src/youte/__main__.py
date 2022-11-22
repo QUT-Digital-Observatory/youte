@@ -39,7 +39,9 @@ def _validate_date(ctx, param, value):
 
 
 # CLI argument set up:
-@click.group()
+@click.group(invoke_without_command=True, no_args_is_help=True)
+@click.pass_context
+@click.version_option()
 def youte():
     """
     Utility to collect and tidy YouTube meta-data and comments via YouTube API.

@@ -211,14 +211,13 @@ class Youte:
 
                     yield r.json()
 
-            history.close()
-            os.remove(history_file)
-
         except KeyboardInterrupt:
             raise StopCollector()
 
         finally:
             history.close()
+            if history_file.exists():
+                os.remove(history_file)
 
     def list_items(
         self,
@@ -323,14 +322,12 @@ class Youte:
                             yield r.json()
 
                 except KeyboardInterrupt:
-                    if history_file.exists():
-                        history.close()
-                        os.remove(history_file)
                     sys.exit(1)
 
                 finally:
                     history.close()
-                    os.remove(history_file)
+                    if history_file.exists():
+                        os.remove(history_file)
 
 
 def _get_endpoint(endpoint) -> dict:

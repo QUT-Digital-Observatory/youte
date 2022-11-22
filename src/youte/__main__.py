@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Sequence, List
 import json
 import os
+from json.decoder import JSONDecodeError
 
 from youte.collector import Youte, _get_history_path
 from youte.config import YouteConfig, get_api_key, get_config_path
@@ -39,8 +40,7 @@ def _validate_date(ctx, param, value):
 
 
 # CLI argument set up:
-@click.group(invoke_without_command=True, no_args_is_help=True)
-@click.pass_context
+@click.group()
 @click.version_option()
 def youte():
     """
@@ -340,12 +340,15 @@ def hydrate(
 def dehydrate(infile, output: str) -> None:
     """Extract an ID list from a file of YouTube resources
 
-    INFILE: File of YouTube resources
+    INFILE: JSON file of YouTube resources
     """
-    items = tidier.get_items(infile)
-    ids = tidier.get_id(items)
-    for id_ in ids:
-        click.echo(id_, file=output)
+    try:
+        items = tidier.get_items(infile)
+        ids = tidier.get_id(items)
+        for id_ in ids:
+            click.echo(id_, file=output)
+    except JSONDecodeError:
+        raise click.BadParameter("File is not JSON.")
 
 
 @youte.command()

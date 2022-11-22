@@ -242,8 +242,7 @@ def get_comments(
     to_csv,
 ) -> None:
     """
-    Get YouTube comments from a list of comment/channel/video ids.
-    By default, get all comments from a list of comment ids.
+    Get YouTube comments from a list of channel/video ids.
 
     OUTPUT: name of JSON file to store output
 
@@ -268,6 +267,8 @@ def get_comments(
         by = "video"
     elif by_parent:
         by = "parent"
+    else:
+        by = None
 
     results = collector.list_items(item_type=item_type, ids=ids, by=by)
 

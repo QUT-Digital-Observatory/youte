@@ -272,12 +272,8 @@ def _get_mapping(item: dict, resource_kind) -> dict:
         mapping["is_linked"] = status.get("isLinked")
         mapping["made_for_kids"] = status.get("madeForKids")
         mapping["keywords"] = branding["channel"].get("keywords")
-        mapping["moderate_comments"] = branding["channel"].get(
-            "moderateComments"
-        )
-        mapping["unsubscribed_trailer"] = branding["channel"].get(
-            "unsubscribedTrailer"
-        )
+        mapping["moderate_comments"] = branding["channel"].get("moderateComments")
+        mapping["unsubscribed_trailer"] = branding["channel"].get("unsubscribedTrailer")
         mapping["content_owner"] = owner.get("contentOwner")
         mapping["time_linked"] = owner.get("timeLinked")
 

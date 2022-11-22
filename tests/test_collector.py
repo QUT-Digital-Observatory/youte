@@ -1,21 +1,20 @@
 import os
 import json
 import pytest
-import dotenv
 from click.testing import CliRunner
 
 from youte.config import YouteConfig
 from youte.collector import Youte
 from youte.__main__ import youte
 
-dotenv.load_dotenv()
+
 API_KEY = os.environ["STAGING_API_KEY"]
 NAME = "tester"
 
 
 @pytest.fixture()
 def config_path(tmp_path):
-    config_name = 'test_config'
+    config_name = "test_config"
     return tmp_path / config_name
 
 
@@ -44,7 +43,7 @@ def runner() -> CliRunner:
     runner = CliRunner()
     yield runner
     try:
-        os.remove('youte.log')
+        os.remove("youte.log")
     except FileNotFoundError:
         pass
 
@@ -58,9 +57,10 @@ def test_search(youte_obj):
         "part": "snippet",
         "maxResults": 50,
         "type": "video",
-        "order": "relevance"
+        "order": "relevance",
+        "publishedAfter": "2022-10-01",
     }
-    search = youte_obj.search(query="mozart", **params)
+    search = youte_obj.search(query="harry potter", **params)
     page = 0
     total_responses = 0
 
@@ -77,69 +77,109 @@ def test_search(youte_obj):
 @pytest.fixture()
 def search_params() -> dict:
     params = {
-        "standard-no-output": ["search", "harry potter",
-                               "--from", "2021-01-01",
-                               "--to", "2021-02-01",
-                               "--key", API_KEY],
-        "standard-output": ["search", "harry potter",
-                            "--from", "2021-01-01",
-                            "--to", "2021-02-01",
-                            "--key", API_KEY,
-                            "output.json"],
-        "wrong-date-format": ["search", "harry potter",
-                              "--from", "10-01-2021",
-                              "--to", "2021-02-01",
-                              "--key", API_KEY],
-        "ordered-by-relevance": ["search", "harry potter",
-                                 "--from", "2021-01-01",
-                                 "--order", "relevance",
-                                 "--key", API_KEY],
-        "wrong-order-option": ["search", "harry potter",
-                               "--from", "2021-01-01",
-                               "--order", "alphabet",
-                               "--key", API_KEY],
-        "safe-search": ["search", "harry potter",
-                        "--from", "2021-01-01",
-                        "--safe-search", "moderate",
-                        "--key", API_KEY],
-        "long-videos": ["search", "harry potter",
-                        "--from", "2021-01-01",
-                        "--safe-search", "moderate",
-                        "--video-duration", "long",
-                        "--key", API_KEY],
-        "no-query": ['search', '--from', '2022-08-01',
-                     '--key', API_KEY]
+        "standard-no-output": [
+            "search",
+            "harry potter",
+            "--from",
+            "2021-01-01",
+            "--to",
+            "2021-02-01",
+            "--key",
+            API_KEY,
+        ],
+        "standard-output": [
+            "search",
+            "harry potter",
+            "--from",
+            "2021-01-01",
+            "--to",
+            "2021-02-01",
+            "--key",
+            API_KEY,
+            "output.json",
+        ],
+        "wrong-date-format": [
+            "search",
+            "harry potter",
+            "--from",
+            "10-01-2021",
+            "--to",
+            "2021-02-01",
+            "--key",
+            API_KEY,
+        ],
+        "ordered-by-relevance": [
+            "search",
+            "harry potter",
+            "--from",
+            "2021-01-01",
+            "--order",
+            "relevance",
+            "--key",
+            API_KEY,
+        ],
+        "wrong-order-option": [
+            "search",
+            "harry potter",
+            "--from",
+            "2021-01-01",
+            "--order",
+            "alphabet",
+            "--key",
+            API_KEY,
+        ],
+        "safe-search": [
+            "search",
+            "harry potter",
+            "--from",
+            "2021-01-01",
+            "--safe-search",
+            "moderate",
+            "--key",
+            API_KEY,
+        ],
+        "long-videos": [
+            "search",
+            "harry potter",
+            "--from",
+            "2021-01-01",
+            "--safe-search",
+            "moderate",
+            "--video-duration",
+            "long",
+            "--key",
+            API_KEY,
+        ],
+        "no-query": ["search", "--from", "2022-08-01", "--key", API_KEY],
     }
 
     return params
 
 
-@pytest.mark.parametrize("command",
-                         ["wrong-date-format",
-                          "wrong-order-option",
-                          "no-query"])
+@pytest.mark.parametrize(
+    "command", ["wrong-date-format", "wrong-order-option", "no-query"]
+)
 def test_cli_search_fail(runner, search_params, command):
     results = runner.invoke(youte, search_params[command])
     assert results.exception
 
 
-@pytest.mark.parametrize("command",
-                         ["standard-no-output",
-                          "ordered-by-relevance",
-                          "safe-search",
-                          "long-videos"])
+@pytest.mark.parametrize(
+    "command",
+    ["standard-no-output", "ordered-by-relevance", "safe-search", "long-videos"],
+)
 def test_cli_search(runner, search_params, command):
     results = runner.invoke(youte, search_params[command])
     assert results.exit_code == 0
-    assert 'youtube#searchListResponse' in results.output
+    assert "youtube#searchListResponse" in results.output
 
 
 def test_cli_search_output(runner, tmp_path, search_params):
     with runner.isolated_filesystem(temp_dir=tmp_path) as td:
-        results = runner.invoke(youte, search_params["standard-output"])
-        assert os.path.exists('output.json')
+        runner.invoke(youte, search_params["standard-output"])
+        assert os.path.exists("output.json")
 
-        with open('output.json', 'r') as file:
+        with open("output.json", "r") as file:
             row = file.readline()
             r = json.loads(row)
 

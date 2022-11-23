@@ -1,21 +1,21 @@
-import logging
-import sqlite3
-import requests
-from datetime import datetime, timedelta
-from dateutil import tz
-import random
 import json
-import time
-from typing import List, Tuple, Mapping
-from pathlib import Path
-from tqdm import tqdm
+import logging
 import os
+import random
+import sqlite3
 import sys
-from typing import Union
-import click
+import time
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import List, Mapping, Tuple, Union
 
-from youte.utilities import create_utc_datetime_string
+import click
+import requests
+from dateutil import tz
+from tqdm import tqdm
+
 from youte.exceptions import StopCollector
+from youte.utilities import create_utc_datetime_string
 
 logger = logging.getLogger(__name__)
 

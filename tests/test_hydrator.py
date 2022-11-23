@@ -48,7 +48,7 @@ def test_hydrate_video(runner, hydrate_args, extra_args):
 def test_hydrate_channel(runner, hydrate_args):
     results = runner.invoke(
         youte,
-        hydrate_args + ["-f", Path("tests") / "channel_ids.csv", "--kind=channels"]
+        hydrate_args + ["-f", Path("tests") / "channel_ids.csv", "--kind=channels"],
     )
     assert results.exit_code == 0
     assert "youtube#channelListResponse" in results.output
@@ -74,3 +74,14 @@ def test_get_comments_on_video(runner, comment_args, extra_args):
     assert results.exit_code == 0
     assert "youtube#commentThreadListResponse" in results.output
     assert "topLevelComment" in results.output
+
+
+def test_dehydrate(runner):
+    results = runner.invoke(youte, ["dehydrate", "tests/search_results.json"])
+    assert results.exit_code == 0
+    assert "AYdQvnWtEHU" in results.output
+
+
+def test_dehydrate_fail(runner):
+    results = runner.invoke(youte, ["dehydrate", "tests/channel_ids.csv"])
+    assert results.exception

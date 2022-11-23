@@ -1,7 +1,8 @@
 import logging
-from pathlib import Path
-import click
 import re
+from pathlib import Path
+
+import click
 
 from youte.exceptions import InvalidFileName
 

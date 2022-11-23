@@ -1,16 +1,17 @@
 import csv
-import sqlite3
 import html
 import json
-from typing import Iterable, Mapping, Union, Sequence
-import re
-from tqdm import tqdm
 import logging
+import re
+import sqlite3
 from pathlib import Path
-import click
+from typing import Iterable, Mapping, Sequence, Union
 
-from youte.utilities import validate_file, check_file_overwrite
+import click
+from tqdm import tqdm
+
 import youte.table_mappings as mappings
+from youte.utilities import check_file_overwrite, validate_file
 
 logger = logging.getLogger()
 

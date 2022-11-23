@@ -2,20 +2,21 @@
 Copyright: Digital Observatory 2022 <digitalobservatory@qut.edu.au>
 Author: Boyd Nguyen <thaihoang.nguyen@qut.edu.au>
 """
-import logging
-import sys
-import click
-from pathlib import Path
-from typing import Sequence, List
 import json
+import logging
 import os
+import sys
 from json.decoder import JSONDecodeError
+from pathlib import Path
+from typing import List, Sequence
 
+import click
+
+from youte import tidier
 from youte.collector import Youte, _get_history_path
 from youte.config import YouteConfig, get_api_key, get_config_path
-from youte import tidier
-from youte.utilities import validate_date_string
 from youte.exceptions import StopCollector
+from youte.utilities import validate_date_string
 
 # Logging
 logger = logging.getLogger()

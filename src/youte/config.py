@@ -1,8 +1,9 @@
 import logging
-from pathlib import Path
-import configobj
-import click
 import sys
+from pathlib import Path
+
+import click
+import configobj
 
 logger = logging.getLogger(__name__)
 

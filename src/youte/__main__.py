@@ -46,7 +46,7 @@ def _validate_date(ctx, param, value):
 def youte():
     """
     Utility to collect and tidy YouTube meta-data and comments via YouTube API.
-    Run `youte config --help` to get started.
+    Run `youte --help` to get started.
     """
     pass
 
@@ -165,7 +165,8 @@ def search(
 ) -> None:
     """Do a YouTube search.
 
-    QUERY: search query\n
+    QUERY: search query
+
     OUTPUT: name of json file to store output data
     """
     api_key = key if key else get_api_key(name=name)
@@ -243,7 +244,7 @@ def get_comments(
     to_csv,
 ) -> None:
     """
-    Get YouTube comments from a list of channel/video ids.
+    Get YouTube comments by video IDs or thread IDs.
 
     OUTPUT: name of JSON file to store output
 
@@ -307,10 +308,12 @@ def hydrate(
     key: str,
     to_csv,
 ) -> None:
-    """Hydrate video or channel ids.
+    """Hydrate YouTube resource IDs.
 
-    Get all metadata for a list of video or channel IDs.
+    Get all metadata for a list of resource IDs.
     By default, the function hydrates video IDs.
+
+    All IDs passed in the command must be of one kind.
 
     OUTPUT: name of JSON file to store output
 

@@ -65,7 +65,7 @@ def youte():
     help="Type of resource to search for",
     show_default=True,
 )
-@click.option("--name", help="Specify an API name added to youte config")
+@click.option("--name", help="Specify an API key name added to youte config")
 @click.option("--key", help="Specify a YouTube API key")
 @click.option(
     "--order",
@@ -230,7 +230,7 @@ def search(
     is_flag=True,
 )
 @click.option("-v", "--by-video", help="Get all comments for a video ID", is_flag=True)
-@click.option("--name", help="Specify an API name added to youte config")
+@click.option("--name", help="Specify an API key name added to youte config")
 @click.option("--key", help="Specify a YouTube API key")
 @click.option("--to-csv", type=click.Path(), help="Tidy data to CSV file")
 def get_comments(
@@ -245,6 +245,9 @@ def get_comments(
 ) -> None:
     """
     Get YouTube comments by video IDs or thread IDs.
+
+    The IDs should all belong to one type, i.e. either video or comment thread.
+    You cannot mix both video AND comment thread IDs in one command.
 
     OUTPUT: name of JSON file to store output
 
@@ -296,7 +299,7 @@ def get_comments(
     show_default=True,
     default="videos",
 )
-@click.option("--name", help="Specify an API name added to youte config")
+@click.option("--name", help="Specify an API key name added to youte config")
 @click.option("--key", help="Specify a YouTube API key")
 @click.option("--to-csv", type=click.Path(), help="Tidy data to CSV file")
 def hydrate(
@@ -313,7 +316,8 @@ def hydrate(
     Get all metadata for a list of resource IDs.
     By default, the function hydrates video IDs.
 
-    All IDs passed in the command must be of one kind.
+    The IDs should all belong to one type, i.e. either video, channel, or comment.
+    For example, you cannot mix both video AND channel IDs in one command.
 
     OUTPUT: name of JSON file to store output
 

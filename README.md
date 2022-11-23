@@ -8,13 +8,11 @@ A command line utility to get YouTube video metadata and comments from YouTube D
 python -m pip install youte
 ```  
 
-## Initial set up  
+## YouTube API key  
 
-### YouTube API key  
+To get data from YouTube API, you will need a YouTube API key. Follow YouTube [instructions](https://developers.google.com/youtube/v3/getting-started) to obtain a YouTube API key if you do not already have one.
 
-To get data from YouTube API, you will need a YouTube API key. Follow YouTube [instructions](https://developers.google.com/youtube/v3/getting-started) to obtain a YouTube API key if you do not already have one.  
-
-### youte config
+## Configure API key (recommended)
 
 You can save your API key in the youte config file for reuse. To do so, run:
 
@@ -22,13 +20,13 @@ You can save your API key in the youte config file for reuse. To do so, run:
 youte config add-key
 ```  
 
-The interactive prompt will ask you to input your API key, as well as a "name" for that key. The name is used to identify the key, and can be anything you choose.
+The interactive prompt will ask you to input your API key and name it. The name is used to identify the key, and can be anything you choose.
 
-The program will also ask if you want to set the given key as default.
+The prompt will also ask if you want to set the given key as default.
 
 When running queries, if no API key or name is specified, `youte` will automatically use the default key.
 
-#### Manually set a key as default  
+### Manually set a key as default  
 
 If you want to manually set an existing key as a default, run:  
 
@@ -48,7 +46,7 @@ youte config list-keys
 
 The default key, if there is one, will have an asterisk next to it.
 
-#### Delete a key
+#### Remove a key
 
 To remove a stored key, run:
 
@@ -115,6 +113,7 @@ Options:
 
 ```commandline  
 youte search 'study with me' --from 2022-08-01 --to 2022-08-07
+
 youte search gaza --from 2022-07-25 --name user_2 --safe-search moderate --order=title gaza.json
 ```
 
@@ -128,7 +127,7 @@ The terms to search for. You can also use the Boolean NOT (-) and OR (|) operato
 youte search "koala|australia zoo -kangaroo"
 ```  
 
-If you are looking for exact phrases, the exact phrases can be wrapped in double quotes, then wrapped again by single quotes.  
+If you are looking for exact phrases, the exact phrases can be wrapped in double quotes, then wrapped again in single quotes.  
 
 ```commandline  
 youte search '"australia zoo"' aussie_zoo.jsonl
@@ -136,9 +135,9 @@ youte search '"australia zoo"' aussie_zoo.jsonl
 
 #### `OUTPUT` (optional)
 
-(Optional) Path of the output file where raw JSON responses will be stored. Must have `.json` file endings (e.g., `.json` or `.jsonl`). If the output file already exists, `youte` will **_update_** the existing file, instead of overwriting it.
+Path of the output file where raw JSON responses will be stored. Must have `.json` file endings (e.g., `.json` or `.jsonl`). If the output file already exists, `youte` will **_update_** the existing file, instead of overwriting it.
 
-If no OUTPUT argument is passed, results will be printed in the terminal.
+If no OUTPUT argument is passed, results will be printed to the terminal.
 
 #### `--from` (optional)  
 
@@ -156,11 +155,11 @@ The API key name has to be added to the config file first using `youte config ad
 
 #### `--key` (optional)
 
-The API key to use.
+The API key to use, if you want to use a key not configured with youte.
 
 #### `--type` (optional)
 
-Type of Youtube resource to retrieve. Can be a comma-separated list of acceptable types, which are `channel`, `playlist`, `video`.
+Type of Youtube resource to retrieve. Can be one type or a comma-separated list of acceptable types, which are `channel`, `playlist`, `video`.
 
 #### `--order` (optional)
 
@@ -213,7 +212,11 @@ Maximum number of results returned per page. The default value is 50.
 
 Resume progress from a progress file.
 
-Searching is very expensive in terms of API quota (100 units per search results page). Therefore, `youte` saves the progress of a search so that if you exit the program prematurely, you can choose to resume the search to avoid wasting valuable quota. Specifically, when you exit the program in the middle of a search, a prompt will ask if you want to save its progress. If yes, all the recorded plus unrecorded search page tokens are saved in a SQLite database in a hidden `.youte.history` folder inside your current directory. The name of the progress file is printed on the terminal, as demonstrated below:
+Searching is very expensive in terms of API quota (100 units per search results page). Therefore, `youte` saves the progress of a search so that if you exit the program prematurely, you can choose to resume the search to avoid wasting valuable quota.
+
+When you exit the program in the middle of a search, a prompt will ask if you want to save progress. If yes, all search page tokens are stored to a database in the **.youte.history** folder inside your current directory. 
+
+The name of the progress file is printed on the terminal, as demonstrated below:
 
 ```commandline
 Do you want to save your current progress? [y/N]: y
@@ -221,7 +224,9 @@ Progress saved at /home/boyd/Documents/youte/.youte.history/search_1669178310.db
 To resume progress, run the same youte search command and add `--resume search_1669178310`
 ```
 
-To resume progress of this query, run the same query again and add `--resume <NAME OF PROGRESS>`. You can also run `youte list-history` to see the list of resumable progress files found in ***.youte.history*** folder inside your current directory.
+To resume progress of this query, run the same query again and add `--resume <NAME OF PROGRESS>`. 
+
+You can also run `youte list-history` to see the list of resumable progress files found in ***.youte.history*** folder inside your current directory.
 
 #### `--to-csv` (optional)  
 
@@ -229,15 +234,14 @@ Tidy results into a CSV file.
 
 ## Hydrate a list of IDs
 
-`youte hydrate` takes a list of resource IDs of one type, and get the full data associated with them.
+`youte hydrate` takes a list of resource IDs, and get the full data associated with them.
 
 ```commandline  
 Usage: youte hydrate [OPTIONS] [ITEMS]...
 
   Hydrate YouTube resource IDs.
 
-  Get all metadata for a list of resource IDs. By default, the function
-  hydrates video IDs.
+  Get all metadata for a list of resource IDs. By default, the function hydrates video IDs.
 
   All IDs passed in the command must be of one kind.
 
@@ -276,7 +280,7 @@ youte hydrate -f channel_ids.txt --kind channel
 
 YouTube resource IDs. If there are multiple IDs, separate each one with a space.
 
-The IDs should all belong to one type, i.e. either video, channel, or comment, e.g. you cannot mix both video AND comment IDs in one command.
+The IDs should all belong to one type, i.e. either video, channel, or comment. For example, you cannot mix both video AND channel IDs in one command.
 
 #### `-f` or `--file-path`  
 
@@ -359,7 +363,7 @@ The `tidy` command will detect the type of resources in the JSON file (i.e. vide
 
 ### Database schemas
 
-`youte tidy` processes JSON data into different schemas depending on the type of resource in the JSON file. Here are all the schemas with their corresponding YouTube resources.
+`youte tidy` processes JSON data into different schemas depending on the type of resource in the JSON file. Here are the schema names with their corresponding YouTube resources.
 
 | Resource                             | Schema         |
 |--------------------------------------|----------------|

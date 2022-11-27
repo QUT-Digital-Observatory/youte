@@ -5,6 +5,8 @@ from pathlib import Path
 import click
 import configobj
 
+from youte.exceptions import ValueAlreadyExists
+
 logger = logging.getLogger(__name__)
 
 
@@ -14,6 +16,17 @@ class YouteConfig(configobj.ConfigObj):
         self.file_path = filename
 
     def add_profile(self, name, key):
+        existing = []
+
+        try:
+            for profile in self:
+                existing.append(self[profile]["key"])
+        except ValueError:
+            pass
+
+        if key in existing:
+            raise ValueAlreadyExists("API key already exists.")
+
         self[name] = {}
         self[name]["key"] = key
         self.write()

@@ -12,3 +12,7 @@ class InvalidRequestParameter(Exception):
 
 class StopCollector(Exception):
     pass
+
+
+class ValueAlreadyExists(Exception):
+    pass

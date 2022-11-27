@@ -15,7 +15,7 @@ import click
 from youte import tidier
 from youte.collector import Youte, _get_history_path
 from youte.config import YouteConfig, get_api_key, get_config_path
-from youte.exceptions import StopCollector
+from youte.exceptions import StopCollector, ValueAlreadyExists
 from youte.utilities import validate_date_string
 
 # Logging
@@ -422,7 +422,11 @@ def add_key():
     conf = _set_up_config()
     click.echo(f"Config file is stored at {config_file_path.resolve()}.")
 
-    conf.add_profile(name=username, key=api_key)
+    try:
+        conf.add_profile(name=username, key=api_key)
+    except ValueAlreadyExists:
+        raise click.BadArgumentUsage("API key already exists in config file.")
+
     click.echo()
     if click.confirm("Set this API key as default?"):
         conf.set_default(username)

@@ -12,5 +12,7 @@ def lint(session):
 
 @nox.session(python=["3.8", "3.9", "3.10"])
 def test(session):
-    session.install("-r", "requirements.txt")
+    session.run("pip", "install", "--upgrade", "pip", "setuptools", "wheel")
+    session.install(".")
+    session.install("pytest")
     session.run("pytest", "tests")

@@ -171,9 +171,7 @@ class Youte:
         self.api_key = api_key
         self.history_file = None
 
-    def search(
-        self, query: str, save_progress_to: Union[str, Path] = None, **kwargs
-    ) -> dict:
+    def search(self, save_progress_to: Union[str, Path] = None, **kwargs) -> dict:
 
         page = 0
 
@@ -195,7 +193,7 @@ class Youte:
 
                     url = "https://www.googleapis.com/youtube/v3/search"
 
-                    params = _get_params(key=self.api_key, q=query, **kwargs)
+                    params = _get_params(key=self.api_key, **kwargs)
 
                     if token != "":
                         params["pageToken"] = token

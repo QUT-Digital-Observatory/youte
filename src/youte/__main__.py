@@ -8,7 +8,7 @@ import os
 import sys
 from json.decoder import JSONDecodeError
 from pathlib import Path
-from typing import List, Sequence
+from typing import List, Sequence, Union
 
 import click
 
@@ -174,6 +174,7 @@ def search(
 
     params = {
         "part": "snippet",
+        "q": query,
         "maxResults": max_results,
         "order": order,
         "safeSearch": safe_search,
@@ -198,9 +199,7 @@ def search(
             if not _get_history_path(resume).exists():
                 raise click.BadParameter("No such history file found")
 
-        results = search_collector.search(
-            query=query, save_progress_to=resume, **params
-        )
+        results = search_collector.search(save_progress_to=resume, **params)
 
         click.echo(params)
 
@@ -310,7 +309,7 @@ def hydrate(
     name: str,
     key: str,
     to_csv,
-) -> None:
+) -> Union[str, None]:
     """Hydrate YouTube resource IDs.
 
     Get all metadata for a list of resource IDs.
@@ -339,6 +338,70 @@ def hydrate(
 
     if output:
         click.echo(f"Results are stored in {output.name}")
+
+
+@youte.command()
+@click.argument("items", nargs=-1, required=False)
+@click.option("-f", "--file-path", type=click.Path(),
+              help="Get IDs from file", default=None)
+@click.option("-o", "--output", type=click.File(mode="w"))
+@click.option(
+    "--safe-search",
+    type=click.Choice(["none", "moderate", "strict"], case_sensitive=False),
+    help="Include or exclude restricted content",
+    default="none",
+    show_default=True,
+)
+@click.option("--name", help="Specify an API key name added to youte config")
+@click.option("--key", help="Specify a YouTube API key")
+@click.option(
+    "--max-results",
+    type=click.IntRange(0, 50),
+    help="Maximum number of results returned per page",
+    default=50,
+    show_default=True,
+)
+@click.option("--to-csv", type=click.Path(), help="Tidy data to CSV file")
+def get_related(
+    items: Sequence[str],
+    output: str,
+    safe_search: str,
+    to_csv: str,
+    file_path: str,
+    name: str,
+    key: str,
+    max_results: int
+):
+    api_key = key if key else get_api_key(name=name)
+    collector = _set_up_collector(api_key=api_key)
+
+    ids = _get_ids(string=items, file=file_path)
+
+    for id_ in ids:
+
+        params = {
+            "part": "snippet",
+            "maxResults": max_results,
+            "safeSearch": safe_search,
+            "type": "video",
+            "relatedToVideoId": id_,
+        }
+
+        results = collector.search(**params)
+
+        click.echo(params)
+
+        for result in results:
+            click.echo(json.dumps(result), file=output)
+
+            if to_csv:
+                items = result["items"]
+                tidier.tidy_to_csv(
+                    items=items, output=to_csv, resource_kind="search"
+                )
+
+        if output:
+            click.echo(f"Results are stored in {output.name}")
 
 
 @youte.command()

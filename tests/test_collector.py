@@ -2,6 +2,7 @@ import os
 import json
 import pytest
 from click.testing import CliRunner
+from pathlib import Path
 
 from youte.config import YouteConfig
 from youte.collector import Youte
@@ -60,7 +61,7 @@ def test_search(youte_obj):
         "order": "relevance",
         "publishedAfter": "2022-10-01",
     }
-    search = youte_obj.search(query="harry potter", **params)
+    search = youte_obj.search(**params)
     page = 0
     total_responses = 0
 
@@ -83,7 +84,7 @@ def search_params() -> dict:
             "--from",
             "2021-01-01",
             "--to",
-            "2021-02-01",
+            "2021-01-03",
             "--key",
             API_KEY,
         ],
@@ -93,7 +94,7 @@ def search_params() -> dict:
             "--from",
             "2021-01-01",
             "--to",
-            "2021-02-01",
+            "2021-01-03",
             "--key",
             API_KEY,
             "output.json",
@@ -113,6 +114,8 @@ def search_params() -> dict:
             "harry potter",
             "--from",
             "2021-01-01",
+            "--to",
+            "2021-01-03",
             "--order",
             "relevance",
             "--key",
@@ -133,6 +136,8 @@ def search_params() -> dict:
             "harry potter",
             "--from",
             "2021-01-01",
+            "--to",
+            "2021-01-03",
             "--safe-search",
             "moderate",
             "--key",
@@ -143,6 +148,8 @@ def search_params() -> dict:
             "harry potter",
             "--from",
             "2021-01-01",
+            "--to",
+            "2021-01-03",
             "--safe-search",
             "moderate",
             "--video-duration",
@@ -180,6 +187,48 @@ def test_cli_search_output(runner, tmp_path, search_params):
         assert os.path.exists("output.json")
 
         with open("output.json", "r") as file:
+            row = file.readline()
+            r = json.loads(row)
+
+            assert len(r["items"]) > 10
+
+
+@pytest.fixture()
+def related_params() -> dict:
+    return {
+        "one-id": [
+            "get-related",
+            "f3m_WqxhL4o",
+            "--output",
+            "related.json"
+        ],
+        "multi-ids": [
+            "get-related",
+            "f3m_WqxhL4o",
+            "17yO5AssjAI",
+            "--output",
+            "related.json"
+        ],
+        "from-file": [
+            "get-related",
+            "-f",
+            (Path("tests") / "related_ids.csv").resolve(),
+            "--output",
+            "related.json"
+        ]
+    }
+
+
+@pytest.mark.parametrize(
+    "command",
+    ["one-id", "multi-ids", "from-file"]
+)
+def test_cli_related_search(runner, tmp_path, related_params, command):
+    with runner.isolated_filesystem(temp_dir=tmp_path) as td:
+        runner.invoke(youte, related_params[command])
+        assert os.path.exists("related.json")
+
+        with open("related.json", "r") as file:
             row = file.readline()
             r = json.loads(row)
 

@@ -327,6 +327,58 @@ class Youte:
                     if history_file.exists():
                         os.remove(history_file)
 
+    def list_most_popular(
+        self,
+        region_code: str = None,
+        video_category: str = None,
+    ) -> Mapping:
+        request_info = _get_endpoint("videos")
+        url = request_info["url"]
+        params = request_info["params"]
+        params["key"] = self.api_key
+        params["chart"] = "mostPopular"
+
+        if region_code:
+            params["regionCode"] = region_code
+        elif video_category:
+            params["videoCategoryId"] = video_category
+
+        history_file = _get_history_path(f"history_{time.time()}.db")
+
+        try:
+            while True:
+                if "pageToken" in params:
+                    del params["pageToken"]
+
+                tokens, history = _load_page_token(history_file)
+
+                if not tokens:
+                    logger.info("No more token found.")
+                    break
+
+                for token in tokens:
+
+                    if token != "":
+                        logger.info("Adding page token...")
+                        params["pageToken"] = token
+
+                    r = _request_with_error_handling(url=url, params=params)
+
+                    _get_page_token(response=r, saved_to=history)
+
+                    # store recorded and unrecorded tokens
+                    history.update_token(token)
+
+                    yield r.json()
+
+        except KeyboardInterrupt:
+            sys.exit(1)
+
+        finally:
+            history.close()
+            if history_file.exists():
+                os.remove(history_file)
+
 
 def _get_endpoint(endpoint) -> dict:
     """Get all the request details needed to make an API request to

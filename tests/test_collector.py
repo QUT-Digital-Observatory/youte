@@ -84,7 +84,7 @@ def search_params() -> dict:
             "--from",
             "2021-01-01",
             "--to",
-            "2021-01-03",
+            "2021-01-02",
             "--key",
             API_KEY,
         ],
@@ -94,7 +94,7 @@ def search_params() -> dict:
             "--from",
             "2021-01-01",
             "--to",
-            "2021-01-03",
+            "2021-01-02",
             "--key",
             API_KEY,
             "output.json",
@@ -115,7 +115,7 @@ def search_params() -> dict:
             "--from",
             "2021-01-01",
             "--to",
-            "2021-01-03",
+            "2021-01-02",
             "--order",
             "relevance",
             "--key",
@@ -137,7 +137,7 @@ def search_params() -> dict:
             "--from",
             "2021-01-01",
             "--to",
-            "2021-01-03",
+            "2021-01-02",
             "--safe-search",
             "moderate",
             "--key",
@@ -149,7 +149,7 @@ def search_params() -> dict:
             "--from",
             "2021-01-01",
             "--to",
-            "2021-01-03",
+            "2021-01-02",
             "--safe-search",
             "moderate",
             "--video-duration",
@@ -233,3 +233,19 @@ def test_cli_related_search(runner, tmp_path, related_params, command):
             r = json.loads(row)
 
             assert len(r["items"]) > 10
+
+
+@pytest.mark.parametrize(
+    "country",
+    [None, "au", "vn"]
+)
+def test_cli_most_popular(runner, tmp_path, country):
+    with runner.isolated_filesystem(temp_dir=tmp_path) as td:
+        runner.invoke(youte, ["most-popular", "test.json", "-r", country])
+        assert os.path.exists("test.json")
+
+        with open("test.json", "r") as file:
+            row = file.readline()
+            r = json.loads(row)
+
+            assert len(r["items"]) > 40

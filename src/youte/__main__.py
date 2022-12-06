@@ -413,6 +413,39 @@ def get_related(
 
 
 @youte.command()
+@click.argument("output", type=click.File(mode="w"), required=False)
+@click.option(
+    "-r", "--region-code", help="ISO 3166-1 alpha-2 country codes to retrieve videos"
+)
+@click.option("--name", help="Specify an API key name added to youte config")
+@click.option("--key", help="Specify a YouTube API key")
+@click.option("--to-csv", type=click.Path(), help="Tidy data to CSV file")
+def most_popular(region_code, output, name, key, to_csv):
+    """Return the most popular videos for a region and video category
+
+    By default, if nothing is else is provided, the command retrieves the most
+    popular videos in the US.
+
+    OUTPUT: name of JSON file to store results
+    """
+
+    api_key = key if key else get_api_key(name=name)
+    collector = _set_up_collector(api_key=api_key)
+
+    results = collector.list_most_popular(region_code=region_code)
+
+    for result in results:
+        click.echo(json.dumps(result), file=output)
+
+        if to_csv:
+            items = result["items"]
+            tidier.tidy_to_csv(items=items, output=to_csv, resource_kind="videos")
+
+    if output:
+        click.echo(f"Results are stored in {output.name}")
+
+
+@youte.command()
 @click.argument("infile", type=click.Path())
 @click.option(
     "-o", "--output", type=click.File(mode="w"), help="Output text file to store IDs in"

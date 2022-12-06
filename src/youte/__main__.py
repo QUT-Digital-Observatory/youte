@@ -163,7 +163,7 @@ def search(
     to_csv: str,
     max_results: int,
 ) -> None:
-    """Do a YouTube search.
+    """Do a YouTube search
 
     QUERY: search query
 
@@ -243,7 +243,7 @@ def get_comments(
     to_csv,
 ) -> None:
     """
-    Get YouTube comments by video IDs or thread IDs.
+    Get YouTube comments by video IDs or thread IDs
 
     The IDs should all belong to one type, i.e. either video or comment thread.
     You cannot mix both video AND comment thread IDs in one command.
@@ -310,7 +310,7 @@ def hydrate(
     key: str,
     to_csv,
 ) -> Union[str, None]:
-    """Hydrate YouTube resource IDs.
+    """Hydrate YouTube resource IDs
 
     Get all metadata for a list of resource IDs.
     By default, the function hydrates video IDs.
@@ -320,7 +320,7 @@ def hydrate(
 
     OUTPUT: name of JSON file to store output
 
-    ITEMS: ID(s) of item as provided by YouTube
+    ITEMS: ID(s) of items as provided by YouTube
     """
     api_key = key if key else get_api_key(name=name)
     collector = _set_up_collector(api_key=api_key)
@@ -342,9 +342,15 @@ def hydrate(
 
 @youte.command()
 @click.argument("items", nargs=-1, required=False)
-@click.option("-f", "--file-path", type=click.Path(),
-              help="Get IDs from file", default=None)
-@click.option("-o", "--output", type=click.File(mode="w"))
+@click.option(
+    "-f", "--file-path", type=click.Path(), help="Get IDs from file", default=None
+)
+@click.option(
+    "-o",
+    "--output",
+    type=click.File(mode="w"),
+    help="Name of JSON file to store output",
+)
 @click.option(
     "--safe-search",
     type=click.Choice(["none", "moderate", "strict"], case_sensitive=False),
@@ -370,8 +376,12 @@ def get_related(
     file_path: str,
     name: str,
     key: str,
-    max_results: int
+    max_results: int,
 ):
+    """Get videos related to a video
+
+    ITEMS: ID(s) of videos as provided by YouTube
+    """
     api_key = key if key else get_api_key(name=name)
     collector = _set_up_collector(api_key=api_key)
 
@@ -396,9 +406,7 @@ def get_related(
 
             if to_csv:
                 items = result["items"]
-                tidier.tidy_to_csv(
-                    items=items, output=to_csv, resource_kind="search"
-                )
+                tidier.tidy_to_csv(items=items, output=to_csv, resource_kind="search")
 
         if output:
             click.echo(f"Results are stored in {output.name}")
@@ -448,7 +456,7 @@ def list_history():
 @youte.group()
 def config():
     """
-    Set up API keys to access data from YouTube API.
+    Set up API keys to access data from YouTube API
     """
 
 

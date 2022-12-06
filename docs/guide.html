@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.1.251">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>youte - youte: Collecting YouTube video metadata and comments</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1.6em;
+  vertical-align: middle;
+}
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">youte</span>
+    </a>
+  </div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="./index.html">Home</a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./documentation.html">Documentation</a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link active" href="./guide.html" aria-current="page">Guide</a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/QUT-Digital-Observatory/youte"><i class="bi bi-github" role="img">
+</i> 
+ </a>
+  </li>  
+</ul>
+              <div id="quarto-search" class="" title="Search"></div>
+          </div> <!-- /navcollapse -->
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#about-youte" id="toc-about-youte" class="nav-link active" data-scroll-target="#about-youte">About <code>youte</code></a>
+  <ul class="collapse">
+  <li><a href="#youtube-data-api" id="toc-youtube-data-api" class="nav-link" data-scroll-target="#youtube-data-api">YouTube Data API</a></li>
+  <li><a href="#command-line" id="toc-command-line" class="nav-link" data-scroll-target="#command-line">Command-line</a></li>
+  </ul></li>
+  <li><a href="#installing-youte" id="toc-installing-youte" class="nav-link" data-scroll-target="#installing-youte">Installing youte</a>
+  <ul class="collapse">
+  <li><a href="#issues-installing-youte-in-anaconda" id="toc-issues-installing-youte-in-anaconda" class="nav-link" data-scroll-target="#issues-installing-youte-in-anaconda">Issues installing <code>youte</code> in Anaconda</a></li>
+  </ul></li>
+  <li><a href="#set-up" id="toc-set-up" class="nav-link" data-scroll-target="#set-up">Set up</a></li>
+  <li><a href="#running-a-search" id="toc-running-a-search" class="nav-link" data-scroll-target="#running-a-search">Running a search</a>
+  <ul class="collapse">
+  <li><a href="#saving-search-progress" id="toc-saving-search-progress" class="nav-link" data-scroll-target="#saving-search-progress">Saving search progress</a></li>
+  </ul></li>
+  <li><a href="#hydrating-videos-and-channels" id="toc-hydrating-videos-and-channels" class="nav-link" data-scroll-target="#hydrating-videos-and-channels">Hydrating videos and channels</a>
+  <ul class="collapse">
+  <li><a href="#hydrating-channels" id="toc-hydrating-channels" class="nav-link" data-scroll-target="#hydrating-channels">Hydrating channels</a></li>
+  <li><a href="#using-file-containing-ids" id="toc-using-file-containing-ids" class="nav-link" data-scroll-target="#using-file-containing-ids">Using file containing IDs</a></li>
+  </ul></li>
+  <li><a href="#getting-comments" id="toc-getting-comments" class="nav-link" data-scroll-target="#getting-comments">Getting comments</a>
+  <ul class="collapse">
+  <li><a href="#getting-comments-on-video" id="toc-getting-comments-on-video" class="nav-link" data-scroll-target="#getting-comments-on-video">Getting comments on video</a></li>
+  <li><a href="#getting-replies-to-comment-threads" id="toc-getting-replies-to-comment-threads" class="nav-link" data-scroll-target="#getting-replies-to-comment-threads">Getting replies to comment threads</a></li>
+  </ul></li>
+  <li><a href="#tidying-data" id="toc-tidying-data" class="nav-link" data-scroll-target="#tidying-data">Tidying data</a>
+  <ul class="collapse">
+  <li><a href="#json-format" id="toc-json-format" class="nav-link" data-scroll-target="#json-format">JSON format</a></li>
+  <li><a href="#working-with-databases-in-r-and-python" id="toc-working-with-databases-in-r-and-python" class="nav-link" data-scroll-target="#working-with-databases-in-r-and-python">Working with databases in R and Python</a></li>
+  </ul></li>
+  <li><a href="#youtube-api-quota-system" id="toc-youtube-api-quota-system" class="nav-link" data-scroll-target="#youtube-api-quota-system">YouTube API Quota system</a>
+  <ul class="collapse">
+  <li><a href="#youtes-handling-of-quota-usage" id="toc-youtes-handling-of-quota-usage" class="nav-link" data-scroll-target="#youtes-handling-of-quota-usage"><code>youte</code>’s handling of quota usage</a></li>
+  <li><a href="#saving-search-progress-1" id="toc-saving-search-progress-1" class="nav-link" data-scroll-target="#saving-search-progress-1">Saving search progress</a></li>
+  </ul></li>
+  <li><a href="#feedback-is-welcome" id="toc-feedback-is-welcome" class="nav-link" data-scroll-target="#feedback-is-welcome">Feedback is welcome!</a></li>
+  </ul>
+<div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/QUT-Digital-Observatory/youte/issues/new" class="toc-action">Report an issue</a></p></div></div></nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">youte: Collecting YouTube video metadata and comments</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    
+  </div>
+  
+
+</header>
+
+<section id="about-youte" class="level2">
+<h2 class="anchored" data-anchor-id="about-youte">About <code>youte</code></h2>
+<p><code>youte</code> is a helper library that interacts with <a href="https://developers.google.com/youtube/v3">YouTube Data API</a>. Effectively, it makes working with YouTube API and collecting YouTube metadata and comments easy and intuitive. <code>youte</code> is primarily run as a command-line tool.</p>
+<p><code>youte</code> is still early in its development, so its functionalities remain quite limited. However, the tool is actively worked on and new capabilities are being added at the present. Keep an eye out for new releases on our <a href="https://github.com/QUT-Digital-Observatory/youte">GitHub page</a>:</p>
+<section id="youtube-data-api" class="level3">
+<h3 class="anchored" data-anchor-id="youtube-data-api">YouTube Data API</h3>
+<p>An <em>Application Programming Interface</em> or API is a set of communication protocols that help two programs or applications talk to each other. According to this protocol, you send a request to the API, and the API returns a response code to tell you whether your request was valid, and a response body that contains the data requested.</p>
+<p>As an API, <a href="https://developers.google.com/youtube/v3/getting-started">YouTube Data API</a> allows you to get information of a wide range of resources. A YouTube <a href="https://developers.google.com/youtube/v3/getting-started#resources"><em>resource</em></a> is an entity that makes up the YouTube experience, including video, channel, playlist, comment, and search results. Each resource has a unique ID given by YouTube. These IDs will come in handy when you query data from YouTube API.</p>
+<p>The API also allows you to update, delete or create YouTube resources, although as a data collection tool, <code>youte</code> currently does not support these operations.</p>
+</section>
+<section id="command-line" class="level3">
+<h3 class="anchored" data-anchor-id="command-line">Command-line</h3>
+<p>We mentioned that <code>youte</code> is a command-line tool. So what is a command line? A <em>command line</em>, or the <em>shell</em>, is an interface that takes textual, keyboard commands and passes them to your computer for execution.</p>
+<p>A variety of shells are used across operating systems. Some common ones are listed below:</p>
+<ul>
+<li><p>Windows: Command Prompt (cmd), Powershell, Git Bash</p></li>
+<li><p>Linux &amp; Mac OS: Bash, Zsh</p></li>
+</ul>
+<p>If you need a quick introduction of how the shell works, <a href="https://swcarpentry.github.io/shell-novice/">this guide</a> is a useful resource.</p>
+<p><em>Code display convention</em>: Shell commands in this tutorial are displayed as codes with a dollar ($) sign in front of them. When copying the code to your own terminal, make sure to omit the dollar sign.</p>
+</section>
+</section>
+<section id="installing-youte" class="level2">
+<h2 class="anchored" data-anchor-id="installing-youte">Installing youte</h2>
+<p>To install youte, run:</p>
+<pre class="shell"><code>$ python -m pip install youte</code></pre>
+<p><code>youte</code> can work with Python 3.8 and above, so make sure you check your Python version before installing.</p>
+<section id="issues-installing-youte-in-anaconda" class="level3">
+<h3 class="anchored" data-anchor-id="issues-installing-youte-in-anaconda">Issues installing <code>youte</code> in Anaconda</h3>
+<p>If you use Anaconda’s distribution of Python, there might be issues installing and using <code>youte</code>. The below solutions have been tried and shown to work:</p>
+<ul>
+<li><p>If you install <code>youte</code> in the base environment (i.e.&nbsp;not in a virtual environment), run <code>youte</code> in Anaconda Prompt as opposed to other shells.</p></li>
+<li><p>You can install <code>youte</code> in a virtual environment and run it in that virtual environment.</p></li>
+</ul>
+</section>
+</section>
+<section id="set-up" class="level2">
+<h2 class="anchored" data-anchor-id="set-up">Set up</h2>
+<p>To get started, you will need a YouTube API key. Obtaining an API key is simple and straightforward, but you will need a Google account to do so. Instructions for getting an API key are described <a href="https://developers.google.com/youtube/v3/getting-started">here</a>.</p>
+<p>Once you have your API key, configure your key with <code>youte</code> by running the command:</p>
+<pre class="shell"><code>$ youte config add-key</code></pre>
+<p>This will display an interactive prompt where you enter your API key and give it a name. The name will be used to specify the API key, and it can be anything you choose. This will save you the trouble of having to enter the API key every time you query data from YouTube: all you need is the key’s name.</p>
+<p>You’re also asked if you want to set a key as the default key. If there is a default key, it will be used automatically every time you run a query.</p>
+<p>All API keys have to be added to <code>youte</code> before they can be used. <code>config add-key</code> stores your API key in a config file which <code>youte</code> will refer to when running queries. The config file also stores metadata such as your quota usage and time of its most recent use.</p>
+<p>To see a list of all stored keys, run:</p>
+<pre class="shell"><code>$ youte config list-keys</code></pre>
+<p>To manually set a key as a default, run:</p>
+<pre class="shell"><code>$ youte config set-default &lt;NAME-OF-KEY&gt;</code></pre>
+<p>Here you specify the <em>name</em> of the API key you want to set as default.</p>
+<p>To remove an API key from <code>youte</code>, run:</p>
+<pre class="shell"><code>$ youte config remove &lt;NAME-OF-KEY&gt;</code></pre>
+</section>
+<section id="running-a-search" class="level2">
+<h2 class="anchored" data-anchor-id="running-a-search">Running a search</h2>
+<p>Now, onto the exciting part. Let’s run a search!</p>
+<p>Similarly to doing a YouTube search, <code>youte search</code> allows you to do get a list of videos matching keywords and other specified criteria. <code>youte</code> does not return audiovisual content, just the metadata such as video titles and descriptions.</p>
+<p>Here is the format of <code>youte search</code> command. Note that all shell commands must be inputted in one line. The backlashes (<code>\</code>) are used to enter a new line without breaking the command and help with readability.</p>
+<pre class="shell"><code>$ youte search &lt;QUERY&gt; &lt;OUTPUT&gt; \
+    --from &lt;YYYY-MM-DD&gt; \
+    --to &lt;YYYY-MM-DD&gt; \
+    --name &lt;name-of-api-key&gt; \
+    --order=&lt;date|rating|relevance|title&gt; \
+    --safe-search=&lt;none|moderate|strict&gt;</code></pre>
+<p>The &lt;QUERY&gt; and &lt;OUTPUT&gt; are must-have arguments and have to follow the order specified in the command.</p>
+<ul>
+<li><p><code>QUERY</code>: the search term to look for in YouTube video titles and descriptions.</p></li>
+<li><p><code>OUTPUT</code>: name of the file to store raw JSON responses from the API. The file must end in <code>.json</code> or <code>.jsonl</code>.</p></li>
+</ul>
+<p>Besides the above, there are several optional arguments that you can pass to further refine the search:</p>
+<ul>
+<li><p><code>--from</code>, <code>--to</code>: specify date range of the search results returned. The date format has to follow ISO format (YYYY-MM-DD). Note that the date range here is <em>inclusive</em>.</p></li>
+<li><p><code>--name</code>: name of the API key configured with <code>youte</code>. This is optional if you already have a default API key set up.</p></li>
+<li><p><code>--order</code>: specify how you want the data to be sorted. The default (<code>date</code>) will sort the results by date of upload. Other options include <code>rating</code>, <code>relevance</code>, and <code>title</code>.</p></li>
+<li><p><code>--safe-search</code>: include or exclude restricted content. The default (none) will include all publicly available content. Other options include <code>moderate</code>, and <code>strict</code>.</p></li>
+</ul>
+<p>As an example, let’s search for videos matching “offgrid living” in August 2022.</p>
+<pre class="shell"><code>youte search "offgrid living" results.json --from 2022-08-01 --to 2022-08-31</code></pre>
+<p>Of course, you might want to get just the most relevant results first:</p>
+<pre class="shell"><code>youte search "offgrid living" results.json --from 2022-08-01 --to 2022-08-31 --order=relevance</code></pre>
+<p>Or only include moderated content:</p>
+<pre class="shell"><code>youte search "offgrid living" results.json --from 2022-08-01 --to 2022-08-31 --safe-search=moderate</code></pre>
+<section id="saving-search-progress" class="level3">
+<h3 class="anchored" data-anchor-id="saving-search-progress">Saving search progress</h3>
+<p>As will be described below, often there is a limit to how much data you get from YouTube API per day. Searching, in particular, is very “expensive” in terms of API usage. Therefore, you can choose to save the progress of a search so that if you exit the program prematurely, either by accident or on purpose, you can resume the search to avoid wasting valuable quota units.</p>
+<p>Specifically, when you exit the program in the middle of a search, a prompt will ask if you want to save its progress. If yes, progress of the search is saved in a database, whose name matches exactly the name of the <code>OUTPUT</code> file that you specified. If you rerun the same search in the same directory, you can choose to resume the progress from that database. This database will be deleted once all search results have been returned.</p>
+<pre class="shell"><code>$ youte search "offgrid living" --from 2022-08-08 --output search_offgrid.json  </code></pre>
+<pre class="text"><code>
+# exit program
+Do you want to save your current progress? [y/N]: # y  
+
+# resume search
+$ youte search "offgrid living" --from 2022-08-08 --output search_offgrid.json  
+
+Getting API key from config file.  
+
+        A history file '.youte.history/search_offgrid.db' is detected in your current directory.
+        Do you want to resume progress from this history file?
+        If you are at all unsure, say No. [y/N]:</code></pre>
+</section>
+</section>
+<section id="hydrating-videos-and-channels" class="level2">
+<h2 class="anchored" data-anchor-id="hydrating-videos-and-channels">Hydrating videos and channels</h2>
+<p>Now, if you look at the search results returned from <code>youte search</code>, you’ll see that they contain only a few fields of information. For example, video statistics are not provided, and video descriptions are truncated.</p>
+<p><code>youte search</code> only returns some data, so if you want to get full data on a set of videos or channels you might need to use <code>hydrate</code>.</p>
+<pre class="shell"><code>youte hydrate [OPTIONS] &lt;OUTPUT&gt; &lt;ITEMS&gt;...</code></pre>
+<ul>
+<li><code>OUTPUT</code>: name of the file to store raw JSON responses from the API. The file must end in <code>.json</code> or <code>.jsonl</code>.</li>
+<li><code>ITEMS</code>: one or more video IDs separated by a space.</li>
+</ul>
+<p><code>youte hydrate</code> command takes as input a list of video or channel IDs and retrieves information on those. As mentioned above, each YouTube resource has a unique identifier. You can get the ID of a resource in the browser or within the data returned by YouTube Data API. For example, the ID of a YouTube video can be seen in the video’s URL:</p>
+<p>https://www.youtube.com/watch?v=<strong>5MXTcO1veRQ</strong></p>
+<p>Now let’s hydrate this video. By default, <code>youte hydrate</code> takes the IDs as video IDs and return video information. So you can hydrate one video easily with:</p>
+<pre class="shell"><code>$ youte hydrate video.json 5MXTcO1veRQ</code></pre>
+<p>You can also hydrate multiple videos:</p>
+<pre class="shell"><code>$ youte hydrate videos.json 5MXTcO1veRQ cbAj3biUeDI dTI3I9ZFzTI</code></pre>
+<section id="hydrating-channels" class="level3">
+<h3 class="anchored" data-anchor-id="hydrating-channels">Hydrating channels</h3>
+<p>If you want to hydrate a list of channel IDs, pass the <code>--channel</code> flag.</p>
+<p>Hydrate 1 channel ID:</p>
+<pre class="shell"><code>$ youte hydrate channel.json --channel UC3mORGO2XYSn3Y_BUPuazeQ</code></pre>
+<p>Hydrate multiple channel IDs</p>
+<pre class="shell"><code>$ youte hydrate channels.json --channel UCC-jcZTFL1r17E-bEC7VYYA UC3mORGO2XYSn3Y_BUPuazeQ</code></pre>
+<section id="working-with-channel-ids" class="level4">
+<h4 class="anchored" data-anchor-id="working-with-channel-ids">Working with channel IDs</h4>
+<p>Similar to video IDs, channel IDs can be found in the channels’ URLs (https://www.youtube.com/channel/<strong>UC3mORGO2XYSn3Y_BUPuazeQ</strong>).</p>
+<p>However, most often channel IDs will be more difficult to find because YouTube channels can have custom names and URLs (e.g.&nbsp;https://www.youtube.com/c/<strong>AmbitionMusic</strong>), or older channels might have a different URL (e.g.&nbsp;https://www.youtube.com/user/QueenAnime141). These custom names won’t be able to hydrate.</p>
+<p>Therefore, the best way to get channel IDs is in the search results from <code>youte search</code>.</p>
+</section>
+</section>
+<section id="using-file-containing-ids" class="level3">
+<h3 class="anchored" data-anchor-id="using-file-containing-ids">Using file containing IDs</h3>
+<p>Instead of listing the IDs in the shell, you can also specify a file containing the IDs by passing the <code>-f</code> flag followed by the file’s path. The file should contain just the IDs, each on a new line, and of the same resource type.</p>
+<pre class="shell"><code>$ youte hydrate videos_json -f video_ids.csv</code></pre>
+</section>
+</section>
+<section id="getting-comments" class="level2">
+<h2 class="anchored" data-anchor-id="getting-comments">Getting comments</h2>
+<section id="getting-comments-on-video" class="level3">
+<h3 class="anchored" data-anchor-id="getting-comments-on-video">Getting comments on video</h3>
+<p>The <code>youte list-comments</code> command lets you retrieve comments left on a video or to a comment thread. First, let’s get comments on a video.</p>
+<pre class="shell"><code>$ youte list-comments -v &lt;OUTPUT&gt; &lt;ITEMS&gt;...</code></pre>
+<p>The format of <code>list-comments</code> is the same as <code>hydrate</code>. You specify a name for the output file, followed by one or multiple video IDs. Remember to pass the <code>-v</code> flag to indicate that the IDs are video IDs from which to get comments.</p>
+<pre class="shell"><code>$ youte list-comments -v comments.json dTI3I9ZFzTI</code></pre>
+<p>One potential issue you might run into when running this command is if the video has comments disabled. In this case, the program will show a warning and skip to other IDs if there is any.</p>
+</section>
+<section id="getting-replies-to-comment-threads" class="level3">
+<h3 class="anchored" data-anchor-id="getting-replies-to-comment-threads">Getting replies to comment threads</h3>
+<p>Getting comments on a video retrieves only the top level comments (or <em>threads</em>), but not their replies. You can get the replies to a thread by running <code>list-comments</code> with the thread ID, and passing <code>-t</code> to indicate the ID belongs to a thread, not a video.</p>
+<p>In a browser, the thread ID can be seen if you hover your mouse over a comment’s timestamp. Or you can get the thread IDs from the data returned by <code>list-comments</code>.</p>
+<p>https://www.youtube.com/watch?v=A-mO7rbYtgk&amp;lc=<strong>UgwTqVJTgz1gZl6X57Z4AaABAg</strong></p>
+<pre class="shell"><code>$ youte list-comments -t &lt;OUTPUT&gt; &lt;ITEMS&gt;...</code></pre>
+<p>This command will return an empty JSON if there are no replies.</p>
+<section id="using-text-file-containing-ids" class="level4">
+<h4 class="anchored" data-anchor-id="using-text-file-containing-ids">Using text file containing IDs</h4>
+<p>Similarly to <code>hydrate</code>, you can also use IDs from a text file instead of passing them to the shell, by using the <code>-f</code> flag.</p>
+<pre class="shell"><code>$ youte list-comments -v comments_many.json -f video_ids.csv</code></pre>
+</section>
+</section>
+</section>
+<section id="tidying-data" class="level2">
+<h2 class="anchored" data-anchor-id="tidying-data">Tidying data</h2>
+<section id="json-format" class="level3">
+<h3 class="anchored" data-anchor-id="json-format">JSON format</h3>
+<p>All data returned from <code>youte search</code>, <code>youte hydrate</code>, and <code>youte list-comments</code> are in JSON format.</p>
+<p><em>What is JSON?</em></p>
+<p><a href="https://www.w3schools.com/js/js_json_intro.asp">JSON</a> is the most common way for exchanging text data. Today it is the universal standard of data exchange because of its conciseness, versatility, and platform independence.</p>
+<p>Here is an example of a JSON object.</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode json code-with-copy"><code class="sourceCode json"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">{</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"kind"</span><span class="fu">:</span> <span class="st">"youtube#searchResult"</span><span class="fu">,</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"etag"</span><span class="fu">:</span> <span class="st">"B_TxCObncAju-vhnFwKefxRoNRI"</span><span class="fu">,</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"id"</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>    <span class="dt">"kind"</span><span class="fu">:</span> <span class="st">"youtube#video"</span><span class="fu">,</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>    <span class="dt">"videoId"</span><span class="fu">:</span> <span class="st">"SR2Mf27YweM"</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">},</span></span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>  <span class="dt">"snippet"</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>    <span class="dt">"publishedAt"</span><span class="fu">:</span> <span class="st">"2022-08-31T00:43:25Z"</span><span class="fu">,</span></span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>    <span class="dt">"channelId"</span><span class="fu">:</span> <span class="st">"UCnSc_XzYmAMMSJX4shj7ovw"</span><span class="fu">,</span></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>    <span class="dt">"title"</span><span class="fu">:</span> <span class="st">"30/08/22 :: 9 HOURS STUDY WITH ME [PART-2/2] :: CA: UPSC: PCS: IIT: NEET: SSC: OTHER EXAMS"</span><span class="fu">,</span></span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>    <span class="dt">"description"</span><span class="fu">:</span> <span class="st">"Why is this channel ? As we know that to get good marks in any exam ,we have to study hard and for which consistency is ..."</span><span class="fu">,</span></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>    <span class="dt">"thumbnails"</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>      <span class="dt">"default"</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>        <span class="dt">"url"</span><span class="fu">:</span> <span class="st">"https://i.ytimg.com/vi/SR2Mf27YweM/default.jpg"</span><span class="fu">,</span></span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>        <span class="dt">"width"</span><span class="fu">:</span> <span class="dv">120</span><span class="fu">,</span></span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>        <span class="dt">"height"</span><span class="fu">:</span> <span class="dv">90</span></span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>      <span class="fu">},</span></span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>      <span class="dt">"medium"</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a>        <span class="dt">"url"</span><span class="fu">:</span> <span class="st">"https://i.ytimg.com/vi/SR2Mf27YweM/mqdefault.jpg"</span><span class="fu">,</span></span>
+<span id="cb22-21"><a href="#cb22-21" aria-hidden="true" tabindex="-1"></a>        <span class="dt">"width"</span><span class="fu">:</span> <span class="dv">320</span><span class="fu">,</span></span>
+<span id="cb22-22"><a href="#cb22-22" aria-hidden="true" tabindex="-1"></a>        <span class="dt">"height"</span><span class="fu">:</span> <span class="dv">180</span></span>
+<span id="cb22-23"><a href="#cb22-23" aria-hidden="true" tabindex="-1"></a>      <span class="fu">},</span></span>
+<span id="cb22-24"><a href="#cb22-24" aria-hidden="true" tabindex="-1"></a>      <span class="dt">"high"</span><span class="fu">:</span> <span class="fu">{</span></span>
+<span id="cb22-25"><a href="#cb22-25" aria-hidden="true" tabindex="-1"></a>        <span class="dt">"url"</span><span class="fu">:</span> <span class="st">"https://i.ytimg.com/vi/SR2Mf27YweM/hqdefault.jpg"</span><span class="fu">,</span></span>
+<span id="cb22-26"><a href="#cb22-26" aria-hidden="true" tabindex="-1"></a>        <span class="dt">"width"</span><span class="fu">:</span> <span class="dv">480</span><span class="fu">,</span></span>
+<span id="cb22-27"><a href="#cb22-27" aria-hidden="true" tabindex="-1"></a>        <span class="dt">"height"</span><span class="fu">:</span> <span class="dv">360</span></span>
+<span id="cb22-28"><a href="#cb22-28" aria-hidden="true" tabindex="-1"></a>      <span class="fu">}</span></span>
+<span id="cb22-29"><a href="#cb22-29" aria-hidden="true" tabindex="-1"></a>    <span class="fu">},</span></span>
+<span id="cb22-30"><a href="#cb22-30" aria-hidden="true" tabindex="-1"></a>    <span class="dt">"channelTitle"</span><span class="fu">:</span> <span class="st">"BE CONSISTENT"</span><span class="fu">,</span></span>
+<span id="cb22-31"><a href="#cb22-31" aria-hidden="true" tabindex="-1"></a>    <span class="dt">"liveBroadcastContent"</span><span class="fu">:</span> <span class="st">"none"</span><span class="fu">,</span></span>
+<span id="cb22-32"><a href="#cb22-32" aria-hidden="true" tabindex="-1"></a>    <span class="dt">"publishTime"</span><span class="fu">:</span> <span class="st">"2022-08-31T00:43:25Z"</span></span>
+<span id="cb22-33"><a href="#cb22-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">}</span></span>
+<span id="cb22-34"><a href="#cb22-34" aria-hidden="true" tabindex="-1"></a><span class="fu">}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Everything inside a curly braces belongs to an object. An <em>object</em> is basically a thing or an entity. Within that object, you can have object properties or attributes, represented by key-value pairs. As shown in the example above, you can also have objects nested within objects.</p>
+<p>As you can see, the JSON format is great for data exchange, but not for data analysis, for which you’ll probably need something closer to a table or spreadsheet. This is where <code>youte tidy</code> might come in handy, as it processes and transforms raw JSON files into a relational, SQLite database.</p>
+<p>A relational database contains tables of columns and rows. Each row represents an entity (object) and each column an attribute of that entity. So it looks very similar to your spreadsheet or CSV file. SQLite is a light-weight database engine that stores an entire database within a <code>.db</code> file, making it easy to transfer and work with small-scale databases. Interacting with databases requires <a href="https://www.w3schools.com/sql/sql_intro.asp">SQL</a>, although there are tools and libraries that will minimise the amount of SQL you’ll need to read data.</p>
+<p>Now, let’s see what <code>youte tidy</code> does. It takes in a single JSON file as input, and a <code>.db</code> file as output.</p>
+<pre class="shell"><code>youte tidy &lt;INPUT-JSON&gt; &lt;OUTPUT-DB&gt;</code></pre>
+<p>The JSON file should contain <strong><em>one</em></strong> type of resource (e.g.&nbsp;video, channel, comment). And the output file must have a <code>.db</code> ending.</p>
+<pre class="shell"><code>youte tidy raw.json cleaned.db</code></pre>
+</section>
+<section id="working-with-databases-in-r-and-python" class="level3">
+<h3 class="anchored" data-anchor-id="working-with-databases-in-r-and-python">Working with databases in R and Python</h3>
+<section id="r" class="level4">
+<h4 class="anchored" data-anchor-id="r">R</h4>
+<p>There are many tools to work with SQlite files, in R and Python. In R, the <code>RSQLite</code> package offers a nice and easy way to interact and read data from <code>.db</code> files.</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(DBI)     <span class="co"># for createing database connection</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(RSQLite)</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>con <span class="ot">&lt;-</span> DBI<span class="sc">::</span><span class="fu">dbConnect</span>(RSQLite<span class="sc">::</span><span class="fu">SQLite</span>(), <span class="st">"comments.db"</span>)</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a><span class="fu">dbListTables</span>(con)             <span class="co"># list all tables in the database</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> <span class="fu">dbReadTable</span>(con, <span class="st">"comments"</span>)  <span class="co"># get table `comments` to a dataframe</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="python" class="level4">
+<h4 class="anchored" data-anchor-id="python">Python</h4>
+<p>The <code>pandas</code> library offers some nice functions to connect with and read data from databases. pandas’ <code>read_sql_query</code> lets you query a database into a DataFrame.</p>
+<div class="sourceCode" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sqlite3   <span class="co"># for creating connection with SQLite databases</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>con <span class="op">=</span> sqlite3.<span class="ex">connect</span>(<span class="st">"cleaned.db"</span>)   <span class="co"># connect to cleaned.db</span></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>data <span class="op">=</span> pandas.read_sql_query(<span class="st">"SELECT * FROM comments"</span>, con<span class="op">=</span>con)  <span class="co"># read all data from table "comments" to a pandas DataFrame</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+</section>
+<section id="youtube-api-quota-system" class="level2">
+<h2 class="anchored" data-anchor-id="youtube-api-quota-system">YouTube API Quota system</h2>
+<p>Most often, there is a limit to how many requests you can make to YouTube API per day. YouTube API uses a quota system in which each request costs a number of units depending on the operation requested.</p>
+<p>For example:</p>
+<ul>
+<li><p>searching costs 100 units per request</p></li>
+<li><p>hydrating videos, channels, and comments each costs 1 unit per request</p></li>
+</ul>
+<p>Free accounts get an API quota cap of 10,000 units per project per day, which resets at midnight Pacific Time. Hence the default maximum quota value is set to be 10,000 in <code>youte</code>.</p>
+<section id="youtes-handling-of-quota-usage" class="level3">
+<h3 class="anchored" data-anchor-id="youtes-handling-of-quota-usage"><code>youte</code>’s handling of quota usage</h3>
+<p>At present, you can only check your quota usage on the <a href="https://console.cloud.google.com/iam-admin/quotas">Quotas</a> page in the API Console. It is not possible to monitor quota usage via metadata returned in the API responses.</p>
+<p>Therefore, <code>youte</code> manually monitors quota by keeping counts of requests made and logging their quota usage to the config file. If the maximum quota has been reached, youte handles it by putting the program to sleep until quota reset time (midnight Pacific) before re-running the collector. This is a makeshift approach and does not guarantee perfectly accurate data, especially when you try to collect data on multiple computers using the same API key.</p>
+</section>
+<section id="saving-search-progress-1" class="level3">
+<h3 class="anchored" data-anchor-id="saving-search-progress-1">Saving search progress</h3>
+<p>As you have seen above, searching is very “expensive” in terms of quota usage. Therefore, you can select to save the progress of a search so that if you exit the program prematurely, either by accident or on purpose, you can resume the search from where it stopped to avoid wasting valuable quota units.</p>
+<p>When you exit the program in the middle of a search (i.e.&nbsp;by pressing Ctrl+C), you will get a prompt asking to save progress.</p>
+<p>If you select Yes, search progress is saved in a SQLite database in a hidden <em>.youte.history</em> folder inside your current directory. The name of the database is what is passed as the OUTPUT file with the <code>.json</code> extension removed. If you rerun the same search in the same directory, you can choose to resume the progress from that database. This database will be deleted once all search results have been returned.</p>
+<pre class="shell"><code>$ youte search "offgrid living" search.json</code></pre>
+<p>When you press Ctrl+C to exit the program midway through and then press <code>y</code> after the prompt you will see:</p>
+<pre class="text"><code>Do you want to save your current progress? [y/N]:
+
+Progress saved at /home/boyd/Documents/demo/.youte.history/search.db</code></pre>
+<p>To resume the search, type the same command in the same directory:</p>
+<pre class="shell"><code>$ youte search "offgrid living" search.json</code></pre>
+<pre class="text"><code>A history file '.youte.history/search.db' is detected in your current directory.
+Do you want to resume progress from this history file?
+If you are at all unsure, say No. [y/N]:</code></pre>
+</section>
+</section>
+<section id="feedback-is-welcome" class="level2">
+<h2 class="anchored" data-anchor-id="feedback-is-welcome">Feedback is welcome!</h2>
+<p><code>youte</code> is still in its infancy, and we are working to improve and expand its capabilities. Extra documentation on <code>youte</code> can be found on our <a href="https://github.com/QUT-Digital-Observatory/youte">GitHub’s repository</a>. Let us know your feedback or suggestions by creating GitHub issues or emailing us at <a href="mailto:digitalobservatory@qut.edu.au">digitalobservatory@qut.edu.au</a>.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    setTimeout(function() {
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const cites = ref.parentNode.getAttribute('data-cites').split(' ');
+    tippyHover(ref, function() {
+      var popup = window.document.createElement('div');
+      cites.forEach(function(cite) {
+        var citeDiv = window.document.createElement('div');
+        citeDiv.classList.add('hanging-indent');
+        citeDiv.classList.add('csl-entry');
+        var biblioDiv = window.document.getElementById('ref-' + cite);
+        if (biblioDiv) {
+          citeDiv.innerHTML = biblioDiv.innerHTML;
+        }
+        popup.appendChild(citeDiv);
+      });
+      return popup.innerHTML;
+    });
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

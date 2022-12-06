@@ -137,3 +137,5 @@ archive/
 *.db
 *.jsonl
 demo
+
+/.quarto/

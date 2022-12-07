@@ -112,30 +112,41 @@ ul.task-list li input[type="checkbox"] {
   <ul>
   <li><a href="#installation" id="toc-installation" class="nav-link active" data-scroll-target="#installation">Installation</a></li>
   <li><a href="#youtube-api-key" id="toc-youtube-api-key" class="nav-link" data-scroll-target="#youtube-api-key">YouTube API key</a></li>
-  <li><a href="#configure-api-key-recommended" id="toc-configure-api-key-recommended" class="nav-link" data-scroll-target="#configure-api-key-recommended">Configure API key (recommended)</a>
+  <li><a href="#config" id="toc-config" class="nav-link" data-scroll-target="#config">config</a>
   <ul class="collapse">
   <li><a href="#manually-set-a-key-as-default" id="toc-manually-set-a-key-as-default" class="nav-link" data-scroll-target="#manually-set-a-key-as-default">Manually set a key as default</a></li>
+  <li><a href="#see-the-list-of-all-keys" id="toc-see-the-list-of-all-keys" class="nav-link" data-scroll-target="#see-the-list-of-all-keys">See the list of all keys</a></li>
+  <li><a href="#remove-a-key" id="toc-remove-a-key" class="nav-link" data-scroll-target="#remove-a-key">Remove a key</a></li>
+  <li><a href="#about-the-config-file" id="toc-about-the-config-file" class="nav-link" data-scroll-target="#about-the-config-file">About the config file</a></li>
   </ul></li>
-  <li><a href="#search" id="toc-search" class="nav-link" data-scroll-target="#search">Search</a>
+  <li><a href="#search" id="toc-search" class="nav-link" data-scroll-target="#search">search</a>
   <ul class="collapse">
   <li><a href="#example" id="toc-example" class="nav-link" data-scroll-target="#example">Example</a></li>
   <li><a href="#arguments-and-options" id="toc-arguments-and-options" class="nav-link" data-scroll-target="#arguments-and-options">Arguments and options</a></li>
   </ul></li>
-  <li><a href="#hydrate-a-list-of-ids" id="toc-hydrate-a-list-of-ids" class="nav-link" data-scroll-target="#hydrate-a-list-of-ids">Hydrate a list of IDs</a>
+  <li><a href="#hydrate" id="toc-hydrate" class="nav-link" data-scroll-target="#hydrate">hydrate</a>
   <ul class="collapse">
   <li><a href="#examples" id="toc-examples" class="nav-link" data-scroll-target="#examples">Examples</a></li>
   <li><a href="#arguments-and-options-1" id="toc-arguments-and-options-1" class="nav-link" data-scroll-target="#arguments-and-options-1">Arguments and options</a></li>
   </ul></li>
-  <li><a href="#get-all-comments-of-a-video-or-all-replies-to-a-top-level-comment-thread" id="toc-get-all-comments-of-a-video-or-all-replies-to-a-top-level-comment-thread" class="nav-link" data-scroll-target="#get-all-comments-of-a-video-or-all-replies-to-a-top-level-comment-thread">Get all comments of a video or all replies to a top-level comment thread</a>
+  <li><a href="#get-comments" id="toc-get-comments" class="nav-link" data-scroll-target="#get-comments">get-comments</a>
   <ul class="collapse">
   <li><a href="#example-1" id="toc-example-1" class="nav-link" data-scroll-target="#example-1">Example</a></li>
   <li><a href="#arguments-and-options-2" id="toc-arguments-and-options-2" class="nav-link" data-scroll-target="#arguments-and-options-2">Arguments and options</a></li>
   </ul></li>
-  <li><a href="#tidy-json-responses" id="toc-tidy-json-responses" class="nav-link" data-scroll-target="#tidy-json-responses">Tidy JSON responses</a>
+  <li><a href="#get-related" id="toc-get-related" class="nav-link" data-scroll-target="#get-related">get-related</a>
+  <ul class="collapse">
+  <li><a href="#arguments-and-options-3" id="toc-arguments-and-options-3" class="nav-link" data-scroll-target="#arguments-and-options-3">Arguments and options</a></li>
+  </ul></li>
+  <li><a href="#most-popular" id="toc-most-popular" class="nav-link" data-scroll-target="#most-popular">most-popular</a>
+  <ul class="collapse">
+  <li><a href="#arguments-and-options-4" id="toc-arguments-and-options-4" class="nav-link" data-scroll-target="#arguments-and-options-4">Arguments and options</a></li>
+  </ul></li>
+  <li><a href="#tidy" id="toc-tidy" class="nav-link" data-scroll-target="#tidy">tidy</a>
   <ul class="collapse">
   <li><a href="#database-schemas" id="toc-database-schemas" class="nav-link" data-scroll-target="#database-schemas">Database schemas</a></li>
   </ul></li>
-  <li><a href="#dehydrate" id="toc-dehydrate" class="nav-link" data-scroll-target="#dehydrate">Dehydrate</a></li>
+  <li><a href="#dehydrate" id="toc-dehydrate" class="nav-link" data-scroll-target="#dehydrate">dehydrate</a></li>
   </ul>
 <div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/QUT-Digital-Observatory/youte/issues/new" class="toc-action">Report an issue</a></p></div></div></nav>
     </div>
@@ -166,8 +177,8 @@ ul.task-list li input[type="checkbox"] {
 <h2 class="anchored" data-anchor-id="youtube-api-key">YouTube API key</h2>
 <p>To get data from YouTube API, you will need a YouTube API key. Follow YouTube <a href="https://developers.google.com/youtube/v3/getting-started">instructions</a> to obtain a YouTube API key if you do not already have one.</p>
 </section>
-<section id="configure-api-key-recommended" class="level2">
-<h2 class="anchored" data-anchor-id="configure-api-key-recommended">Configure API key (recommended)</h2>
+<section id="config" class="level2">
+<h2 class="anchored" data-anchor-id="config">config</h2>
 <p>You can save your API key in the youte config file for reuse. To do so, run:</p>
 <pre class="shell"><code>youte config add-key</code></pre>
 <p>The interactive prompt will ask you to input your API key and name it. The name is used to identify the key, and can be anything you choose.</p>
@@ -178,31 +189,31 @@ ul.task-list li input[type="checkbox"] {
 <p>If you want to manually set an existing key as a default, run:</p>
 <pre class="shell"><code>youte config set-default &lt;name-of-existing-key&gt;</code></pre>
 <p>Note that what is passed to this command is the <em>name</em> of the API key, not the API key itself. It follows that the API key has to be first added to the config file using <code>youte config add-key</code>. If you use a name that has not been added to the config file, an error will be raised.</p>
-<section id="see-the-list-of-all-keys" class="level4">
-<h4 class="anchored" data-anchor-id="see-the-list-of-all-keys">See the list of all keys</h4>
+</section>
+<section id="see-the-list-of-all-keys" class="level3">
+<h3 class="anchored" data-anchor-id="see-the-list-of-all-keys">See the list of all keys</h3>
 <p>To see the list of all keys, run:</p>
 <pre class="shell"><code>youte config list-keys</code></pre>
 <p>The default key, if there is one, will have an asterisk next to it.</p>
 </section>
-<section id="remove-a-key" class="level4">
-<h4 class="anchored" data-anchor-id="remove-a-key">Remove a key</h4>
+<section id="remove-a-key" class="level3">
+<h3 class="anchored" data-anchor-id="remove-a-key">Remove a key</h3>
 <p>To remove a stored key, run:</p>
 <pre class="shell"><code>youte config remove &lt;name-of-key&gt;</code></pre>
 </section>
-<section id="about-the-config-file" class="level4">
-<h4 class="anchored" data-anchor-id="about-the-config-file">About the config file</h4>
+<section id="about-the-config-file" class="level3">
+<h3 class="anchored" data-anchor-id="about-the-config-file">About the config file</h3>
 <p>youte’s config file is stored in a central place whose exact location depends on the running operating system:</p>
 <ul>
 <li>Linux/Unix: ~/.config/youte/<br>
 </li>
 <li>Mac OS X: ~/Library/Application Support/youte/</li>
-<li>Windows: C:\&lt;user&gt;\AppData</li>
+<li>Windows: C:\&lt;user&gt;\AppData\Roaming\youte</li>
 </ul>
 </section>
 </section>
-</section>
 <section id="search" class="level2">
-<h2 class="anchored" data-anchor-id="search">Search</h2>
+<h2 class="anchored" data-anchor-id="search">search</h2>
 <pre class="shell"><code>Usage: youte search [OPTIONS] QUERY [OUTPUT]
 
   Do a YouTube search.
@@ -253,42 +264,44 @@ youte search gaza --from 2022-07-25 --name user_2 --safe-search moderate --order
 </section>
 <section id="arguments-and-options" class="level3">
 <h3 class="anchored" data-anchor-id="arguments-and-options">Arguments and options</h3>
+<p>Most options are documented in the help text. This section only describes those that need further explanation.</p>
 <section id="query" class="level4">
-<h4 class="anchored" data-anchor-id="query"><code>QUERY</code></h4>
+<h4 class="anchored" data-anchor-id="query"><em><code>QUERY</code></em></h4>
 <p>The terms to search for. You can also use the Boolean NOT (-) and OR (|) operators to exclude videos or to find videos that match one of several search terms. If the terms contain spaces, the entire QUERY value has to be wrapped in quotes.</p>
-<pre class="commandline"><code>youte search "koala|australia zoo -kangaroo"</code></pre>
+<pre class="shell"><code>youte search "koala|australia zoo -kangaroo"</code></pre>
 <p>If you are looking for exact phrases, the exact phrases can be wrapped in double quotes, then wrapped again in single quotes.</p>
-<pre class="commandline"><code>youte search '"australia zoo"' aussie_zoo.jsonl</code></pre>
+<pre class="shell"><code>youte search '"australia zoo"' aussie_zoo.jsonl</code></pre>
 </section>
 <section id="output-optional" class="level4">
-<h4 class="anchored" data-anchor-id="output-optional"><code>OUTPUT</code> (optional)</h4>
+<h4 class="anchored" data-anchor-id="output-optional"><em><code>OUTPUT</code> (optional)</em></h4>
 <p>Path of the output file where raw JSON responses will be stored. Must have <code>.json</code> file endings (e.g., <code>.json</code> or <code>.jsonl</code>). If the output file already exists, <code>youte</code> will <strong><em>update</em></strong> the existing file, instead of overwriting it.</p>
 <p>If no OUTPUT argument is passed, results will be printed to the terminal.</p>
 </section>
 <section id="from-optional" class="level4">
-<h4 class="anchored" data-anchor-id="from-optional"><code>--from</code> (optional)</h4>
+<h4 class="anchored" data-anchor-id="from-optional"><em><code>--from</code> (optional) </em></h4>
 <p>Start date limit for the search results returned - the results returned by the API should only contain videos created on or after this date (UTC time, which is the default time zone for the YouTube API). Has to be in ISO format (YYYY-MM-DD).</p>
 </section>
 <section id="to-optional" class="level4">
-<h4 class="anchored" data-anchor-id="to-optional"><code>--to</code> (optional)</h4>
+<h4 class="anchored" data-anchor-id="to-optional"><em><code>--to</code> (optional) </em></h4>
 <p>End date limit for the search results returned - the results returned by the API should only contain videos created on or before this date (UTC time, which is the default time zone for the YouTube API). Has to be in ISO format (YYYY-MM-DD).</p>
 </section>
 <section id="name-optional" class="level4">
-<h4 class="anchored" data-anchor-id="name-optional"><code>--name</code> (optional)</h4>
+<h4 class="anchored" data-anchor-id="name-optional"><em><code>--name</code> (optional)</em></h4>
 <p>Name of the API key, if you don’t want to use the default API key or if no default API key has been set.</p>
 <p>The API key name has to be added to the config file first using <code>youte config add-key</code>.</p>
 </section>
 <section id="key-optional" class="level4">
-<h4 class="anchored" data-anchor-id="key-optional"><code>--key</code> (optional)</h4>
-<p>The API key to use, if you want to use a key not configured with youte.</p>
+<h4 class="anchored" data-anchor-id="key-optional"><em><code>--key</code> (optional)</em></h4>
+<p>The API key to use, if you want to use a key not configured with <code>youte</code>.</p>
 </section>
 <section id="type-optional" class="level4">
-<h4 class="anchored" data-anchor-id="type-optional"><code>--type</code> (optional)</h4>
+<h4 class="anchored" data-anchor-id="type-optional"><em><code>--type</code> (optional)</em></h4>
 <p>Type of Youtube resource to retrieve. Can be one type or a comma-separated list of acceptable types, which are <code>channel</code>, <code>playlist</code>, <code>video</code>.</p>
+<pre class="shell"><code>youte search koala --type channel,playlist,video</code></pre>
 </section>
 <section id="order-optional" class="level4">
-<h4 class="anchored" data-anchor-id="order-optional"><code>--order</code> (optional)</h4>
-<p>Specify how results will be sorted.</p>
+<h4 class="anchored" data-anchor-id="order-optional"><em><code>--order</code> (optional)</em></h4>
+<p>Specify how results will be sorted. The following values are accepted:</p>
 <ul>
 <li><code>date</code>: Resources are sorted in reverse chronological order based on the date they were created (default value).</li>
 <li><code>rating</code>: Resources are sorted from highest to lowest rating.</li>
@@ -298,53 +311,37 @@ youte search gaza --from 2022-07-25 --name user_2 --safe-search moderate --order
 <li><code>viewCount</code> – Resources are sorted from highest to lowest number of views. For live broadcasts, videos are sorted by number of concurrent viewers while the broadcasts are ongoing.</li>
 </ul>
 </section>
-<section id="safe-search-optional" class="level4">
-<h4 class="anchored" data-anchor-id="safe-search-optional"><code>--safe-search</code> (optional)</h4>
-<p>Specify whether restricted content is included or exclude.</p>
-</section>
-<section id="video-duration-optional" class="level4">
-<h4 class="anchored" data-anchor-id="video-duration-optional"><code>--video-duration</code> (optional)</h4>
-<p>Include videos of a certain duration.</p>
-</section>
 <section id="channel-type-optional" class="level4">
-<h4 class="anchored" data-anchor-id="channel-type-optional"><code>--channel-type</code> (optional)</h4>
+<h4 class="anchored" data-anchor-id="channel-type-optional"><em><code>--channel-type</code> (optional)</em></h4>
 <p>Restrict search to a particular type of channel. <code>--type</code> has to include <code>channel</code>.</p>
 </section>
 <section id="caption-optional" class="level4">
-<h4 class="anchored" data-anchor-id="caption-optional"><code>--caption</code> (optional)</h4>
+<h4 class="anchored" data-anchor-id="caption-optional"><em><code>--caption</code> (optional)</em></h4>
 <p>Restrict search to videos with or without captions. <code>--type</code> has to include <code>video</code>.</p>
 </section>
 <section id="definition-optional" class="level4">
-<h4 class="anchored" data-anchor-id="definition-optional"><code>--definition</code> (optional)</h4>
+<h4 class="anchored" data-anchor-id="definition-optional"><em><code>--definition</code> (optional)</em></h4>
 <p>Restrict search to videos with a certain definition. <code>--type</code> has to include <code>video</code>.</p>
 </section>
 <section id="dimension-optional" class="level4">
-<h4 class="anchored" data-anchor-id="dimension-optional"><code>--dimension</code> (optional)</h4>
+<h4 class="anchored" data-anchor-id="dimension-optional"><em><code>--dimension</code> (optional)</em></h4>
 <p>Restrict search to 2D or 3D videos. <code>--type</code> has to include <code>video</code>.</p>
 </section>
 <section id="embeddable-optional" class="level4">
-<h4 class="anchored" data-anchor-id="embeddable-optional"><code>--embeddable</code> (optional)</h4>
+<h4 class="anchored" data-anchor-id="embeddable-optional"><em><code>--embeddable</code> (optional)</em></h4>
 <p>Only search for embeddable videos. <code>--type</code> has to include <code>video</code>.</p>
 </section>
-<section id="license-optional" class="level4">
-<h4 class="anchored" data-anchor-id="license-optional"><code>--license</code> (optional)</h4>
-<p>Only include videos with a certain licence.</p>
-</section>
-<section id="max-results-optional" class="level4">
-<h4 class="anchored" data-anchor-id="max-results-optional"><code>--max-results</code> (optional)</h4>
-<p>Maximum number of results returned per page. The default value is 50.</p>
-</section>
 <section id="resume-optional" class="level4">
-<h4 class="anchored" data-anchor-id="resume-optional"><code>--resume</code> (optional)</h4>
-<p>Resume progress from a progress file.</p>
+<h4 class="anchored" data-anchor-id="resume-optional"><em><code>--resume</code> (optional)</em></h4>
+<p>Resume progress from a <code>ProgressSaver</code> file.</p>
 <p>Searching is very expensive in terms of API quota (100 units per search results page). Therefore, <code>youte</code> saves the progress of a search so that if you exit the program prematurely, you can choose to resume the search to avoid wasting valuable quota.</p>
 <p>When you exit the program in the middle of a search, a prompt will ask if you want to save progress. If yes, all search page tokens are stored to a database in the <strong>.youte.history</strong> folder inside your current directory.</p>
 <p>The name of the progress file is printed on the terminal, as demonstrated below:</p>
-<pre class="commandline"><code>Do you want to save your current progress? [y/N]: y
+<pre class="shell"><code>Do you want to save your current progress? [y/N]: y
 Progress saved at /home/boyd/Documents/youte/.youte.history/search_1669178310.db
 To resume progress, run the same youte search command and add `--resume search_1669178310`</code></pre>
-<p>To resume progress of this query, run the same query again and add <code>--resume &lt;NAME OF PROGRESS&gt;</code>.</p>
-<p>You can also run <code>youte list-history</code> to see the list of resumable progress files found in <strong><em>.youte.history</em></strong> folder inside your current directory.</p>
+<p>To resume progress of this query, run the same query again and add <code>--resume &lt;NAME OF ProgressSaver&gt;</code>.</p>
+<p>You can also run <code>youte list-history</code> to see the list of resumable <code>ProgressSaver</code> files found in <strong><em>.youte.history</em></strong> folder inside your current directory.</p>
 </section>
 <section id="to-csv-optional" class="level4">
 <h4 class="anchored" data-anchor-id="to-csv-optional"><code>--to-csv</code> (optional)</h4>
@@ -352,8 +349,8 @@ To resume progress, run the same youte search command and add `--resume search_1
 </section>
 </section>
 </section>
-<section id="hydrate-a-list-of-ids" class="level2">
-<h2 class="anchored" data-anchor-id="hydrate-a-list-of-ids">Hydrate a list of IDs</h2>
+<section id="hydrate" class="level2">
+<h2 class="anchored" data-anchor-id="hydrate">hydrate</h2>
 <p><code>youte hydrate</code> takes a list of resource IDs, and get the full data associated with them.</p>
 <pre class="commandline"><code>Usage: youte hydrate [OPTIONS] [ITEMS]...
 
@@ -391,23 +388,23 @@ youte hydrate -f channel_ids.txt --kind channel</code></pre>
 <section id="arguments-and-options-1" class="level3">
 <h3 class="anchored" data-anchor-id="arguments-and-options-1">Arguments and options</h3>
 <section id="items" class="level4">
-<h4 class="anchored" data-anchor-id="items"><code>ITEMS</code></h4>
+<h4 class="anchored" data-anchor-id="items"><em><code>ITEMS</code></em></h4>
 <p>YouTube resource IDs. If there are multiple IDs, separate each one with a space.</p>
-<p>The IDs should all belong to one type, i.e.&nbsp;either video, channel, or comment. For example, you cannot mix both video AND channel IDs in one command.</p>
+<p>The IDs should all belong to one type, i.e.&nbsp;either video, channel, or comment. For example, you cannot mix both video <em>and</em> channel IDs in one command.</p>
 </section>
 <section id="f-or---file-path" class="level4">
-<h4 class="anchored" data-anchor-id="f-or---file-path"><code>-f</code> or <code>--file-path</code></h4>
-<p>If you want to use IDs from a text file, specify this option with the path to the text file (e.g., <code>.csv</code> or <code>.txt</code>). The text file should contain a line-separated list of IDs.</p>
+<h4 class="anchored" data-anchor-id="f-or---file-path"><em><code>-f</code> or <code>--file-path</code> </em></h4>
+<p>If you want to use IDs from a text file, specify this option with the path to the text file (e.g., <code>.csv</code> or <code>.txt</code>). The text file should contain a line-separated list of IDs, with no header.</p>
 <p>One file should contain one type of IDs.</p>
 </section>
 <section id="kind" class="level4">
-<h4 class="anchored" data-anchor-id="kind"><code>--kind</code></h4>
-<p>Specify which kind of resources the IDs are. The default value is <code>videos</code>.</p>
+<h4 class="anchored" data-anchor-id="kind"><em><code>--kind</code></em></h4>
+<p>Specify which kind of resources the IDs belong to. The default value is <code>videos</code>.</p>
 </section>
 </section>
 </section>
-<section id="get-all-comments-of-a-video-or-all-replies-to-a-top-level-comment-thread" class="level2">
-<h2 class="anchored" data-anchor-id="get-all-comments-of-a-video-or-all-replies-to-a-top-level-comment-thread">Get all comments of a video or all replies to a top-level comment thread</h2>
+<section id="get-comments" class="level2">
+<h2 class="anchored" data-anchor-id="get-comments">get-comments</h2>
 <pre class="commandline"><code>Usage: youte get-comments [OPTIONS] [ITEMS]...
 
   Get YouTube comments by video IDs or thread IDs.
@@ -436,30 +433,90 @@ youte get-comments -t replies.json UgxkjPsKbo2pUEAJju94AaABAg</code></pre>
 <section id="arguments-and-options-2" class="level3">
 <h3 class="anchored" data-anchor-id="arguments-and-options-2">Arguments and options</h3>
 <section id="items-1" class="level4">
-<h4 class="anchored" data-anchor-id="items-1"><code>ITEMS</code></h4>
+<h4 class="anchored" data-anchor-id="items-1"><em><code>ITEMS</code></em></h4>
 <p>Video or comment thread IDs (unique identifiers provided by YouTube). If there are multiple IDs, separate each one with a space.</p>
 <p>The IDs should all belong to one type, i.e.&nbsp;either video or comment thread. You cannot mix both video AND comment thread IDs in one command.</p>
 </section>
 <section id="f-or---file-path-1" class="level4">
-<h4 class="anchored" data-anchor-id="f-or---file-path-1"><code>-f</code> or <code>--file-path</code></h4>
-<p>If you want to use IDs from a text file, specify this option with the path to the text file (e.g., <code>.csv</code> or <code>.txt</code>). The text file should contain a line-separated list of IDs.</p>
+<h4 class="anchored" data-anchor-id="f-or---file-path-1"><em><code>-f</code> or <code>--file-path</code></em></h4>
+<p>If you want to use IDs from a text file, specify this option with the path to the text file (e.g., <code>.csv</code> or <code>.txt</code>). The text file should contain a line-separated list of IDs, with no header.</p>
 <p>One file should contain one type of IDs (i.e.&nbsp;either video or comment thread). You cannot add both video and comment thread IDs in the same file.</p>
 </section>
 <section id="by-thread---by-video" class="level4">
-<h4 class="anchored" data-anchor-id="by-thread---by-video"><code>--by-thread</code>, <code>--by-video</code></h4>
+<h4 class="anchored" data-anchor-id="by-thread---by-video"><em><code>--by-thread</code>, <code>--by-video</code></em></h4>
 <ul>
 <li>Get all replies to a comment thread (<code>--by-thread</code>, <code>-t</code>)<br>
 </li>
 <li>Get all comments on a video (<code>--by-video</code>, <code>-v</code>)</li>
 </ul>
-<p>If none of these flags are passed, the <code>get-comments</code> command works similarly to <code>hydrate</code> - getting full data for a list of comment IDs.</p>
-<p>Only one flag can be used in one command.</p>
+<p>Only one flag can be used in one command. If none of these flags are passed, <code>get-comments</code> will not return anything.</p>
 </section>
 </section>
 </section>
-<section id="tidy-json-responses" class="level2">
-<h2 class="anchored" data-anchor-id="tidy-json-responses">Tidy JSON responses</h2>
-<pre class="commandline"><code>Usage: youte tidy [OPTIONS] FILEPATH OUTPUT
+<section id="get-related" class="level2">
+<h2 class="anchored" data-anchor-id="get-related">get-related</h2>
+<p><code>get-related</code> retrieves a list of videos related to a video/videos.</p>
+<pre class="shell"><code>Usage: youte get-related [OPTIONS] [ITEMS]...
+
+  Get videos related to a video
+
+  ITEMS: ID(s) of videos as provided by YouTube
+
+Options:
+  -f, --file-path PATH            Get IDs from file
+  -o, --output FILENAME           Name of JSON file to store output
+  --safe-search [none|moderate|strict]
+                                  Include or exclude restricted content
+                                  [default: none]
+  --name TEXT                     Specify an API key name added to youte
+                                  config
+  --key TEXT                      Specify a YouTube API key
+  --max-results INTEGER RANGE     Maximum number of results returned per page
+                                  [default: 50; 0&lt;=x&lt;=50]
+  --to-csv PATH                   Tidy data to CSV file
+  --help                          Show this message and exit.</code></pre>
+<section id="arguments-and-options-3" class="level3">
+<h3 class="anchored" data-anchor-id="arguments-and-options-3">Arguments and options</h3>
+<section id="items-2" class="level4">
+<h4 class="anchored" data-anchor-id="items-2"><em><code>ITEMS</code></em></h4>
+<p>Video IDs (unique identifiers provided by YouTube). If there are multiple IDs, separate each one with a space.</p>
+</section>
+<section id="f-or---file-path-2" class="level4">
+<h4 class="anchored" data-anchor-id="f-or---file-path-2"><em><code>-f</code> or <code>--file-path</code></em></h4>
+<p>If you want to use IDs from a text file, specify this option with the path to the text file (e.g., <code>.csv</code> or <code>.txt</code>). The text file should contain a line-separated list of IDs, with no header.</p>
+</section>
+</section>
+</section>
+<section id="most-popular" class="level2">
+<h2 class="anchored" data-anchor-id="most-popular">most-popular</h2>
+<p><code>most-popular</code> retrieves the most popular videos in a region. If no argument or option is given, it retrieves the most popular videos in the United States.</p>
+<pre class="shell"><code>Usage: youte most-popular [OPTIONS] [OUTPUT]
+
+  Return the most popular videos for a region and video category
+
+  By default, if nothing is else is provided, the command retrieves the most
+  popular videos in the US.
+
+  OUTPUT: name of JSON file to store results
+
+Options:
+  -r, --region-code TEXT  ISO 3166-1 alpha-2 country codes to retrieve videos
+  --name TEXT             Specify an API key name added to youte config
+  --key TEXT              Specify a YouTube API key
+  --to-csv PATH           Tidy data to CSV file
+  --help                  Show this message and exit.</code></pre>
+<section id="arguments-and-options-4" class="level3">
+<h3 class="anchored" data-anchor-id="arguments-and-options-4">Arguments and options</h3>
+<section id="r-or---region-code" class="level4">
+<h4 class="anchored" data-anchor-id="r-or---region-code"><em><code>-r</code> or <code>--region-code</code></em></h4>
+<p>ISO 3166-1 alpha-2 country codes to retrieve videos (lower case). You can find the list of country codes here: <a href="https://www.iso.org/obp/ui/#search">https://www.iso.org/obp/ui/#search</a>.</p>
+</section>
+</section>
+</section>
+<section id="tidy" class="level2">
+<h2 class="anchored" data-anchor-id="tidy">tidy</h2>
+<p><code>tidy</code> tidies the raw JSON into a SQlite database. One database can be used multiple times.</p>
+<pre class="shell"><code>Usage: youte tidy [OPTIONS] FILEPATH OUTPUT
 
   Tidy raw JSON response into relational SQLite databases
 
@@ -502,8 +559,9 @@ Options:
 </section>
 </section>
 <section id="dehydrate" class="level2">
-<h2 class="anchored" data-anchor-id="dehydrate">Dehydrate</h2>
-<pre class="commandline"><code>Usage: youte dehydrate [OPTIONS] INFILE
+<h2 class="anchored" data-anchor-id="dehydrate">dehydrate</h2>
+<p><code>dehydrate</code> extracts the IDs from JSON files returned from YouTube API.</p>
+<pre class="shell"><code>Usage: youte dehydrate [OPTIONS] INFILE
 
   Extract an ID list from a file of YouTube resources
 

@@ -62,7 +62,7 @@ This will display an interactive prompt where you enter your API key and give it
 
 You're also asked if you want to set a key as the default key. If there is a default key, it will be used automatically every time you run a query.
 
-All API keys have to be added to `youte` before they can be used. `config add-key` stores your API key in a config file which `youte` will refer to when running queries. The config file also stores metadata such as your quota usage and time of its most recent use.
+All API keys have to be added to `youte` before they can be used. `config add-key` stores your API key in a config file which `youte` will refer to when running queries.
 
 To see a list of all stored keys, run:
 
@@ -93,21 +93,61 @@ Similarly to doing a YouTube search, `youte search` allows you to do get a list 
 Here is the format of `youte search` command. Note that all shell commands must be inputted in one line. The backlashes (`\`) are used to enter a new line without breaking the command and help with readability.
 
 ``` shell
-$ youte search <QUERY> <OUTPUT> \
-    --from <YYYY-MM-DD> \
-    --to <YYYY-MM-DD> \
-    --name <name-of-api-key> \
-    --order=<date|rating|relevance|title> \
-    --safe-search=<none|moderate|strict>
+$ youte search <QUERY>
 ```
 
-The \<QUERY\> and \<OUTPUT\> are must-have arguments and have to follow the order specified in the command.
+The \<QUERY\> argument is compulsory, where you specify the search term to look for in YouTube video titles and descriptions.
 
--   `QUERY`: the search term to look for in YouTube video titles and descriptions.
+The results of this command will be printed to the terminal. If you want to store the output in a file, enter the file name after the search query. The file must end in `.json` or `.jsonl`.
 
--   `OUTPUT`: name of the file to store raw JSON responses from the API. The file must end in `.json` or `.jsonl`.
+``` shell
+$ youte search <QUERY> <OUTPUT>
+```
 
-Besides the above, there are several optional arguments that you can pass to further refine the search:
+Besides the above, there are several optional arguments that you can pass to further refine the search. To get a full list of available options, type:
+
+``` shell
+$ youte search --help
+```
+
+The `--help` flag shows the documentation for a command, so that's usually the first place to go to if you want to know how to use a command.
+
+``` shell
+Options:
+  --from TEXT                     Start date (YYYY-MM-DD)
+  --to TEXT                       End date (YYYY-MM-DD)
+  --type TEXT                     Type of resource to search for  [default:
+                                  video]
+  --name TEXT                     Specify an API key name added to youte
+                                  config
+  --key TEXT                      Specify a YouTube API key
+  --order [date|rating|relevance|title|videoCount|viewCount]
+                                  Sort results  [default: date]
+  --safe-search [none|moderate|strict]
+                                  Include or exclude restricted content
+                                  [default: none]
+  --video-duration [any|long|medium|short]
+                                  Include videos of a certain duration
+  --channel-type [any|show]       Restrict search to a particular type of
+                                  channel
+  --video-type [any|episode|movie]
+                                  Search a particular type of videos
+  --caption [any|closedCaption|none]
+                                  Filter videos based on if they have captions
+  --definition, --video-definition [any|high|standard]
+                                  Include videos by definition
+  --dimension, --video-dimension [any|2d|3d]
+                                  Search 2D or 3D videos
+  --embeddable, --video-embeddable [any|true]
+                                  Search only embeddable videos
+  --license, --video-license [any|creativeCommon|youtube]
+                                  Include videos with a certain license
+  --max-results INTEGER RANGE     Maximum number of results returned per page
+                                  [default: 50; 0<=x<=50]
+  --resume TEXT                   Resume progress from this file
+  --to-csv PATH                   Tidy data to CSV file
+  --help                          Show this message and exit.
+```
 
 -   `--from`, `--to`: specify date range of the search results returned. The date format has to follow ISO format (YYYY-MM-DD). Note that the date range here is *inclusive*.
 

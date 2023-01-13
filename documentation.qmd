@@ -428,6 +428,10 @@ The `tidy` command will detect the type of resources in the JSON file (i.e. vide
 | Comment threads (top-level comments) | comments       |
 | Replies to comment threads           | comments       |
 
+### Data dictionary
+
+Refer to [YouTube Data API](https://developers.google.com/youtube/v3/docs) for definitions of the properties or fields returned in the data. Some fields such as `likeCount`, `viewCount`, and `commentCount` will show as null if these statistics are disabled.
+
 ## dehydrate
 
 `dehydrate` extracts the IDs from JSON files returned from YouTube API.

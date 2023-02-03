@@ -2,17 +2,23 @@
 title: "youte: Collecting YouTube video metadata and comments"
 ---
 
+### About this tutorial
+
+This tutorial provides a quick tour of `youte` and how you can use it to query basic data from YouTube. Familiarity with using the terminal is recommended, although we will try to cover enough of the basics of command-line interface and APIs for you to use `youte`.
+
 ## About `youte`
 
 `youte` is a helper library that interacts with [YouTube Data API](https://developers.google.com/youtube/v3). Effectively, it makes working with YouTube API and collecting YouTube metadata and comments easy and intuitive. `youte` is primarily run as a command-line tool.
 
-`youte` is still early in its development, so its functionalities remain quite limited. However, the tool is actively worked on and new capabilities are being added at the present. Keep an eye out for new releases on our [GitHub page](https://github.com/QUT-Digital-Observatory/youte): 
+`youte` is currently actively developed and new capabilities are being added at the present. Keep an eye out for new releases on our [GitHub page](https://github.com/QUT-Digital-Observatory/youte).
+
+
 
 ### YouTube Data API
 
-An *Application Programming Interface* or API is a set of communication protocols that help two programs or applications talk to each other. According to this protocol, you send a request to the API, and the API returns a response code to tell you whether your request was valid, and a response body that contains the data requested.
+As under the hood, `youte` interacts with YouTube Data API, a quick reminder of what an API is might be useful, although not critical for you to use `youte`. In short, an *Application Programming Interface* or *API* is a set of communication protocols that help two programs or applications talk to each other. According to this protocol, you send a request to the API, and the API returns a response code to tell you whether your request was valid, and a response body that contains the data requested.
 
-As an API, [YouTube Data API](https://developers.google.com/youtube/v3/getting-started) allows you to get information of a wide range of resources. A YouTube [*resource*](https://developers.google.com/youtube/v3/getting-started#resources) is an entity that makes up the YouTube experience, including video, channel, playlist, comment, and search results. Each resource has a unique ID given by YouTube. These IDs will come in handy when you query data from YouTube API.
+As an API, [YouTube Data API](https://developers.google.com/youtube/v3/getting-started) allows you to get the information for a wide range of resources. A YouTube [*resource*](https://developers.google.com/youtube/v3/getting-started#resources) is an entity that makes up the YouTube experience, including video, channel, playlist, comment, and search results. Each resource has a unique ID given by YouTube. These IDs will come in handy when you query data from YouTube API.
 
 The API also allows you to update, delete or create YouTube resources, although as a data collection tool, `youte` currently does not support these operations.
 
@@ -26,13 +32,17 @@ A variety of shells are used across operating systems. Some common ones are list
 
 -   Linux & Mac OS: Bash, Zsh
 
-If you need a quick introduction of how the shell works, [this guide](https://swcarpentry.github.io/shell-novice/) is a useful resource.
+Apart from the very basic, We do not go in-depth on shell commands and how to use the shell in this tutorial. If you need a quick introduction of how the shell works, [this guide](https://swcarpentry.github.io/shell-novice/) is a useful resource.
 
-*Code display convention*: Shell commands in this tutorial are displayed as codes with a dollar (\$) sign in front of them. When copying the code to your own terminal, make sure to omit the dollar sign.
+**Code display convention**: Shell commands in this tutorial are displayed as codes with a dollar (\$) sign in front of them. When copying the code to your own terminal, make sure to omit the dollar sign.
 
 ## Installing youte
 
-To install youte, run:
+In this tutorial, we'll be using the Bash shell. The Bash shell is already the default shell in Mac OS and Linux. Open the Terminal app in your Mac OS or Linux to get to the shell.
+
+Windows users can install and use [Git Bash](https://gitforwindows.org/) or [Windows Subsystem for Linux](https://learn.microsoft.com/en-us/windows/wsl/install) to access the Bash shell.
+
+Once your terminal is open, to install youte, run this command in your shell:
 
 ``` shell
 $ python -m pip install youte
@@ -40,29 +50,41 @@ $ python -m pip install youte
 
 `youte` can work with Python 3.8 and above, so make sure you check your Python version before installing.
 
+To check that you've installed youte successfully, run:
+
+```shell
+$ youte --version
+```
+
+If everything is installed properly, the command will print out the version number of youte.
+
 ### Issues installing `youte` in Anaconda
 
 If you use Anaconda's distribution of Python, there might be issues installing and using `youte`. The below solutions have been tried and shown to work:
 
 - If you install `youte` in the base environment (i.e. not in a virtual environment), run `youte` in Anaconda Prompt as opposed to other shells.
 
-- You can install `youte` in a virtual environment and run it in that virtual environment.
+- You can install `youte` in a virtual environment and run it in that virtual environment. Refer to this [guide](https://python.land/virtual-environments/virtualenv) for a quick walk-through on how to create and activate a Python virtual environment.
 
 ## Set up
 
+### YouTube API Key
+
 To get started, you will need a YouTube API key. Obtaining an API key is simple and straightforward, but you will need a Google account to do so. Instructions for getting an API key are described [here](https://developers.google.com/youtube/v3/getting-started).
 
-Once you have your API key, configure your key with `youte` by running the command:
+### Configure API key in youte (optional)
+
+All `youte` commands that retrieve data from YouTube require you to input your API key each time you run them. Alternatively, you can store your API key in `youte`, so that you won't have to repeatedly specify an API key. You do so by entering this command in the shell:
 
 ``` shell
 $ youte config add-key
 ```
 
-This will display an interactive prompt where you enter your API key and give it a name. The name will be used to specify the API key, and it can be anything you choose. This will save you the trouble of having to enter the API key every time you query data from YouTube: all you need is the key's name.
+The interactive prompt will ask you to enter your API key and give it a name. The name will be used to specify the API key, and it can be anything you choose. This will save you the trouble of having to enter the API key every time you query data from YouTube - all you need is the key's name.
 
-You're also asked if you want to set a key as the default key. If there is a default key, it will be used automatically every time you run a query.
+You can also set a key as the default key. If there is a default key, it will be used automatically every time you run a query.
 
-All API keys have to be added to `youte` before they can be used. `config add-key` stores your API key in a config file which `youte` will refer to when running queries.
+Behind the scenes, `config add-key` stores your API key in a config file which `youte` will refer to when running queries.
 
 To see a list of all stored keys, run:
 
@@ -70,7 +92,7 @@ To see a list of all stored keys, run:
 $ youte config list-keys
 ```
 
-To manually set a key as a default, run:
+To manually set a stored key as a default, run:
 
 ``` shell
 $ youte config set-default <NAME-OF-KEY>
@@ -84,27 +106,63 @@ To remove an API key from `youte`, run:
 $ youte config remove <NAME-OF-KEY>
 ```
 
-## Running a search
+## Run a search
 
 Now, onto the exciting part. Let's run a search!
 
 Similarly to doing a YouTube search, `youte search` allows you to do get a list of videos matching keywords and other specified criteria. `youte` does not return audiovisual content, just the metadata such as video titles and descriptions.
 
-Here is the format of `youte search` command. Note that all shell commands must be inputted in one line. The backlashes (`\`) are used to enter a new line without breaking the command and help with readability.
-
+Here is the format of `youte search` command.
 ``` shell
 $ youte search <QUERY>
 ```
 
-The \<QUERY\> argument is compulsory, where you specify the search term to look for in YouTube video titles and descriptions.
+Let's do a search for videos on salmon recipes:
 
-The results of this command will be printed to the terminal. If you want to store the output in a file, enter the file name after the search query. The file must end in `.json` or `.jsonl`.
-
-``` shell
-$ youte search <QUERY> <OUTPUT>
+```shell
+$ youte search "salmon recipes"
 ```
 
-Besides the above, there are several optional arguments that you can pass to further refine the search. To get a full list of available options, type:
+Notice the quotes around "salmon recipes". Spacing is important in shell commands. Therefore, if there is any space in your search term, wrap everything inside quotes.
+
+The results of this command will be printed to the terminal. You'll observe that the results are very difficult to see.
+
+![](images/youte_search_results.png)
+
+This is because YouTube API returns data as a bunch of **JSON**, the standard format for data exchange between systems or applications. While the JSON contains a lot of useful information, in this format it is impossible to analyse and interpret.
+
+Instead, we can store the JSON in a file, to easily process it later using JSON-processing tools.
+
+``` shell
+$ youte search "salmon recipes" salmon_recipes_search.json
+```
+
+By specify the name of the file ("salmon_recipes_search.json") at the end of the command, you instruct `youte` to store the results in that file, rather than print them out on the shell. The file has to have a `.json` ending.
+
+### Search options
+
+Now, that search is pretty broad. What if you only want videos uploaded within a specific period? The `--from` and `--to` options let you specify the time videos are published. Let's specify that we only want salmon recipes videos uploaded within the last month.
+
+Note that shell commands have to be typed in one line. The backlashes (\\) are used to enter a new line without breaking the command and help with readability.
+
+``` shell
+$ youte search "salmon recipes" salmon_recipes_search.json \
+    --from 2023-01-01 \
+    --to 2023-01-31
+```
+
+The date has to be in YYYY-MM-DD format, otherwise you will get an error.
+
+Let's refine our search a bit further. Let's search for short videos that are under 4 minutes.
+
+``` shell
+$ youte search "salmon recipes" salmon_recipes_search.json \
+    --from 2023-01-01 \
+    --to 2023-01-31 \
+    --video-duration short
+```
+
+Besides the above, there is a range of options that you can specify to further narrow your search. To get a full list of available options, specify the flag `--help`.
 
 ``` shell
 $ youte search --help
@@ -112,201 +170,142 @@ $ youte search --help
 
 The `--help` flag shows the documentation for a command, so that's usually the first place to go to if you want to know how to use a command.
 
-``` shell
-Options:
-  --from TEXT                     Start date (YYYY-MM-DD)
-  --to TEXT                       End date (YYYY-MM-DD)
-  --type TEXT                     Type of resource to search for  [default:
-                                  video]
-  --name TEXT                     Specify an API key name added to youte
-                                  config
-  --key TEXT                      Specify a YouTube API key
-  --order [date|rating|relevance|title|videoCount|viewCount]
-                                  Sort results  [default: date]
-  --safe-search [none|moderate|strict]
-                                  Include or exclude restricted content
-                                  [default: none]
-  --video-duration [any|long|medium|short]
-                                  Include videos of a certain duration
-  --channel-type [any|show]       Restrict search to a particular type of
-                                  channel
-  --video-type [any|episode|movie]
-                                  Search a particular type of videos
-  --caption [any|closedCaption|none]
-                                  Filter videos based on if they have captions
-  --definition, --video-definition [any|high|standard]
-                                  Include videos by definition
-  --dimension, --video-dimension [any|2d|3d]
-                                  Search 2D or 3D videos
-  --embeddable, --video-embeddable [any|true]
-                                  Search only embeddable videos
-  --license, --video-license [any|creativeCommon|youtube]
-                                  Include videos with a certain license
-  --max-results INTEGER RANGE     Maximum number of results returned per page
-                                  [default: 50; 0<=x<=50]
-  --resume TEXT                   Resume progress from this file
-  --to-csv PATH                   Tidy data to CSV file
-  --help                          Show this message and exit.
-```
+### Save search progress
 
--   `--from`, `--to`: specify date range of the search results returned. The date format has to follow ISO format (YYYY-MM-DD). Note that the date range here is *inclusive*.
+Often there is a limit to how much data you get from YouTube API per day. Searching, in particular, is very "expensive" in terms of API usage. Therefore, you can choose to save the progress of a search so that if you exit the program prematurely, either by accident or on purpose, you can resume the search to avoid wasting valuable quota units.
 
--   `--name`: name of the API key configured with `youte`. This is optional if you already have a default API key set up.
+Specifically, when you exit the program in the middle of a search, a prompt will ask if you want to save its progress. If yes, progress of the search is saved in a database, whose name is displayed in the shell along with instructions on how to resume progress from this database.
 
--   `--order`: specify how you want the data to be sorted. The default (`date`) will sort the results by date of upload. Other options include `rating`, `relevance`, and `title`.
+![](images/youte_save_progress.png)
 
--   `--safe-search`: include or exclude restricted content. The default (none) will include all publicly available content. Other options include `moderate`, and `strict`.
-
-As an example, let's search for videos matching "offgrid living" in August 2022.
+To resume progress from a database, add the `--resume` flag followed by the name of the progress file.
 
 ``` shell
-youte search "offgrid living" results.json --from 2022-08-01 --to 2022-08-31
+$ youte search "salmon recipes" salmon_recipes_search.json \
+    --from 2023-01-01 \
+    --to 2023-01-31 \
+    --video-duration short \
+    --resume search_1675381044
 ```
 
-Of course, you might want to get just the most relevant results first:
+The progress file is automatically deleted once youte has completed collecting all data for a search.
+
+### Export to CSV
+
+Another useful feature in youte is processing your results into a tidy CSV. To do so, specify the tag `--to-csv` followed by the name of the CSV file.
 
 ``` shell
-youte search "offgrid living" results.json --from 2022-08-01 --to 2022-08-31 --order=relevance
+$ youte search "salmon recipes" salmon_recipes_search.json \
+    --from 2023-01-01 \
+    --to 2023-01-31 \
+    --video-duration short \
+    --resume search_1675381044 \
+    --to-csv salmon_recipes_search.csv
 ```
 
-Or only include moderated content:
+Now you have the raw JSON file, as well as a tidy CSV file which can then be easily plugged into analysis software.
 
-``` shell
-youte search "offgrid living" results.json --from 2022-08-01 --to 2022-08-31 --safe-search=moderate
-```
+## Retrieve data about videos or channels
 
-### Saving search progress
-
-As will be described below, often there is a limit to how much data you get from YouTube API per day. Searching, in particular, is very "expensive" in terms of API usage. Therefore, you can choose to save the progress of a search so that if you exit the program prematurely, either by accident or on purpose, you can resume the search to avoid wasting valuable quota units.
-
-Specifically, when you exit the program in the middle of a search, a prompt will ask if you want to save its progress. If yes, progress of the search is saved in a database, whose name matches exactly the name of the `OUTPUT` file that you specified. If you rerun the same search in the same directory, you can choose to resume the progress from that database. This database will be deleted once all search results have been returned.
-
-``` shell
-$ youte search "offgrid living" --from 2022-08-08 --output search_offgrid.json  
-```
-
-``` text
-
-# exit program
-Do you want to save your current progress? [y/N]: # y  
-
-# resume search
-$ youte search "offgrid living" --from 2022-08-08 --output search_offgrid.json  
-
-Getting API key from config file.  
-
-        A history file '.youte.history/search_offgrid.db' is detected in your current directory.
-        Do you want to resume progress from this history file?
-        If you are at all unsure, say No. [y/N]:
-```
-
-## Hydrating videos and channels
+### Videos
 
 Now, if you look at the search results returned from `youte search`, you'll see that they contain only a few fields of information. For example, video statistics are not provided, and video descriptions are truncated.
 
-`youte search` only returns some data, so if you want to get full data on a set of videos or channels you might need to use `hydrate`.
+`youte search` only returns some data. Thus, if you want to get full data on a set of videos or channels you will need to use `hydrate`. *Hydrating* is a concept taken from Twitter API, which means retrieving the data about videos or channels using their IDs.
 
-``` shell
-youte hydrate [OPTIONS] <OUTPUT> <ITEMS>...
-```
-
-- `OUTPUT`: name of the file to store raw JSON responses from the API. The file must end in `.json` or `.jsonl`.
-- `ITEMS`: one or more video IDs separated by a space. 
-
-`youte hydrate` command takes as input a list of video or channel IDs and retrieves information on those. As mentioned above, each YouTube resource has a unique identifier. You can get the ID of a resource in the browser or within the data returned by YouTube Data API. For example, the ID of a YouTube video can be seen in the video's URL:
+`youte hydrate` command takes as input a list of video or channel IDs and retrieves information on those. Each YouTube resource (video, channel, comment) is assigned a unique identifier. You can get the ID of a video in the URL or within the data returned by YouTube Data API. For example, the ID of a YouTube video can be found in the video's URL:
 
 https://www.youtube.com/watch?v=**5MXTcO1veRQ**
 
 Now let's hydrate this video. By default, `youte hydrate` takes the IDs as video IDs and return video information. So you can hydrate one video easily with:
 
 ``` shell
-$ youte hydrate video.json 5MXTcO1veRQ
+$ youte hydrate 5MXTcO1veRQ
 ```
 
-You can also hydrate multiple videos:
+You can also hydrate multiple videos and store results in a file:
 
 ``` shell
-$ youte hydrate videos.json 5MXTcO1veRQ cbAj3biUeDI dTI3I9ZFzTI
+$ youte hydrate 5MXTcO1veRQ cbAj3biUeDI dTI3I9ZFzTI videos.json
 ```
 
-### Hydrating channels
+If you have a long list of IDs, you can put them all in text file, each ID on a new line, and instruct `youte hydrate` to use that file by specifying the `-f` flag.
+
+``` shell
+$ youte hydrate -f video_ids.txt videos.json
+```
+
+### Channels
 
 If you want to hydrate a list of channel IDs, pass the `--channel` flag.
 
 Hydrate 1 channel ID:
 
 ``` shell
-$ youte hydrate channel.json --channel UC3mORGO2XYSn3Y_BUPuazeQ
+$ youte hydrate --channel UC3mORGO2XYSn3Y_BUPuazeQ
 ```
 
-Hydrate multiple channel IDs
+Hydrate multiple channel IDs:
 
 ```shell
-$ youte hydrate channels.json --channel UCC-jcZTFL1r17E-bEC7VYYA UC3mORGO2XYSn3Y_BUPuazeQ
+$ youte hydrate --channel UCC-jcZTFL1r17E-bEC7VYYA UC3mORGO2XYSn3Y_BUPuazeQ
 ```
 
-#### Working with channel IDs 
+#### Working with channel IDs
 
-Similar to video IDs, channel IDs can be found in the channels' URLs (https://www.youtube.com/channel/**UC3mORGO2XYSn3Y_BUPuazeQ**). 
+Similar to video IDs, channel IDs can be found in the channels' URLs (https://www.youtube.com/channel/**UC3mORGO2XYSn3Y_BUPuazeQ**).
 
 However, most often channel IDs will be more difficult to find because YouTube channels can have custom names and URLs (e.g. https://www.youtube.com/c/**AmbitionMusic**), or older channels might have a different URL (e.g. https://www.youtube.com/user/QueenAnime141). These custom names won't be able to hydrate.
 
 Therefore, the best way to get channel IDs is in the search results from `youte search`.
 
-### Using file containing IDs
+### Extract IDs from youte data
 
-Instead of listing the IDs in the shell, you can also specify a file containing the IDs by passing the `-f` flag followed by the file's path. The file should contain just the IDs, each on a new line, and of the same resource type.
+More often, you want to do a youte search of relevant videos, then retrieve the full data on those videos, instead of copying and pasting video IDs from the URLs. `youte dehydrate` provides a quick way to extract the IDs from the JSON resulted by youte search, and store them in a text file.
 
-``` shell
-$ youte hydrate videos_json -f video_ids.csv
+Say you have done a youte search for "salmon recipes" and stored the JSON result in `salmon_recipes_search.json`. Let's get the IDs of all videos within that data, and store it in a file `salmon_ids.csv`.
+
+```shell
+youte dehydrate salmon_recipes_search.json --output salmon_ids.csv
 ```
 
-## Getting comments
+Now you can use `hydrate -f` to retrieve the full data for those videos.
 
-### Getting comments on video
-
-The `youte list-comments` command lets you retrieve comments left on a video or to a comment thread. First, let's get comments on a video.
-
-``` shell
-$ youte list-comments -v <OUTPUT> <ITEMS>...
+```shell
+youte hydrate -f salmon_ids.csv salmon_videos.json
 ```
 
-The format of `list-comments` is the same as `hydrate`. You specify a name for the output file, followed by one or multiple video IDs. Remember to pass the `-v` flag to indicate that the IDs are video IDs from which to get comments.
+## Get comments
+
+If you're interested in the conversation going in the comment section, `youte get-comments` retrieves the comment threads (top level comments) under a video or a list of videos. `youte get-comments` can also retrieve replies to those comment threads using the thread IDs.
+
+`get-comments` works similarly to `hydrate` in that it takes one or many video IDs or thread IDs, which can be input straight to the shell, or stored in a text file and referred to with the `-f` flag. The major difference is that you have to specify a flag to indicate whether IDs belong to videos or threads.
+
+If the IDs are video IDs, pass the `-v` flag to indicate so.
 
 ``` shell
-$ youte list-comments -v comments.json dTI3I9ZFzTI
+$ youte get-comments -v 5MXTcO1veRQ cbAj3biUeDI dTI3I9ZFzTI
 ```
 
 One potential issue you might run into when running this command is if the video has comments disabled. In this case, the program will show a warning and skip to other IDs if there is any.
 
-### Getting replies to comment threads
+You can get the replies to a thread by running `get-comments` with the thread ID and passing `-t` to indicate the ID belongs to a thread, not a video.
 
-Getting comments on a video retrieves only the top level comments (or *threads*), but not their replies. You can get the replies to a thread by running `list-comments` with the thread ID, and passing `-t` to indicate the ID belongs to a thread, not a video.
-
-In a browser, the thread ID can be seen if you hover your mouse over a comment's timestamp. Or you can get the thread IDs from the data returned by `list-comments`.
+In a browser, the thread ID can be seen if you hover your mouse over a comment's timestamp. Or you can get the thread IDs from the data returned by `get-comments`.
 
 https://www.youtube.com/watch?v=A-mO7rbYtgk&lc=**UgwTqVJTgz1gZl6X57Z4AaABAg**
 
-
 ``` shell
-$ youte list-comments -t <OUTPUT> <ITEMS>...
+$ youte get-comments -t UgwTqVJTgz1gZl6X57Z4AaABAg
 ```
 
 This command will return an empty JSON if there are no replies.
 
-#### Using text file containing IDs
-
-Similarly to `hydrate`, you can also use IDs from a text file instead of passing them to the shell, by using the `-f` flag.
-
-``` shell
-$ youte list-comments -v comments_many.json -f video_ids.csv
-```
-
-## Tidying data
+## Tidy data into a relational database
 
 ### JSON format
 
-All data returned from `youte search`, `youte hydrate`, and `youte list-comments` are in JSON format.
+All data returned from `youte search`, `youte hydrate`, and `youte get-comments` are in JSON format.
 
 *What is JSON?*
 
@@ -355,7 +354,12 @@ Everything inside a curly braces belongs to an object. An *object* is basically 
 
 As you can see, the JSON format is great for data exchange, but not for data analysis, for which you'll probably need something closer to a table or spreadsheet. This is where `youte tidy` might come in handy, as it processes and transforms raw JSON files into a relational, SQLite database.
 
-A relational database contains tables of columns and rows. Each row represents an entity (object) and each column an attribute of that entity. So it looks very similar to your spreadsheet or CSV file. SQLite is a light-weight database engine that stores an entire database within a `.db` file, making it easy to transfer and work with small-scale databases. Interacting with databases requires [SQL](https://www.w3schools.com/sql/sql_intro.asp), although there are tools and libraries that will minimise the amount of SQL you'll need to read data. 
+### Relational database
+
+A relational database contains tables of columns and rows. Each row represents an entity (object) and each column an attribute of that entity. So it looks very similar to your spreadsheet or CSV file. While you can export YouTube data to CSV format using `--to-csv` in most youte commands, there are cases where a relational database is more desirable. Relational databases are excellent in checking data redundancy and joining data. For example, you can have a `videos` table, a `channels` table, a `comments` table and combine them in multiple ways to get a fuller picture of the dataset.
+
+SQLite is a light-weight database engine that stores an entire database within a `.db` file, making it easy to transfer and work with small-scale databases. Interacting with databases requires [SQL](https://www.w3schools.com/sql/sql_intro.asp), although there are tools and libraries that will minimise the amount of SQL you'll need to read data.
+
 
 Now, let's see what `youte tidy` does. It takes in a single JSON file as input, and a `.db` file as output.
 
@@ -363,10 +367,10 @@ Now, let's see what `youte tidy` does. It takes in a single JSON file as input, 
 youte tidy <INPUT-JSON> <OUTPUT-DB>
 ```
 
-The JSON file should contain ***one*** type of resource (e.g. video, channel, comment). And the output file must have a `.db` ending.
+The JSON file should contain ***one*** type of resource (e.g. search result, video, channel, comment). And the output file must have a `.db` ending.
 
 ``` shell
-youte tidy raw.json cleaned.db
+youte tidy salmon_videos.json salmon.db
 ```
 
 ### Working with databases in R and Python
@@ -379,9 +383,9 @@ There are many tools to work with SQlite files, in R and Python. In R, the `RSQL
 library(DBI)     # for createing database connection
 library(RSQLite)
 
-con <- DBI::dbConnect(RSQLite::SQLite(), "comments.db")
+con <- DBI::dbConnect(RSQLite::SQLite(), "salmon.db")
 dbListTables(con)             # list all tables in the database
-data <- dbReadTable(con, "comments")  # get table `comments` to a dataframe
+data <- dbReadTable(con, "videos")  # get table `comments` to a dataframe
 ```
 
 #### Python
@@ -392,61 +396,13 @@ The `pandas` library offers some nice functions to connect with and read data fr
 import pandas
 import sqlite3   # for creating connection with SQLite databases
 
-con = sqlite3.connect("cleaned.db")   # connect to cleaned.db
-data = pandas.read_sql_query("SELECT * FROM comments", con=con)  # read all data from table "comments" to a pandas DataFrame
-```
+# connect to cleaned.db
+con = sqlite3.connect("salmon.db")
 
-## YouTube API Quota system
-
-Most often, there is a limit to how many requests you can make to YouTube API per day. YouTube API uses a quota system in which each request costs a number of units depending on the operation requested.
-
-For example:
-
-- searching costs 100 units per request
-
-- hydrating videos, channels, and comments each costs 1 unit per request
-
-Free accounts get an API quota cap of 10,000 units per project per day, which resets at midnight Pacific Time. Hence the default maximum quota value is set to be 10,000 in `youte`.
-
-### `youte`'s handling of quota usage
-
-At present, you can only check your quota usage on the [Quotas](https://console.cloud.google.com/iam-admin/quotas) page in the API Console. It is not possible to monitor quota usage via metadata returned in the API responses.
-
-Therefore, `youte` manually monitors quota by keeping counts of requests made and logging their quota usage to the config file. If the maximum quota has been reached, youte handles it by putting the program to sleep until quota reset time (midnight Pacific) before re-running the collector. This is a makeshift approach and does not guarantee perfectly accurate data, especially when you try to collect data on multiple computers using the same API key.
-
-### Saving search progress
-
-As you have seen above, searching is very "expensive" in terms of quota usage. Therefore, you can select to save the progress of a search so that if you exit the program prematurely, either by accident or on purpose, you can resume the search from where it stopped to avoid wasting valuable quota units.
-
-When you exit the program in the middle of a search (i.e. by pressing Ctrl+C), you will get a prompt asking to save progress. 
-
-If you select Yes, search progress is saved in a SQLite database in a hidden *.youte.history* folder inside your current directory. The name of the database is what is passed as the OUTPUT file with the `.json` extension removed. If you rerun the same search in the same directory, you can choose to resume the progress from that database. This database will be deleted once all search results have been returned.
-
-``` shell
-$ youte search "offgrid living" search.json
-```
-
-When you press Ctrl+C to exit the program midway through and then press `y` after the prompt you will see:
-
-``` text
-Do you want to save your current progress? [y/N]:
-
-Progress saved at /home/boyd/Documents/demo/.youte.history/search.db
-```
-
-To resume the search, type the same command in the same directory:
-
-``` shell
-$ youte search "offgrid living" search.json
-```
-
-``` text
-A history file '.youte.history/search.db' is detected in your current directory.
-Do you want to resume progress from this history file?
-If you are at all unsure, say No. [y/N]:
+# read all data from table "comments" to a pandas DataFrame
+data = pandas.read_sql_query("SELECT * FROM comments", con=con)
 ```
 
 ## Feedback is welcome!
 
 `youte` is still in its infancy, and we are working to improve and expand its capabilities. Extra documentation on `youte` can be found on our [GitHub's repository](https://github.com/QUT-Digital-Observatory/youte). Let us know your feedback or suggestions by creating GitHub issues or emailing us at [digitalobservatory@qut.edu.au](mailto:digitalobservatory@qut.edu.au).
- 

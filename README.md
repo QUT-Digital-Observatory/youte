@@ -103,6 +103,8 @@ Options:
                                   Include videos with a certain license
   --max-results INTEGER RANGE     Maximum number of results returned per page
                                   [default: 50; 0<=x<=50]
+  -l, --limit INTEGER RANGE       Maximum number of result pages to retrieve
+                                  [1<=x<=13]                           
   --resume TEXT                   Resume progress from this file
   --to-csv PATH                   Tidy data to CSV file
   --help                          Show this message and exit.
@@ -160,6 +162,10 @@ The API key to use, if you want to use a key not configured with youte.
 #### `--type` (optional)
 
 Type of Youtube resource to retrieve. Can be one type or a comma-separated list of acceptable types, which are `channel`, `playlist`, `video`.
+
+#### `--limit` (optional)
+
+Specify the number of result pages to retrieve. Useful when you want to test search terms without using up your quota. 
 
 #### `--order` (optional)
 

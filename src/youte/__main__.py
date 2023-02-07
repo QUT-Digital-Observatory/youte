@@ -473,11 +473,12 @@ def dehydrate(infile, output: str) -> None:
 
 
 @youte.command()
-@click.argument("filepath", type=click.Path(), required=True)
+@click.argument("filepath", nargs=-1, type=click.Path(), required=True)
 @click.argument("output", type=click.Path(), required=True)
 def tidy(filepath, output):
     """Tidy raw JSON response into relational SQLite databases"""
-    tidier.master_tidy(filepath=filepath, output=output)
+    for file in filepath:
+        tidier.master_tidy(filepath=file, output=output)
 
 
 @youte.command()

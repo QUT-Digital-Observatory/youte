@@ -22,8 +22,6 @@ def connect_db(db_path: Union[str, Path]) -> sqlite3.Connection:
 
 
 def master_tidy(filepath: str, output: Union[str, Path]) -> None:
-    output = check_file_overwrite(validate_file(output, suffix=".db"))
-
     with open(filepath, mode="r") as file:
         first_response = json.loads(file.readline())
         kind = first_response["kind"]

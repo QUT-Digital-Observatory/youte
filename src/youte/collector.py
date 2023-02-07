@@ -104,6 +104,7 @@ def _request_with_error_handling(url: str, params: Mapping) -> requests.Response
             else:
                 logger.error(f"Reason: {error['message']}")
                 logger.error(json.dumps(response.json()))
+                click.echo(f"{error['message']}")
                 sys.exit(1)
 
     return response
@@ -171,8 +172,9 @@ class Youte:
         self.api_key = api_key
         self.history_file = None
 
-    def search(self, save_progress_to: Union[str, Path] = None, **kwargs) -> dict:
-
+    def search(
+        self, save_progress_to: Union[str, Path] = None, limit: int = None, **kwargs
+    ) -> dict:
         page = 0
 
         if not save_progress_to:
@@ -190,6 +192,9 @@ class Youte:
 
                 for token in tokens:
                     page += 1
+
+                    if limit and page > limit:
+                        sys.exit(0)
 
                     url = "https://www.googleapis.com/youtube/v3/search"
 
@@ -283,11 +288,9 @@ class Youte:
                 yield r.json()
 
         elif cannot_batch_ids:
-
             history_file = _get_history_path(save_progress_to)
 
             for each in tqdm(ids):
-
                 if by == "parent":
                     params["parentId"] = each
                 elif by == "video":
@@ -305,7 +308,6 @@ class Youte:
                             break
 
                         for token in tokens:
-
                             if token != "":
                                 logger.info("Adding page token...")
                                 params["pageToken"] = token
@@ -357,7 +359,6 @@ class Youte:
                     break
 
                 for token in tokens:
-
                     if token != "":
                         logger.info("Adding page token...")
                         params["pageToken"] = token
@@ -405,8 +406,10 @@ def _get_endpoint(endpoint) -> dict:
             "url": r"https://www.googleapis.com/youtube/v3/videos",
             "api_cost_unit": 1,
             "params": {
-                "part": "snippet,statistics,topicDetails,status,"
-                "contentDetails,recordingDetails,id",
+                "part": (
+                    "snippet,statistics,topicDetails,status,"
+                    "contentDetails,recordingDetails,id"
+                ),
                 "id": None,
                 "maxResults": 50,
                 "key": None,
@@ -416,8 +419,10 @@ def _get_endpoint(endpoint) -> dict:
             "url": r"https://www.googleapis.com/youtube/v3/channels",
             "api_cost_unit": 1,
             "params": {
-                "part": "snippet,statistics,topicDetails,status,"
-                "contentDetails,brandingSettings,contentOwnerDetails",
+                "part": (
+                    "snippet,statistics,topicDetails,status,"
+                    "contentDetails,brandingSettings,contentOwnerDetails"
+                ),
                 "id": None,
                 "maxResults": 50,
                 "key": None,

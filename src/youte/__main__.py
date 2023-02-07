@@ -139,6 +139,12 @@ def youte():
     default=50,
     show_default=True,
 )
+@click.option(
+    "--limit",
+    "-l",
+    type=click.IntRange(1, 13),
+    help="Maximum number of result pages to retrieve",
+)
 @click.option("--resume", help="Resume progress from this file")
 @click.option("--to-csv", type=click.Path(), help="Tidy data to CSV file")
 def search(
@@ -161,6 +167,7 @@ def search(
     safe_search: str,
     resume: str,
     to_csv: str,
+    limit: int,
     max_results: int,
 ) -> None:
     """Do a YouTube search
@@ -199,7 +206,9 @@ def search(
             if not _get_history_path(resume).exists():
                 raise click.BadParameter("No such history file found")
 
-        results = search_collector.search(save_progress_to=resume, **params)
+        results = search_collector.search(
+            save_progress_to=resume, limit=limit, **params
+        )
 
         click.echo(params)
 
@@ -388,7 +397,6 @@ def get_related(
     ids = _get_ids(string=items, file=file_path)
 
     for id_ in ids:
-
         params = {
             "part": "snippet",
             "maxResults": max_results,
@@ -622,7 +630,7 @@ def _get_ids(string: Sequence[str] = None, file: str = None) -> List[str]:
 def _raise_no_item_error(items: Sequence[str], file_path: str) -> None:
     if not (items or file_path):
         click.secho(
-            "No item ID is specified. Pass some item IDs or specify " "a file.",
+            "No item ID is specified. Pass some item IDs or specify a file.",
             fg="red",
             bold=True,
         )
@@ -634,7 +642,7 @@ def _prompt_save_progress(filename) -> None:
         full_path = Path(filename).resolve()
         click.echo(f"Progress saved at {full_path}")
         click.echo(
-            f"To resume progress, run the same youte search command "
+            "To resume progress, run the same youte search command "
             f"and add `--resume {full_path.stem}`"
         )
     else:

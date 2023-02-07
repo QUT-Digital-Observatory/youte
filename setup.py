@@ -11,7 +11,7 @@ if __name__ == "__main__":
         name="youte",
         author="Digital Observatory",
         authhor_email="digitalobservatory@qut.edu.au",
-        version="1.1.0",
+        version="1.2.0",
         description="Command-line tool to collect video metadata and comments from "
                     "Youtube API",
         long_description=long_description,

@@ -315,7 +315,6 @@ def tidy_video(filepath: str, output: Union[str, Path]) -> None:
     total = 0
 
     for item in tqdm(items):
-
         video_mapping = _get_mapping(item, "videos")
 
         db.execute("BEGIN")

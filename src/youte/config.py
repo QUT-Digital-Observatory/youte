@@ -82,8 +82,7 @@ def get_api_key(name=None, filename="config"):
                 default_check.append(name)
         if not default_check:
             click.secho(
-                "No API key name was specified, and "
-                "you haven't got a default API key.",
+                "No API key name was specified, and you haven't got a default API key.",
                 fg="red",
                 bold=True,
             )

@@ -356,7 +356,7 @@ Only one flag can be used in one command.
 ## Tidy JSON responses  
 
 ```commandline  
-Usage: youte tidy [OPTIONS] FILEPATH OUTPUT
+Usage: youte tidy [OPTIONS] FILEPATH... OUTPUT
 
   Tidy raw JSON response into relational SQLite databases
 
@@ -364,7 +364,7 @@ Options:
   --help  Show this message and exit.
 ```  
 
-The `tidy` command will detect the type of resources in the JSON file (i.e. video, channel, search results, or comments) and process the data accordingly. It's important that each JSON file contains just **one** type of resource.  
+The `tidy` command will detect the type of resources in the JSON file (i.e. video, channel, search results, or comments) and process the data accordingly. It's important that each JSON file contains just **one** type of resource. You can specify multiple JSON files, but the final argument has to be the output database. 
 
 
 ### Database schemas

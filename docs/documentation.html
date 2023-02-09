@@ -207,8 +207,7 @@ ul.task-list li input[type="checkbox"] {
 <h3 class="anchored" data-anchor-id="about-the-config-file">About the config file</h3>
 <p>youte’s config file is stored in a central place whose exact location depends on the running operating system:</p>
 <ul>
-<li>Linux/Unix: ~/.config/youte/<br>
-</li>
+<li>Linux/Unix: ~/.config/youte/</li>
 <li>Mac OS X: ~/Library/Application Support/youte/</li>
 <li>Windows: C:\&lt;user&gt;\AppData\Roaming\youte</li>
 </ul>
@@ -254,6 +253,8 @@ Options:
                                   Include videos with a certain license
   --max-results INTEGER RANGE     Maximum number of results returned per page
                                   [default: 50; 0&lt;=x&lt;=50]
+  -l, --limit INTEGER RANGE       Maximum number of result pages to retrieve
+                                  [1&lt;=x&lt;=13]
   --resume TEXT                   Resume progress from this file
   --to-csv PATH                   Tidy data to CSV file
   --help                          Show this message and exit.
@@ -300,6 +301,10 @@ youte search gaza --from 2022-07-25 --name user_2 --safe-search moderate --order
 <h4 class="anchored" data-anchor-id="type-optional"><em><code>--type</code> (optional)</em></h4>
 <p>Type of Youtube resource to retrieve. Can be one type or a comma-separated list of acceptable types, which are <code>channel</code>, <code>playlist</code>, <code>video</code>.</p>
 <pre class="shell"><code>youte search koala --type channel,playlist,video</code></pre>
+</section>
+<section id="limit-optional" class="level4">
+<h4 class="anchored" data-anchor-id="limit-optional"><em><code>--limit</code> (optional)</em></h4>
+<p>Specify the number of result pages to retrieve. Useful when you want to test search terms without using up your quota.</p>
 </section>
 <section id="order-optional" class="level4">
 <h4 class="anchored" data-anchor-id="order-optional"><em><code>--order</code> (optional)</em></h4>
@@ -447,8 +452,7 @@ youte get-comments -t replies.json UgxkjPsKbo2pUEAJju94AaABAg</code></pre>
 <section id="by-thread---by-video" class="level4">
 <h4 class="anchored" data-anchor-id="by-thread---by-video"><em><code>--by-thread</code>, <code>--by-video</code></em></h4>
 <ul>
-<li>Get all replies to a comment thread (<code>--by-thread</code>, <code>-t</code>)<br>
-</li>
+<li>Get all replies to a comment thread (<code>--by-thread</code>, <code>-t</code>)</li>
 <li>Get all comments on a video (<code>--by-video</code>, <code>-v</code>)</li>
 </ul>
 <p>Only one flag can be used in one command. If none of these flags are passed, <code>get-comments</code> will not return anything.</p>
@@ -518,13 +522,13 @@ Options:
 <section id="tidy" class="level2">
 <h2 class="anchored" data-anchor-id="tidy">tidy</h2>
 <p><code>tidy</code> tidies the raw JSON into a SQlite database. One database can be used multiple times.</p>
-<pre class="shell"><code>Usage: youte tidy [OPTIONS] FILEPATH OUTPUT
+<pre class="shell"><code>Usage: youte tidy [OPTIONS] FILEPATH... OUTPUT
 
   Tidy raw JSON response into relational SQLite databases
 
 Options:
   --help  Show this message and exit.</code></pre>
-<p>The <code>tidy</code> command will detect the type of resources in the JSON file (i.e.&nbsp;video, channel, search results, or comments) and process the data accordingly. It’s important that each JSON file contains just <strong>one</strong> type of resource.</p>
+<p>The <code>tidy</code> command will detect the type of resources in the JSON file (i.e.&nbsp;video, channel, search results, or comments) and process the data accordingly. It’s important that each JSON file contains just <strong>one</strong> type of resource. You can specify multiple JSON files, but the final argument has to be the output database.</p>
 <section id="database-schemas" class="level3">
 <h3 class="anchored" data-anchor-id="database-schemas">Database schemas</h3>
 <p><code>youte tidy</code> processes JSON data into different schemas depending on the type of resource in the JSON file. Here are the schema names with their corresponding YouTube resources.</p>
@@ -576,7 +580,7 @@ Options:
 Options:
   -o, --output FILENAME  Output text file to store IDs in
   --help                 Show this message and exit.
-  
+
 </code></pre>
 
 

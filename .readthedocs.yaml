@@ -10,4 +10,4 @@ mkdocs:
 
 python:
   install:
-    requirements: requirements-mkdocs.txt
+    - requirements: requirements-mkdocs.txt

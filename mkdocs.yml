@@ -1,0 +1,17 @@
+site_name: youte
+site_url: https://example.com/
+repo_url: https://github.com/QUT-Digital-Observatory/youte
+repo_name: youte
+site_description: youte is a command-line tool that collects and tidies YouTube video metadata and comments from YouTube Data API v.3
+nav:
+    - Home: index.md
+    - Documentation: documentation.md
+    - Tutorial: tutorial.md
+theme:
+  name: material
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  - search
+  - mkdocstrings

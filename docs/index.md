@@ -2,7 +2,7 @@
 title: "youte"
 ---
 
-`youte` is a command-line tool that collects and tidies YouTube video metadata and comments from YouTube Data API v.3. At the moment, the tool supports collecting public data that does not require OAuth 2.0. 
+`youte` is a command-line tool that collects and tidies YouTube video metadata and comments from YouTube Data API v.3. At the moment, the tool supports collecting public data that does not require OAuth 2.0.
 
 `youte` can collect the following data:
 
@@ -44,10 +44,14 @@ At present, you can only check your quota usage on the Quotas page in the API Co
 
 ## Data governance considerations
 
-Activities involving data collected from YouTube Data API (e.g. collecting, analysing, storing, sharing, and archiving) should be in accordance with [YouTube API Terms of Service](https://developers.google.com/youtube/terms/api-services-terms-of-service) and [Developer Policies](https://developers.google.com/youtube/terms/developer-policies). 
+Activities involving data collected from YouTube Data API (e.g. collecting, analysing, storing, sharing, and archiving) should be in accordance with [YouTube API Terms of Service](https://developers.google.com/youtube/terms/api-services-terms-of-service) and [Developer Policies](https://developers.google.com/youtube/terms/developer-policies).
 
 At the same time, it is best-practice data governance to consider data implications that might arise from using YouTube data. Refer to [this guide](https://www.digitalobservatory.net.au/data-governance-guide/) for a high-level list of data governance considerations.
 
 ## Other tools
 
-Google provides client libraries to interact with their APIs, including YouTube Data API: [https://developers.google.com/youtube/v3/libraries](https://developers.google.com/youtube/v3/libraries). The libraries are available in a number of programming languages such as Java, Python, and JavaScript. 
+Google provides client libraries to interact with their APIs, including YouTube Data API: [https://developers.google.com/youtube/v3/libraries](https://developers.google.com/youtube/v3/libraries). The libraries are available in a number of programming languages such as Java, Python, and JavaScript.
+
+## Feedback is welcome!
+
+`youte` is still in its infancy, and we are working to improve and expand its capabilities. Let us know your feedback or suggestions by creating GitHub issues or emailing us at [digitalobservatory@qut.edu.au](mailto:digitalobservatory@qut.edu.au).

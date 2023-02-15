@@ -1,13 +1,27 @@
 site_name: youte
-site_url: https://example.com/
+site_url: https://youte.readthedocs.io/
 repo_url: https://github.com/QUT-Digital-Observatory/youte
 repo_name: youte
 site_description: youte is a command-line tool that collects and tidies YouTube video metadata and comments from YouTube Data API v.3
+
 nav:
     - Home: index.md
     - Documentation: documentation.md
     - Tutorial: tutorial.md
+
 theme:
   name: material
+  logo: images/youte-logo-white-transparent-1x.png
+  favicon: images/youte-logo-black-transparent.png
+  features:
+    - content.code.copy
+
 extra_css:
   - stylesheets/extra.css
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences

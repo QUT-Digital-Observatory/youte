@@ -83,12 +83,6 @@ ul.task-list li input[type="checkbox"] {
   <li class="nav-item">
     <a class="nav-link active" href="./index.html" aria-current="page">Home</a>
   </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./documentation.html">Documentation</a>
-  </li>  
-  <li class="nav-item">
-    <a class="nav-link" href="./tutorial.html">Tutorial</a>
-  </li>  
 </ul>
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item compact">
@@ -107,16 +101,7 @@ ul.task-list li input[type="checkbox"] {
 <!-- sidebar -->
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        <nav id="TOC" role="doc-toc" class="toc-active">
-    <h2 id="toc-title">On this page</h2>
-   
-  <ul>
-  <li><a href="#installing-youte" id="toc-installing-youte" class="nav-link active" data-scroll-target="#installing-youte">Installing <code>youte</code></a></li>
-  <li><a href="#rate-limit-and-youtube-api-quota-system" id="toc-rate-limit-and-youtube-api-quota-system" class="nav-link" data-scroll-target="#rate-limit-and-youtube-api-quota-system">Rate limit and YouTube API Quota system</a></li>
-  <li><a href="#data-governance-considerations" id="toc-data-governance-considerations" class="nav-link" data-scroll-target="#data-governance-considerations">Data governance considerations</a></li>
-  <li><a href="#other-tools" id="toc-other-tools" class="nav-link" data-scroll-target="#other-tools">Other tools</a></li>
-  </ul>
-<div class="toc-actions"><div><i class="bi bi-github"></i></div><div class="action-links"><p><a href="https://github.com/QUT-Digital-Observatory/youte/issues/new" class="toc-action">Report an issue</a></p></div></div></nav>
+        
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -137,45 +122,9 @@ ul.task-list li input[type="checkbox"] {
 
 </header>
 
-<p><code>youte</code> is a command-line tool that collects and tidies YouTube video metadata and comments from YouTube Data API v.3. At the moment, the tool supports collecting public data that does not require OAuth 2.0.</p>
-<p><code>youte</code> can collect the following data:</p>
-<ul>
-<li>search results</li>
-<li>video metadata</li>
-<li>channel metadata</li>
-<li>comment threads and comments</li>
-</ul>
-<p>It does so while handling pagination and YouTube API’s rate limits. <code>youte</code> also provides the functionality to tidy raw JSON data into tabular format, either in a CSV file or an SQLite database.</p>
-<section id="installing-youte" class="level2">
-<h2 class="anchored" data-anchor-id="installing-youte">Installing <code>youte</code></h2>
-<p>If you have Python 3.8 and above installed, you can install <code>youte</code> with <code>pip</code>.</p>
-<pre class="shell"><code>python -m pip install youte</code></pre>
-<p>If you run into issues, first try upgrading <code>pip</code>, <code>setuptools</code>, and <code>wheel</code>.</p>
-<pre class="shell"><code>python -m pip install --upgrade pip setuptools wheel</code></pre>
-</section>
-<section id="rate-limit-and-youtube-api-quota-system" class="level2">
-<h2 class="anchored" data-anchor-id="rate-limit-and-youtube-api-quota-system">Rate limit and YouTube API Quota system</h2>
-<p>Most often, there is a limit to how many requests you can make to YouTube API per day. YouTube Data API uses a quota system, whereby each request, valid or invalid, incurs a quota cost of at least one point. Different endpoints will use up different quota costs. For example:</p>
-<ul>
-<li>search endpoint costs 100 units per request</li>
-<li>video, channel, commentThread, and comment endpoints each costs 1 unit per request</li>
-</ul>
-<p>Refer to <a href="https://developers.google.com/youtube/v3/determine_quota_cost">YouTube Data API’s documentation</a> for more details on the costs of each endpoint.</p>
-<p>Free accounts get an API quota cap of 10,000 units per project per day, which resets at midnight Pacific Time. You can complete an <a href="https://developers.google.com/youtube/v3/guides/quota_and_compliance_audits">Audit and Quota Extension form</a> to request additional quota on top of your default allocation.</p>
-<p>At present, you can only check your quota usage on the Quotas page in the API Console. It is not possible to monitor quota usage via metadata returned in the API response.</p>
-<p><code>youte</code> does not monitor quota usage. However, it handles errors when quota is exceeded by sleeping until quota reset time.</p>
-</section>
-<section id="data-governance-considerations" class="level2">
-<h2 class="anchored" data-anchor-id="data-governance-considerations">Data governance considerations</h2>
-<p>Activities involving data collected from YouTube Data API (e.g.&nbsp;collecting, analysing, storing, sharing, and archiving) should be in accordance with <a href="https://developers.google.com/youtube/terms/api-services-terms-of-service">YouTube API Terms of Service</a> and <a href="https://developers.google.com/youtube/terms/developer-policies">Developer Policies</a>.</p>
-<p>At the same time, it is best-practice data governance to consider data implications that might arise from using YouTube data. Refer to <a href="https://www.digitalobservatory.net.au/data-governance-guide/">this guide</a> for a high-level list of data governance considerations.</p>
-</section>
-<section id="other-tools" class="level2">
-<h2 class="anchored" data-anchor-id="other-tools">Other tools</h2>
-<p>Google provides client libraries to interact with their APIs, including YouTube Data API: <a href="https://developers.google.com/youtube/v3/libraries">https://developers.google.com/youtube/v3/libraries</a>. The libraries are available in a number of programming languages such as Java, Python, and JavaScript.</p>
+<p>Our site has moved. For documentation on youte, go to <a href="https://youte.readthedocs.io/">https://youte.readthedocs.io/</a></p>
 
 
-</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

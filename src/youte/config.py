@@ -1,5 +1,4 @@
 import logging
-import sys
 from pathlib import Path
 
 import click
@@ -56,7 +55,7 @@ def get_api_key(name=None, filename="config"):
     """Get API key from config file.
     If no name is given, use default API key
     """
-    click.secho("Getting API key from config file.", fg="magenta")
+    logger.info("Getting API key from config file.")
     config_file_path = Path(click.get_app_dir("youte")).joinpath(filename)
     config = YouteConfig(filename=str(config_file_path))
 
@@ -64,29 +63,14 @@ def get_api_key(name=None, filename="config"):
         try:
             api_key = config[name]["key"]
         except KeyError:
-            click.secho("ERROR", fg="red", bold=True)
-            click.secho(
-                "No API key found for %s. Did you use a different name?\n"
-                "Try:\n"
-                "`youte init list-keys` to get a "
-                "full list of registered API keys "
-                "or `youte init add-key` to add a new API key" % name,
-                fg="red",
-                bold=True,
-            )
-            sys.exit()
+            raise NoAPINameFound
     else:
         default_check = []
         for name in config:
             if "default" in config[name]:
                 default_check.append(name)
         if not default_check:
-            click.secho(
-                "No API key name was specified, and you haven't got a default API key.",
-                fg="red",
-                bold=True,
-            )
-            sys.exit()
+            raise NoAPIKey
         else:
             api_key = config[default_check[0]]["key"]
 
@@ -96,3 +80,12 @@ def get_api_key(name=None, filename="config"):
 def get_config_path(filename="config"):
     config_file_path = Path(click.get_app_dir("youte")).joinpath(filename)
     return str(config_file_path)
+
+
+class NoAPINameFound(Exception):
+    def __str__(self):
+        return "No API key found for specified name."
+
+
+class NoAPIKey(Exception):
+    pass

@@ -14,7 +14,9 @@ import click
 
 from youte import tidier
 from youte.collector import Youte, _get_history_path
-from youte.config import YouteConfig, get_api_key, get_config_path
+from youte.config import (
+    YouteConfig, get_api_key, get_config_path, NoAPIKey, NoAPINameFound
+)
 from youte.exceptions import StopCollector, ValueAlreadyExists
 from youte.utilities import validate_date_string
 
@@ -176,7 +178,7 @@ def search(
 
     OUTPUT: name of json file to store output data
     """
-    api_key = key if key else get_api_key(name=name)
+    api_key = key if key else _get_api_key(name=name)
     search_collector = _set_up_collector(api_key=api_key)
 
     params = {
@@ -261,7 +263,7 @@ def get_comments(
 
     ITEMS: ID(s) of item as provided by YouTube
     """
-    api_key = key if key else get_api_key(name=name)
+    api_key = key if key else _get_api_key(name=name)
     collector = _set_up_collector(api_key=api_key)
 
     ids = _get_ids(string=items, file=file_path)
@@ -331,7 +333,7 @@ def hydrate(
 
     ITEMS: ID(s) of items as provided by YouTube
     """
-    api_key = key if key else get_api_key(name=name)
+    api_key = key if key else _get_api_key(name=name)
     collector = _set_up_collector(api_key=api_key)
 
     ids = _get_ids(string=items, file=file_path)
@@ -391,7 +393,7 @@ def get_related(
 
     ITEMS: ID(s) of videos as provided by YouTube
     """
-    api_key = key if key else get_api_key(name=name)
+    api_key = key if key else _get_api_key(name=name)
     collector = _set_up_collector(api_key=api_key)
 
     ids = _get_ids(string=items, file=file_path)
@@ -437,7 +439,7 @@ def most_popular(region_code, output, name, key, to_csv):
     OUTPUT: name of JSON file to store results
     """
 
-    api_key = key if key else get_api_key(name=name)
+    api_key = key if key else _get_api_key(name=name)
     collector = _set_up_collector(api_key=api_key)
 
     results = collector.list_most_popular(region_code=region_code)
@@ -565,8 +567,8 @@ def set_default(name):
             You might not have added this profile or
             added it under a different name.
             Run:
-            - `youte init list-keys` to see the list of registered keys.
-            - `youte init add-key to add a new API key.
+            - `youte config list-keys` to see the list of registered keys.
+            - `youte config add-key to add a new API key.
             """,
             fg="red",
             bold=True,
@@ -652,3 +654,27 @@ def _prompt_save_progress(filename) -> None:
         except FileNotFoundError:
             pass
     sys.exit(0)
+
+
+def _get_api_key(name, filename="config"):
+    try:
+        return get_api_key(name=name, filename=filename)
+    except NoAPINameFound:
+        click.secho("ERROR", fg="red", bold=True)
+        click.secho(
+            "No API key found for %s. Did you use a different name?\n"
+            "Try:\n"
+            "`youte config list-keys` to get a "
+            "full list of registered API keys "
+            "or `youte config add-key` to add a new API key" % name,
+            fg="red",
+            bold=True,
+        )
+        sys.exit(1)
+    except NoAPIKey:
+        click.secho(
+            "No API key name was specified, and you haven't got a default API key.",
+            fg="red",
+            bold=True,
+        )
+        sys.exit(1)

@@ -31,7 +31,7 @@ if __name__ == "__main__":
         python_requires='>=3.8',
         entry_points={
             'console_scripts': [
-                'youte=youte.__main__:youte'
+                'youte=youte.cli:youte'
                 ]
             }
     )

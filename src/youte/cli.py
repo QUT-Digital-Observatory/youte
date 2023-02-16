@@ -82,7 +82,17 @@ def youte():
     type=click.Choice(["none", "moderate", "strict"], case_sensitive=False),
     help="Include or exclude restricted content",
     default="none",
-    show_default=True,
+    show_default=True
+)
+@click.option(
+    "--lang",
+    help="Return results most relevant to a language (ISO 639-1 two-letter code)"
+)
+@click.option(
+    "--region",
+    default="US",
+    help="Return videos viewable in the specified country (ISO 3166-1 alpha-2 code)",
+    show_default=True
 )
 @click.option(
     "--video-duration",
@@ -156,6 +166,8 @@ def search(
     key: str,
     order: str,
     video_duration: str,
+    lang: str,
+    region: str,
     type_: str,
     channel_type: str,
     video_type: str,
@@ -193,7 +205,9 @@ def search(
         "videoDimension": video_dimension,
         "videoEmbeddable": video_embeddable,
         "videoLicense": video_license,
-        "videoType": video_type
+        "videoType": video_type,
+        "relevanceLanguage": lang,
+        "regionCode": region
     }
 
     if from_:

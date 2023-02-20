@@ -1,9 +1,8 @@
 import os
 import pytest
 from click.testing import CliRunner
-from pathlib import Path
 
-from youte.__main__ import youte
+from youte.cli import youte
 
 
 @pytest.fixture()

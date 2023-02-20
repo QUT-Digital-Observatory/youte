@@ -3,7 +3,7 @@ import pytest
 from click.testing import CliRunner
 from pathlib import Path
 
-from youte.__main__ import youte
+from youte.cli import youte
 
 API_KEY = os.environ["STAGING_API_KEY"]
 NAME = "tester"
@@ -63,8 +63,8 @@ def comment_args() -> list:
 @pytest.mark.parametrize(
     "extra_args",
     [
-        ["-v", "mRUghuWNaaI"],
-        ["-v", "FZCWXlJWueM", "9nvdawlwATQ", "XH9-Dx_RwDw"],
+        ["-v", "XmYnsO7iSI8"],
+        ["-v", "XmYnsO7iSI8", "4oqjcKenCH8", "_b6NgY_pMdw"],
         ["-v", "--file-path", Path("tests") / "ids_to_get_comment.csv"],
     ],
     ids=["one_id", "multi_ids", "from_file"],

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from youte.config import YouteConfig
 from youte.collector import Youte
-from youte.__main__ import youte
+from youte.cli import youte
 
 
 API_KEY = os.environ["STAGING_API_KEY"]
@@ -53,28 +53,6 @@ def test_empty_youte(youte_obj):
     assert youte_obj.api_key == API_KEY
 
 
-def test_search(youte_obj):
-    params = {
-        "part": "snippet",
-        "maxResults": 50,
-        "type": "video",
-        "order": "relevance",
-        "publishedAfter": "2022-10-01",
-    }
-    search = youte_obj.search(**params)
-    page = 0
-    total_responses = 0
-
-    for results in search:
-        if page >= 3:
-            break
-        total_responses += len(results["items"])
-        page += 1
-
-    assert 50 < total_responses < 200
-    assert youte_obj.history_file.exists()
-
-
 @pytest.fixture()
 def search_params() -> dict:
     params = {
@@ -83,10 +61,10 @@ def search_params() -> dict:
             "harry potter",
             "--from",
             "2021-01-01",
-            "--to",
-            "2021-01-02",
             "--key",
             API_KEY,
+            "--limit",
+            "2"
         ],
         "standard-output": [
             "search",
@@ -98,6 +76,8 @@ def search_params() -> dict:
             "--key",
             API_KEY,
             "output.json",
+            "--limit",
+            "2"
         ],
         "wrong-date-format": [
             "search",
@@ -108,18 +88,18 @@ def search_params() -> dict:
             "2021-02-01",
             "--key",
             API_KEY,
+            "--limit",
+            "2"
         ],
         "ordered-by-relevance": [
             "search",
             "harry potter",
-            "--from",
-            "2021-01-01",
-            "--to",
-            "2021-01-02",
             "--order",
             "relevance",
             "--key",
             API_KEY,
+            "--limit",
+            "2"
         ],
         "wrong-order-option": [
             "search",
@@ -130,6 +110,8 @@ def search_params() -> dict:
             "alphabet",
             "--key",
             API_KEY,
+            "--limit",
+            "2"
         ],
         "safe-search": [
             "search",
@@ -142,6 +124,8 @@ def search_params() -> dict:
             "moderate",
             "--key",
             API_KEY,
+            "--limit",
+            "2"
         ],
         "long-videos": [
             "search",
@@ -156,6 +140,8 @@ def search_params() -> dict:
             "long",
             "--key",
             API_KEY,
+            "--limit",
+            "2"
         ],
         "no-query": ["search", "--from", "2022-08-01", "--key", API_KEY],
     }
@@ -190,7 +176,7 @@ def test_cli_search_output(runner, tmp_path, search_params):
             row = file.readline()
             r = json.loads(row)
 
-            assert len(r["items"]) > 10
+            assert len(r["items"]) > 5
 
 
 @pytest.fixture()

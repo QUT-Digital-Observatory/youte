@@ -11,7 +11,6 @@ import click
 from tqdm import tqdm
 
 import youte.table_mappings as mappings
-from youte.utilities import check_file_overwrite, validate_file
 
 logger = logging.getLogger()
 

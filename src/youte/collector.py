@@ -33,6 +33,11 @@ class ProgressSaver:
                 retrieval_time
                 );
 
+            CREATE TABLE IF NOT EXISTS meta (
+                id INT CHECK (id=1) UNIQUE,
+                params
+                );
+
             INSERT OR IGNORE INTO history(next_page_token)
             VALUES ("");
             """
@@ -65,6 +70,22 @@ class ProgressSaver:
             (token,),
         )
         self.conn.commit()
+
+    def add_meta(self, params: Mapping) -> None:
+        self.conn.execute(
+            """
+            INSERT OR IGNORE INTO meta
+            VALUES (?, ?)
+            """,
+            (1, json.dumps(params)),
+        )
+
+    def get_meta(self) -> Mapping:
+        params = [row[0] for row in self.conn.execute("SELECT params FROM meta")]
+        if len(params) > 1:
+            logger.error("Something is seriously wrong!")
+        else:
+            return json.loads(params[0])
 
     def close(self) -> None:
         self.conn.close()
@@ -187,6 +208,8 @@ class Youte:
             while True:
                 tokens, history = _load_page_token(history_file)
 
+                history.add_meta(kwargs)
+
                 if not tokens:
                     break
 
@@ -194,6 +217,8 @@ class Youte:
                     page += 1
 
                     if limit and page > limit:
+                        if history_file.exists():
+                            os.remove(history_file)
                         sys.exit(0)
 
                     url = "https://www.googleapis.com/youtube/v3/search"
@@ -214,13 +239,17 @@ class Youte:
 
                     yield r.json()
 
+            history.close()
+
+            if history_file.exists():
+                os.remove(history_file)
+
         except KeyboardInterrupt:
             raise StopCollector()
 
         finally:
-            history.close()
             if history_file.exists():
-                os.remove(history_file)
+                history.close()
 
     def list_items(
         self,

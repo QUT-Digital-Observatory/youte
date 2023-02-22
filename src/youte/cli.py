@@ -8,12 +8,12 @@ import os
 import sys
 from json.decoder import JSONDecodeError
 from pathlib import Path
-from typing import List, Sequence, Union
+from typing import List, Sequence, Union, Iterable
 
 import click
 
 from youte import tidier
-from youte.collector import Youte, _get_history_path
+from youte.collector import Youte, ProgressSaver
 from youte.config import YouteConfig
 from youte.exceptions import StopCollector, ValueAlreadyExists
 from youte.utilities import validate_date_string
@@ -40,6 +40,17 @@ def _validate_date(ctx, param, value):
             raise click.BadParameter("Date not in correct format (YYYY-MM-DD)")
 
 
+def _get_history_path(outfile: Union[str, Path]) -> Path:
+    history_dir = Path(".youte.history")
+
+    if not history_dir.exists():
+        os.mkdir(history_dir)
+
+    db_file = Path(outfile).with_suffix(".db")
+
+    return history_dir / db_file.name
+
+
 # CLI argument set up:
 @click.group()
 @click.version_option()
@@ -52,8 +63,8 @@ def youte():
 
 
 @youte.command()
-@click.argument("query", required=True)
-@click.argument("output", type=click.File(mode="w"), required=False)
+@click.argument("query", required=False)
+@click.option("-o", "--output", type=click.File(mode="w"))
 @click.option(
     "--from", "from_", help="Start date (YYYY-MM-DD)", callback=_validate_date
 )
@@ -82,17 +93,17 @@ def youte():
     type=click.Choice(["none", "moderate", "strict"], case_sensitive=False),
     help="Include or exclude restricted content",
     default="none",
-    show_default=True
+    show_default=True,
 )
 @click.option(
     "--lang",
-    help="Return results most relevant to a language (ISO 639-1 two-letter code)"
+    help="Return results most relevant to a language (ISO 639-1 two-letter code)",
 )
 @click.option(
     "--region",
     default="US",
     help="Return videos viewable in the specified country (ISO 3166-1 alpha-2 code)",
-    show_default=True
+    show_default=True,
 )
 @click.option(
     "--video-duration",
@@ -207,7 +218,7 @@ def search(
         "videoLicense": video_license,
         "videoType": video_type,
         "relevanceLanguage": lang,
-        "regionCode": region
+        "regionCode": region,
     }
 
     if from_:
@@ -219,6 +230,9 @@ def search(
         if resume:
             if not _get_history_path(resume).exists():
                 raise click.BadParameter("No such history file found")
+
+            resume_source = ProgressSaver(_get_history_path(resume))
+            params = resume_source.get_meta()
 
         results = search_collector.search(
             save_progress_to=resume, limit=limit, **params
@@ -496,8 +510,11 @@ def tidy(filepath, output):
 
 
 @youte.command()
-def list_history():
-    """List resumable history files"""
+@click.option("-v", "--verbose", is_flag=True, help="Display full search info")
+@click.option("-c", "--clear", help="Clear searches by ID")
+@click.option("-C", "--clear-all", is_flag=True, help="Clear all search IDs")
+def history(verbose: bool = False, clear: str = None, clear_all: bool = False):
+    """List resumable search IDs"""
     if not os.path.exists(".youte.history"):
         click.echo("No history file found")
 
@@ -505,8 +522,26 @@ def list_history():
     if not files:
         click.echo("No history file found")
     else:
-        for file in files:
-            click.echo(file.removesuffix(".db"))
+        if clear_all:
+            for file in files:
+                try:
+                    os.remove(f".youte.history/{file}")
+                except FileNotFoundError:
+                    pass
+            sys.exit(0)
+        if clear:
+            try:
+                os.remove(f".youte.history/{clear}.db")
+                sys.exit(0)
+            except FileNotFoundError:
+                raise click.ClickException(f"No search found for {clear}")
+        if not verbose:
+            click.echo("\nsearch ID")
+            click.echo("--" * 20)
+            for file in files:
+                click.echo(file.replace(".db", ""))
+        else:
+            click.echo_via_pager(_generate_meta_from_search_id(files))
 
 
 @youte.group()
@@ -602,7 +637,7 @@ def list_keys():
     click.echo()
     conf = _set_up_config()
 
-    if not Path(get_config_path()).exists():
+    if not Path(_get_config_path()).exists():
         click.echo("No API key has been added to config file.")
     else:
         for name in conf:
@@ -612,7 +647,7 @@ def list_keys():
                 click.echo("%s -------- %s" % (name, conf[name]["key"]))
         click.echo()
         click.secho(
-            "All API keys are stored in %s" % get_config_path(), fg="green", bold=True
+            "All API keys are stored in %s" % _get_config_path(), fg="green", bold=True
         )
         click.echo()
 
@@ -714,3 +749,7 @@ def _get_api_key(name=None, filename="config"):
     return api_key
 
 
+def _generate_meta_from_search_id(files: Iterable[str]) -> Sequence:
+    for file in files:
+        meta = ProgressSaver(_get_history_path(file)).get_meta()
+        yield f"Search ID: {file.replace('.db', '')}\n{json.dumps(meta)}\n--------------------------------------------------------\n"

@@ -75,6 +75,7 @@ def search_params() -> dict:
             "2021-01-02",
             "--key",
             API_KEY,
+            "--output",
             "output.json",
             "--limit",
             "2"
@@ -150,7 +151,7 @@ def search_params() -> dict:
 
 
 @pytest.mark.parametrize(
-    "command", ["wrong-date-format", "wrong-order-option", "no-query"]
+    "command", ["wrong-date-format", "wrong-order-option"]
 )
 def test_cli_search_fail(runner, search_params, command):
     results = runner.invoke(youte, search_params[command])

@@ -64,7 +64,8 @@ def youte():
 
 @youte.command()
 @click.argument("query", required=False)
-@click.option("-o", "--output", type=click.File(mode="w"))
+@click.option("-o", "--output", type=click.File(mode="w"),
+              help="Name of json file to store results to")
 @click.option(
     "--from", "from_", help="Start date (YYYY-MM-DD)", callback=_validate_date
 )
@@ -196,8 +197,6 @@ def search(
     """Do a YouTube search
 
     QUERY: search query
-
-    OUTPUT: name of json file to store output data
     """
     api_key = key if key else _get_api_key(name=name)
     search_collector = _set_up_collector(api_key=api_key)
@@ -697,8 +696,7 @@ def _prompt_save_progress(filename) -> None:
         full_path = Path(filename).resolve()
         click.echo(f"Progress saved at {full_path}")
         click.echo(
-            "To resume progress, run the same youte search command "
-            f"and add `--resume {full_path.stem}`"
+            f"To resume progress, run `search --resume {full_path.stem}`"
         )
     else:
         try:

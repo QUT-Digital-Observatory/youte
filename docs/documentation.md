@@ -74,10 +74,10 @@ youte search <search-terms> --key <API-key>
 
 If you have a default key set up using `youte config`, then there is no need to specify an API key.
 
-This will return the maximum number of results pages (around 12-13) matching the search terms and print them to the shell. Instead of having the JSON printed to the shell, you can specify a JSON file to save results to.
+This will return the maximum number of results pages (around 12-13) matching the search terms and print them to the shell. Instead of having the JSON printed to the shell, you can specify a JSON file to save results to with the `-o` or `--output` option.
 
 ```shell
-youte search <search-terms> <file-name.json>
+youte search <search-terms> -o <file-name.json>
 ```
 
 In the search terms, you can also use the Boolean NOT (-) and OR (|) operators to exclude videos or to find videos that match one of several search terms. If the terms contain spaces, the entire search term value has to be wrapped in quotes.
@@ -101,7 +101,7 @@ youte search <search-terms> --limit 5 --to-csv <file-name.csv>
 You can save results in both JSON and CSV format by specifying both a JSON name and a `--to-csv` option.
 
 ```shell
-youte search <search-terms> <file-name.json> --limit 5 --to-csv <file-name.csv>
+youte search <search-terms> -o <file-name.json> --limit 5 --to-csv <file-name.csv>
 ```
 
 ### Advanced search
@@ -114,9 +114,16 @@ Options:
   --to TEXT                       End date (YYYY-MM-DD)
   --type TEXT                     Type of resource to search for  [default:
                                   video]
+  --order [date|rating|relevance|title|videoCount|viewCount]
+                                  Sort results  [default: date]
   --safe-search [none|moderate|strict]
                                   Include or exclude restricted content
                                   [default: none]
+  --lang TEXT                     Return results most relevant to a language
+                                  (ISO 639-1 two-letter code)
+  --region TEXT                   Return videos viewable in the specified
+                                  country (ISO 3166-1 alpha-2 code)  [default:
+                                  US]
   --video-duration [any|long|medium|short]
                                   Include videos of a certain duration
   --channel-type [any|show]       Restrict search to a particular type of
@@ -147,6 +154,12 @@ The `--type` option specifies the type of results returned, which by default is 
 youte search <search-terms> --limit 5 --type channel,video
 ```
 
+#### Restrict by language and region
+
+The `--lang` returns results most relevant to a language. Not all results will be in the specified language: results in other languages will still be returned if they are highly relevant to the search query term.. To specify the language, use [ISO 639-1 two letter code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes), but you should use the values `zh-Hans` for simplified Chinese and `zh-Hant` for traditional Chinese.
+
+The `--region` returns results viewable in a region. It does *not* filter videos uploaded in that region only. To specify the region, use [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2).
+
 ### Sort results
 
 The `--order` option specifies how results will be sorted. The following values are accepted:
@@ -174,9 +187,11 @@ Progress saved at /home/boyd/Documents/youte/.youte.history/search_1669178310.db
 To resume progress, run the same youte search command and add `--resume search_1669178310`
 ```
 
-To resume progress of this query, run the same query again and add `--resume <search-id>`. Once a query is completed, the search ID is removed.
+To resume progress of this query, simply run `youte search --resume <search-id>`. Once a query is completed, the search ID is removed.
 
-You can also run `youte list-history` to see the list of resumable search IDs inside the ***.youte.history*** folder.
+#### Search history
+
+Run `youte history` to see the list of resumable search IDs inside the ***.youte.history*** folder. To know the details of each search, run `youte history -v` or `youte history --verbose`.
 
 ## hydrate
 

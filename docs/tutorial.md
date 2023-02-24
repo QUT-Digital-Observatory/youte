@@ -133,10 +133,10 @@ This is because YouTube API returns data as a bunch of **JSON**, the standard fo
 Instead, we can store the JSON in a file, to easily process it later using JSON-processing tools.
 
 ``` shell
-youte search "salmon recipes" salmon_recipes_search.json
+youte search "salmon recipes" --output salmon_recipes_search.json
 ```
 
-By specify the name of the file ("salmon_recipes_search.json") at the end of the command, you instruct `youte` to store the results in that file, rather than print them out on the shell. The file has to have a `.json` ending.
+By specify the name of the file ("salmon_recipes_search.json") after the `--output` flag, you instruct `youte` to store the results in that file, rather than print them out on the shell. The file has to have a `.json` ending.
 
 ### Search options
 

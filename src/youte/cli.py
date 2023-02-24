@@ -64,8 +64,12 @@ def youte():
 
 @youte.command()
 @click.argument("query", required=False)
-@click.option("-o", "--output", type=click.File(mode="w"),
-              help="Name of json file to store results to")
+@click.option(
+    "-o",
+    "--output",
+    type=click.File(mode="w"),
+    help="Name of json file to store results to",
+)
 @click.option(
     "--from", "from_", help="Start date (YYYY-MM-DD)", callback=_validate_date
 )
@@ -695,9 +699,7 @@ def _prompt_save_progress(filename) -> None:
     if click.confirm("Do you want to save your current progress?"):
         full_path = Path(filename).resolve()
         click.echo(f"Progress saved at {full_path}")
-        click.echo(
-            f"To resume progress, run `search --resume {full_path.stem}`"
-        )
+        click.echo(f"To resume progress, run `search --resume {full_path.stem}`")
     else:
         try:
             os.remove(filename)

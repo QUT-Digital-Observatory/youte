@@ -156,7 +156,7 @@ youte search <search-terms> --limit 5 --type channel,video
 
 #### Restrict by language and region
 
-The `--lang` returns results most relevant to a language. Not all results will be in the specified language: results in other languages will still be returned if they are highly relevant to the search query term.. To specify the language, use [ISO 639-1 two letter code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes), but you should use the values `zh-Hans` for simplified Chinese and `zh-Hant` for traditional Chinese.
+The `--lang` returns results most relevant to a language. Not all results will be in the specified language: results in other languages will still be returned if they are highly relevant to the search query term. To specify the language, use [ISO 639-1 two letter code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes), except that you should use the values `zh-Hans` for simplified Chinese and `zh-Hant` for traditional Chinese.
 
 The `--region` returns results viewable in a region. It does *not* filter videos uploaded in that region only. To specify the region, use [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2).
 
@@ -183,15 +183,17 @@ The ID of the search is saved and printed to the shell, as demonstrated below:
 
 ``` {.shell .no-copy}
 Do you want to save your current progress? [y/N]: y
-Progress saved at /home/boyd/Documents/youte/.youte.history/search_1669178310.db
-To resume progress, run the same youte search command and add `--resume search_1669178310`
+Progress saved at /home/boyd/Documents/youte/.youte.history/search_1677202150.db
+To resume progress, run `search --resume search_1677202150`
 ```
 
-To resume progress of this query, simply run `youte search --resume <search-id>`. Once a query is completed, the search ID is removed.
+To resume progress of this query, simply run `youte search --resume <search-id>`. Once a query is completed, the search ID and database are deleted and removed.
 
 #### Search history
 
 Run `youte history` to see the list of resumable search IDs inside the ***.youte.history*** folder. To know the details of each search, run `youte history -v` or `youte history --verbose`.
+
+To wipe progress of a particular search, run `youte history -c <search-id>` or `youte history --clear <search-id>`. To clear all searches, run `youte history -C`. When you run `-c` or `-C`, the search databases will be deleted and you'll lose all search details and progress of those searches.
 
 ## hydrate
 

@@ -145,7 +145,8 @@ Now, that search is pretty broad. What if you only want videos uploaded within a
 Note that shell commands have to be typed in one line. The backlashes (\\) are used to enter a new line without breaking the command and help with readability.
 
 ``` shell
-youte search "salmon recipes" salmon_recipes_search.json \
+youte search "salmon recipes" \
+    --output salmon_recipes_search.json \
     --from 2023-01-01 \
     --to 2023-01-31
 ```
@@ -155,7 +156,8 @@ The date has to be in YYYY-MM-DD format, otherwise you will get an error.
 Let's refine our search a bit further. Let's search for short videos that are under 4 minutes.
 
 ``` shell
-youte search "salmon recipes" salmon_recipes_search.json \
+youte search "salmon recipes" \
+    --output salmon_recipes_search.json \
     --from 2023-01-01 \
     --to 2023-01-31 \
     --video-duration short
@@ -180,11 +182,9 @@ Specifically, when you exit the program in the middle of a search, a prompt will
 To resume progress from a database, add the `--resume` flag followed by the search ID.
 
 ``` shell
-youte search "salmon recipes" salmon_recipes_search.json \
-    --from 2023-01-01 \
-    --to 2023-01-31 \
-    --video-duration short \
-    --resume search_1675381044
+youte search "salmon recipes" \
+    --resume search_1675381044 \
+    --output salmon_recipes_search.json
 ```
 
 The progress file is automatically deleted once youte has completed collecting all data for a search.
@@ -194,7 +194,8 @@ The progress file is automatically deleted once youte has completed collecting a
 Another useful feature in youte is processing your results into a tidy CSV. To do so, specify the tag `--to-csv` followed by the name of the CSV file.
 
 ``` shell
-youte search "salmon recipes" salmon_recipes_search.json \
+youte search "salmon recipes" \
+    --output salmon_recipes_search.json \
     --from 2023-01-01 \
     --to 2023-01-31 \
     --video-duration short \

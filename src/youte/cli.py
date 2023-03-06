@@ -13,7 +13,7 @@ from typing import List, Sequence, Union, Iterable
 import click
 
 from youte import tidier
-from youte.collector import Youte, ProgressSaver
+from youte.collector import Youte
 from youte.config import YouteConfig
 from youte.exceptions import StopCollector, ValueAlreadyExists
 from youte.utilities import validate_date_string
@@ -175,7 +175,7 @@ def youte():
 @click.option("--to-csv", type=click.Path(), help="Tidy data to CSV file")
 def search(
     query: str,
-    output: str,
+    output,
     from_: str,
     to: str,
     name: str,
@@ -254,7 +254,7 @@ def search(
             click.echo(f"Results are stored in {output.name}")
 
     except StopCollector:
-        _prompt_save_progress(search_collector.history_file)
+        _prompt_save_progress(search_collector._history_file)
 
 
 @youte.command()

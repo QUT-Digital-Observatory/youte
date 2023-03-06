@@ -1,6 +1,7 @@
 import logging
 import re
 from pathlib import Path
+from typing import Union, Optional
 
 import click
 
@@ -28,8 +29,8 @@ def check_file_overwrite(file_path: Path) -> Path:
     return file_path
 
 
-def create_utc_datetime_string(string: str):
-    return f"{string}T00:00:00Z"
+def create_utc_datetime_string(string: Optional[str] = None) -> Union[str, None]:
+    return f"{string}T00:00:00Z" if string else None
 
 
 def validate_date_string(string: str) -> bool:

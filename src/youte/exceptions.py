@@ -4,6 +4,10 @@ class InvalidFileName(Exception):
     #     return "Incorrect file extension or file does not exist."
 
 
+class InvalidRequest(Exception):
+    pass
+
+
 class InvalidRequestParameter(Exception):
     pass
     # def __str__(self):

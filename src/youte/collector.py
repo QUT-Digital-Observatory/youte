@@ -1,111 +1,21 @@
 import json
 import logging
-import os
 import random
 import sys
 import time
 from datetime import datetime, timedelta
-from pathlib import Path
-from typing import (
-    Mapping, 
-    Literal, 
-    Union, 
-    Optional, 
-    TypedDict, 
-    Generator, 
-    List, 
-    Tuple,
-    Dict
-)
+from typing import Dict, Iterator, List, Literal, Optional, Tuple, Union
 
 import click
 import requests
 from dateutil import tz
 from tqdm import tqdm
 
-from youte.exceptions import StopCollector
+from youte._typing import APIResponse, SearchOrder
+from youte.exceptions import InvalidRequest
 from youte.utilities import create_utc_datetime_string
-from youte._typing import SearchOrder
 
 logger = logging.getLogger(__name__)
-
-
-class SearchResult(TypedDict):
-    kind: str
-    etag: str
-    id: dict
-    nextPageToken: str
-    prevPageToken: str
-    regionCode: str
-    pageInfo: dict
-    items: List[dict]
-
-
-def _request_with_error_handling(
-        url: str,
-        params: Mapping[str, Union[str, int]]
-        ) -> requests.Response:
-    response = requests.get(url, params=params)
-    logger.info(f"Getting {response.url}.\nStatus: {response.status_code}.")
-
-    if response.status_code in [403, 400, 404]:
-        errors = response.json()["error"]["errors"]
-
-        logger.error(f"Error: {response.url}")
-        logger.error(json.dumps(errors))
-
-        for error in errors:
-            # ignore if comment is disabled
-            if error["reason"] == "commentsDisabled":
-                logger.warning(error["reason"])
-            elif "quotaExceeded" in error["reason"]:
-                # wait until reset time if quota exceeded
-                until_reset = _get_reset_remaining(datetime.now(tz=tz.UTC))
-                logger.error(error["reason"])
-                click.echo(error["reason"])
-                logger.warning(f"Sleeping for {until_reset} seconds til reset time")
-                click.echo(f"Sleeping for {until_reset} seconds til reset time")
-                time.sleep(until_reset)
-                _request_with_error_handling(url, **params)
-            else:
-                logger.error(f"Reason: {error['message']}")
-                logger.error(json.dumps(response.json()))
-                click.echo(f"{error['message']}")
-                sys.exit(1)
-
-    return response
-
-
-def _write_output_to_jsonl(output_path: str, json_rec: Mapping) -> None:
-    logger.info(f"Writing output to {output_path}.")
-    with open(output_path, "a") as file:
-        json_record = json.dumps(json_rec)
-        file.write(json_record + "\n")
-
-def _prompt_save_progress(filename) -> None:
-    if os.path.exists(filename):
-        if click.confirm("Do you want to save your current progress?"):
-            full_path = Path(filename).resolve()
-            click.echo(f"Progress saved at {full_path}")
-        else:
-            os.remove(filename)
-    sys.exit()
-
-
-# def _get_page_token(response: requests.Response, saved_to: ProgressSaver) -> None:
-#     try:
-#         next_page_token = response.json()["nextPageToken"]
-#         saved_to.add_token(next_page_token)
-#     except KeyError:
-#         logger.info("No more page...")
-
-
-def _get_reset_remaining(current: datetime) -> int:
-    next_reset = datetime.now(tz=tz.gettz("US/Pacific")) + timedelta(days=1)
-    next_reset = next_reset.replace(hour=0, minute=0, second=0, microsecond=0)
-    reset_remaining = next_reset - current
-
-    return reset_remaining.seconds + 1
 
 
 class Youte:
@@ -122,7 +32,7 @@ class Youte:
         safe_search: Literal["moderate", "none", "strict"] = "none",
         language: Optional[str] = None,
         region: Optional[str] = None,
-        video_duration: Literal["any", "high", "standard"] = "any",
+        video_duration: Literal["any", "long", "medium", "short"] = "any",
         channel_type: Literal["any", "show"] = "any",
         video_type: Literal["any", "episode", "movie"] = "any",
         caption: Literal["any", "closedCaption", "none"] = "any",
@@ -133,8 +43,82 @@ class Youte:
         location: Optional[Tuple] = None,
         location_radius: Optional[str] = None,
         max_result: int = 50,
-        max_pages_retrieved: Optional[int] = None
-    ) -> Generator[SearchResult, None, None]:
+        max_pages_retrieved: Optional[int] = None,
+    ) -> Iterator[APIResponse]:
+        """Do a YouTube search.
+
+        Parameters
+        ----------
+        query : str
+            The term to search for. You can also use the Boolean NOT (-)
+            and OR (|) operators to exclude videos or to find videos
+            matching one of several search terms.
+        type_ : str, default: "video"
+            Type of resources to retrieve. Can be one or a comma-separated string
+            containing one or more of {"channel", "video", "playlist"}
+        start_time : str, optional
+            Retrieve resources after this date. Has to be in YYYY-MM-DD format
+        end_time : str, optional
+            Retrieve resources after this date. Has to be in YYYY-MM-DD format
+        order : {"date", "rating", "relevance", "title", "videoCount", "viewCount"},
+            default: "relevance"
+            Sort results.
+            - "date" sorts results in reverse chronological order.
+            - "rating" sorts results from highest to lowest ratings.
+            - "relevance" sorts results based on their relevance to the search query.
+            - "title" sorts results alphabetically by title.
+            - "videoCount" sorts channels in descending order of their number of videos.
+            - "viewCount" sorts videos in descending order of views. For live broadcasts,
+            videos are sorted by number of concurrent viewers while broadcasts are live.
+        safe_search : {"moderate", "none", "strict"}, optional
+            Include restricted content or not.
+        language : str, optional
+            Return results most relevant to a language. Accepted values are ISO 639-1
+            two-letter language code.
+        region : str, optional
+            Returns results that can be viewed in the specified country.
+            Use ISO 3166-1 alpha-2 country code.
+        video_duration : {"any", "long", "medium", "short"}, default: "any"
+            Filter results by video duration. type_ has to be "video".
+        channel_type : {"any", "show"}, default: "any"
+            Filter results by channel type.
+        video_type : {"any", "episode", "movie"}, default: "any"
+            Filter results by video type.
+        caption : {"any", "closedCaption", "none"}, default: "any"
+            Filter results based on whether they have captions.
+        video_definition : {"any", "high", "standard"}, default: "any"
+            Filter results by HD or SD videos.
+        video_embeddable : {"any", "true"}, default: "any"
+            Restrict to only videos that can be embedded into a webpage.
+        video_license : {"any", "creativeCommon", "youtube"}, default: "any"
+            Only include videos with a particular license.
+        video_dimension : {"2d", "3d", "any"}, default: "any"
+            Only retrieve 2D or 3D videos.
+        location : Tuple, optional
+            Along with location_radius, defines a circular geographic area and restricts
+            a search to videos that specify, in their metadata, a geographic location
+            within that area. Both location and location_radius have to be specified.
+            Input is a tuple of latitude/longitude coordinates, e.g.
+            (37.42307,-122.08427).
+        location_radius : str, optional
+            Along with location, defines a circular geographic area and restricts
+            a search to videos that specify, in their metadata, a geographic location
+            within that area.
+            The parameter value must be a floating point number followed by a
+            measurement unit. Valid measurement units are m, km, ft, and mi. Values
+            larger than 1000 km are not supported.
+        max_result : int, default: 50
+            Maximum number of items that should be returned in one page of the result.
+            Accepted values are between 0 and 50, inclusive.
+        max_pages_retrieved : Optional[int], optional
+            Limit the number of result pages returned. Equals the maximum number of
+            calls made to the API.
+
+        Yields
+        ------
+        Iterator[APIResponse]
+            Returns an Iterator of search results. Search results are dictionaries.
+        """
 
         url: str = r"https://www.googleapis.com/youtube/v3/search"
         params: dict = {
@@ -162,23 +146,52 @@ class Youte:
         }
 
         yield from _paginate_search_results(
-            url=url,
-            max_pages_retrieved=max_pages_retrieved,
-            **params
+            url=url, max_pages_retrieved=max_pages_retrieved, **params
         )
-        
+
     def get_video_metadata(
         self,
         ids: List[str],
-        part: Optional[str] = "snippet,statistics,topicDetails,status,contentDetails,recordingDetails,id",
-        max_results: Optional[int] = 50
-    ) -> Generator[Dict, None, None]:
-        
+        part: List[str] = [
+            "snippet",
+            "statistics",
+            "topicDetails",
+            "status",
+            "contentDetails",
+            "recordingDetails",
+            "id",
+        ],
+        max_results: int = 50,
+    ) -> Iterator[APIResponse]:
+        """Retrieve full metadata for videos using their IDs.
+
+        Parameters
+        ----------
+        ids : List[str]
+            A list of one or multiple video IDs. If a single ID is specified, it should
+            be wrapped in a list as well, e.g. ["video_id"].
+        part : List[str], default: ["snippet", "statistics", "topicDetails",
+                                "status", "contentDetails", "recordingDetails", "id"]
+            A list of video resource properties that the API response will include.
+        max_results : int, default: 50
+            Maximum number of results returned in one page of response.
+            Accepted value is between 0 and 50.
+
+        Yields
+        ------
+        Iterator[APIResponse]
+            Returns an Iterator of dictionaries.
+
+        Raises
+        ------
+        TypeError
+            If the value passed to ids is not a dict, a TypeError will be raised.
+        """
         url: str = r"https://www.googleapis.com/youtube/v3/videos"
         params: dict = {
-            "part": part,
+            "part": ",".join(part),
             "maxResults": max_results,
-            "key": self.api_key
+            "key": self.api_key,
         }
 
         if not isinstance(ids, list):
@@ -199,30 +212,60 @@ class Youte:
                     ids.remove(elm)
 
             params["id"] = ids_string
-            yield from _paginate_search_results(
-                url=url,
-                **params
-            )
+            yield from _paginate_search_results(url=url, **params)
 
     def get_channel_metadata(
         self,
-        ids: Optional[List[str]] = None,
-        part: Optional[str] = "snippet,statistics,topicDetails,status,contentDetails,brandingSettings,contentOwnerDetails",
-        max_results: int = 50
-    ) -> Generator[Dict, None, None]:
+        ids: List[str],
+        part: List[str] = [
+            "snippet",
+            "statistics",
+            "topicDetails",
+            "status",
+            "contentDetails",
+            "brandingSettings",
+            "contentOwnerDetails",
+        ],
+        max_results: int = 50,
+    ) -> Iterator[APIResponse]:
+        """Retrieve full metadata for channels using their IDs.
+        Currently do not work with usernames. Channel IDs can be obtained in API
+        responses to other methods such as search() or get_video_metadata().
+
+        Parameters
+        ----------
+        ids : List[str]
+            A list of one or multiple channel IDs. If a single ID is specified, it
+            should be wrapped in a list as well, e.g. ["video_id"].
+        part : List[str], default: [ "snippet", "statistics", "topicDetails", "status",
+                        "contentDetails", "brandingSettings", "contentOwnerDetails", ]
+            A list of video resource properties that the API response will include.
+        max_results : int, default: 50
+            Maximum number of results returned in one page of response.
+            Accepted value is between 0 and 50.
+
+        Yields
+        ------
+        Iterator[APIResponse]
+            Returns an Iterator of dictionaries.
+
+        Raises
+        ------
+        TypeError
+            If the value passed to ids is not a dict, a TypeError will be raised.
+        """
         url: str = r"https://www.googleapis.com/youtube/v3/channels"
         params: dict = {
-            "part": part,
+            "part": ",".join(part),
             "maxResults": max_results,
-            "key": self.api_key
+            "key": self.api_key,
         }
 
-        if not isinstance(ids, list):
+        if ids and not isinstance(ids, list):
             raise TypeError("ids and username must be a list")
 
-        ids = list(set(ids))
-
         while ids:
+            ids = list(set(ids))
             if len(ids) <= 50:
                 ids_string = ",".join(ids)
                 ids = []
@@ -235,30 +278,7 @@ class Youte:
                     ids.remove(elm)
 
             params["id"] = ids_string
-            yield from _paginate_search_results(
-                url=url,
-                **params
-            )
-        
-        # Get by username not working atm, not sure why
-
-        # while username:
-        #     if len(username) <= 50:
-        #         username_string = ",".join(username)
-        #         ids = []
-        #     else:
-        #         total_batches = int(len(username) / 50)
-        #         logger.info(f"{total_batches} pages remaining")
-        #         batch = random.sample(username, k=50)
-        #         username_string = ",".join(batch)
-        #         for elm in batch:
-        #             username.remove(elm)
-
-        #     params["forUsername"] = username_string
-        #     yield from _paginate_search_results(
-        #         url=url,
-        #         **params
-        #     )
+            yield from _paginate_search_results(url=url, **params)
 
     def get_comment_threads(
         self,
@@ -267,54 +287,99 @@ class Youte:
         comment_ids: Optional[List[str]] = None,
         order: Literal["time", "relevance"] = "time",
         search_terms: Optional[str] = None,
-        text_format: Optional[str] = "html",
-        max_results: int = 100
-    ):
-        if sum(
-            [bool(video_ids), bool(related_channel_ids), bool(comment_ids is True)]
-            ) > 1:
+        text_format: Literal["html", "plainText"] = "html",
+        max_results: int = 100,
+    ) -> Iterator[APIResponse]:
+        """Retrieve comment threads (top-level comments) by their IDs, by video IDs, or
+        by channel IDs.
+        If video_ids are specified, retrieve all comment threads for
+        those videos. If related_channel_ids are specified, retrieve all comments
+        associated with those channels, including comments about the channels' videos.
+        If comment_ids are specified, retrieve metadata of those comments.
+        Exactly ONE of these parameters should be specified in one method call.
+
+        Parameters
+        ----------
+        video_ids : Optional[List[str]], optional
+            List of video IDs. If a single ID, wrap in list, too, e.g. ["video_id"].
+            If this parameter is specified, the call will retrieve all comment threads
+            on the specified videos. Nothing should be passed for related_channel_ids or
+            comment_ids if this paramter is specified. A warning will be displayed if
+            a video has disabled comments.
+        related_channel_ids : Optional[List[str]], optional
+            List of channel IDs. If a single ID, wrap in list, too, e.g. ["channel_id"].
+            If this parameter is specified, retrieve all comment threads associated with
+            these channels, including comments about the channels or the channels'
+            videos. Nothing should be passed for video_ids or comment_ids if this
+            paramter is specified.
+        comment_ids : Optional[List[str]], optional
+            List of comment IDs. If a single ID, wrap in list, too, e.g. ["cmt_id"].
+            If this paramter is specified, retrieve metadata for all specified comment
+            IDs. Nothing should be passed for video_ids or comment_ids if this
+            paramter is specified.
+        order : {"time", "relevance"}, default: "time"
+            How comment threads are sorted.
+        search_terms : Optional[str], optional
+            Only retrieve comment threads matching search terms.
+        text_format : {"html", "plainText"}, default: "html"
+            Specify the format of returned data.
+        max_results : int, default: 100
+            Maximum number of results returned in one page of response.
+            Accepted value is between 0 and 100. Only applicable when retrieving
+            comment threads using video or channel IDs. When comment IDs are provided,
+            this argument is not used.
+
+        Yields
+        ------
+        Iterator[APIResponse]
+            Returns an Iterator of dictionaries.
+
+        Raises
+        ------
+        ValueError
+            If more than one of these parameters - video_ids, related_channel_ids,
+            comment_ids - are specified, a ValueError will be raised.
+        """
+
+        if sum([bool(video_ids), bool(related_channel_ids), bool(comment_ids)]) > 1:
             raise ValueError(
                 "Use only one of the following paramaters: "
-                "video_ids, related_channel_ids, comment_ids")
-        
+                "video_ids, related_channel_ids, comment_ids"
+            )
+
         url: str = r"https://www.googleapis.com/youtube/v3/commentThreads"
-        params: Dict = {
+        params: Dict[str, Union[str, int]] = {
             "part": "snippet",
-            "maxResults": max_results,
             "textFormat": text_format,
-            "key": self.api_key
+            "key": self.api_key,
         }
 
         if video_ids:
             params["order"] = order
+            params["maxResults"] = max_results
             if search_terms:
                 params["searchTerms"] = search_terms
             for video_id in video_ids:
                 params["videoId"] = video_id
-                yield from _paginate_search_results(
-                    url=url,
-                    **params
-                )
-        
+                yield from _paginate_search_results(url=url, **params)
+
         if related_channel_ids:
             params["order"] = order
+            params["maxResults"] = max_results
             if search_terms:
                 params["searchTerms"] = search_terms
             for channel_id in related_channel_ids:
                 params["allThreadsRelatedToChannelId"] = channel_id
-                yield from _paginate_search_results(
-                    url=url,
-                    **params
-                )
+                yield from _paginate_search_results(url=url, **params)
 
         if comment_ids:
-            url: str = r"https://www.googleapis.com/youtube/v3/comment"
+            url: str = r"https://www.googleapis.com/youtube/v3/comments"
 
             comment_ids = list(set(comment_ids))
             while comment_ids:
                 if len(comment_ids) <= 50:
                     ids_string = ",".join(comment_ids)
-                    ids = []
+                    comment_ids = []
                 else:
                     total_batches = int(len(comment_ids) / 50)
                     logger.info(f"{total_batches} pages remaining")
@@ -324,95 +389,174 @@ class Youte:
                         comment_ids.remove(elm)
 
                 params["id"] = ids_string
-                yield from _paginate_search_results(
-                    url=url,
-                    **params
-                )        
+                yield from _paginate_search_results(url=url, **params)
 
     def get_thread_replies(
         self,
         thread_ids: List[str],
-        text_format: Optional[str] = "html",
-        max_results: int = 100
-    ):
-        url: str = r"https://www.googleapis.com/youtube/v3/comment"
+        text_format: Literal["html", "plainText"] = "html",
+        max_results: int = 100,
+    ) -> Iterator[APIResponse]:
+        """Retrieve replies to comment threads. Currently the API only supports getting
+        replies to top-level comments. Replies to replies are not supported as of this
+        version.
+
+        Parameters
+        ----------
+        thread_ids : List[str]
+            List of comment thread IDs. If a single ID, wrap in list, too, e.g.
+            ["thread_id"].
+        text_format : {"html", "plainText"}, default: "html"
+            Specify the format of returned data.
+        max_results : int, default: 100
+            Maximum number of results returned in one page of response.
+            Accepted value is between 0 and 100.
+
+        Yields
+        ------
+        Iterator[APIResponse]
+            Returns an Iterator of dictionaries.
+
+        Raises
+        ------
+        ValueError
+            If more than one of these parameters - video_ids, related_channel_ids,
+            comment_ids - are specified, a ValueError will be raised.
+        """
+        url: str = r"https://www.googleapis.com/youtube/v3/comments"
         params: Dict = {
             "part": "snippet",
             "maxResults": max_results,
             "textFormat": text_format,
-            "key": self.api_key
+            "key": self.api_key,
         }
+
+        if thread_ids and not isinstance(thread_ids, list):
+            raise TypeError("thread_ids must be a list")
 
         thread_ids = list(set(thread_ids))
         for thread_id in thread_ids:
             params["parentId"] = thread_id
-            yield from _paginate_search_results(
-                url=url,
-                **params
-            )
+            yield from _paginate_search_results(url=url, **params)
 
-    # def list_most_popular(
-    #     self,
-    #     region_code: str = None,
-    #     video_category: str = None,
-    # ) -> Mapping:
-    #     request_info = _get_endpoint("videos")
-    #     url = request_info["url"]
-    #     params = request_info["params"]
-    #     params["key"] = self.api_key
-    #     params["chart"] = "mostPopular"
+    def get_most_popular(
+        self,
+        region_code: str = "us",
+        video_category_id: Optional[str] = None,
+        max_results: int = 100,
+        part: List[str] = [
+            "snippet",
+            "statistics",
+            "topicDetails",
+            "status",
+            "contentDetails",
+            "recordingDetails",
+            "id",
+        ],
+    ) -> Iterator[APIResponse]:
+        """Retrieve the most popular videos for a region and video category.
 
-    #     if region_code:
-    #         params["regionCode"] = region_code
-    #     elif video_category:
-    #         params["videoCategoryId"] = video_category
+        Parameters
+        ----------
+        region_code : str, default: "us"
+            ISO 3166-1 alpha-2 country code for specifying a region.
+        video_category_id : Optional[str], optional
+            The video category ID for which the most popular videos should be retrieved.
+        max_results : int, default: 100
+            Maximum number of results to be retrieved per page.
+        part : List[str], default: [ "snippet", "statistics", "topicDetails", "status",
+                                     "contentDetails", "recordingDetails", "id", ]
+            A list of video resource properties that the API response will include.
 
-    #     history_file = _get_history_path(f"history_{time.time()}.db")
+        Yields
+        ------
+        Iterator[APIResponse]
+            Returns an Iterator of dictionaries.
+        """
+        url: str = r"https://www.googleapis.com/youtube/v3/videos"
+        params: Dict = {
+            "part": part,
+            "maxResults": max_results,
+            "key": self.api_key,
+            "chart": "mostPopular",
+            "regionCode": region_code,
+            "videoCategoryId": video_category_id,
+        }
 
-    #     try:
-    #         while True:
-    #             if "pageToken" in params:
-    #                 del params["pageToken"]
+        yield from _paginate_search_results(url=url, **params)
 
-    #             tokens, history = _load_page_token(history_file)
+    def get_related_videos(
+        self,
+        video_ids: List[str],
+        region: Optional[str] = None,
+        relevance_language: Optional[str] = None,
+        safe_search: Literal["none", "moderate", "strict"] = "none",
+        max_results: int = 50,
+        max_pages_retrieved: Optional[int] = None,
+    ) -> Iterator[APIResponse]:
+        """Retrieve videos related to a specified video.
+        Can iterate over a list of video IDs and retrieve related videos for each of the
+        specified ID.
 
-    #             if not tokens:
-    #                 logger.info("No more token found.")
-    #                 break
+        Parameters
+        ----------
+        video_ids : List[str]
+            A list of video IDs for each of which to retrieve related videos. The
+            function will iterate through each ID and get all related videos for that
+            ID before moving on to the next. If a single ID is passed, wrap that in a
+            list, too.
+        region : Optional[str], optional
+            An ISO 3166-1 alpha-2 country code to specify the region that videos can be
+            viewed in.
+        relevance_language : Optional[str], optional
+            An ISO 639-1 two-letter language code to filter results most relevant to a
+            language. Results in other languages will still be included if they are
+            highly relevant to the video.
+        safe_search : {"none", "moderate", "strict"}, default: "none"
+            Include restricted content or not.
+        max_result : int, default: 50
+            Maximum number of items that should be returned in one page of the result.
+            Accepted values are between 0 and 50, inclusive.
+        max_pages_retrieved : Optional[int], optional
+            Limit the number of result pages returned PER video ID.
+            Equals the maximum number of calls made to the API PER video ID. So, if this
+            parameter is set to 2 and a list of 3 IDs is specified for video_ids, that
+            will make 6 calls to the API in total.
 
-    #             for token in tokens:
-    #                 if token != "":
-    #                     logger.info("Adding page token...")
-    #                     params["pageToken"] = token
+        Yields
+        ------
+        Iterator[APIResponse]
+            Returns an Iterator of dictionaries.
+        """
+        url: str = r"https://www.googleapis.com/youtube/v3/search"
+        params: dict = {
+            "part": "snippet",
+            "maxResults": max_results,
+            "regionCode": region,
+            "relevanceLanguage": relevance_language,
+            "safeSearch": safe_search,
+            "key": self.api_key,
+            "type": "video",
+        }
 
-    #                 r = _request_with_error_handling(url=url, params=params)
-
-    #                 _get_page_token(response=r, saved_to=history)
-
-    #                 # store recorded and unrecorded tokens
-    #                 history.update_token(token)
-
-    #                 yield r.json()
-
-    #     except KeyboardInterrupt:
-    #         sys.exit(1)
-
-    #     finally:
-    #         history.close()
-    #         if history_file.exists():
-    #             os.remove(history_file)
+        for video_id in video_ids:
+            params["relatedToVideoId"] = video_id
+            for result in _paginate_search_results(
+                url=url, max_pages_retrieved=max_pages_retrieved, **params
+            ):
+                result["related_to_video_id"] = video_id  # type: ignore
+                yield result
 
 
 def _paginate_search_results(
-        url,
-        max_pages_retrieved: Optional[int] = None,
-        **kwargs) ->  Generator[Dict, None, None]:
+    url: str, max_pages_retrieved: Optional[int] = None, **kwargs
+) -> Iterator[APIResponse]:
     page: int = 0
     logger.info("getting requests")
     r = _request_with_error_handling(url=url, params=kwargs)
     page += 1
-    yield r.json()
-    
+    response = _add_meta(r.json(), collection_time=datetime.now())
+    yield response
 
     while "nextPageToken" in r.json():
         if max_pages_retrieved and page >= max_pages_retrieved:
@@ -422,11 +566,57 @@ def _paginate_search_results(
             kwargs["pageToken"] = next_page_token
             r = _request_with_error_handling(url=url, params=kwargs)
             page += 1
-            yield r.json()
+            response = _add_meta(r.json(), collection_time=datetime.now())
+            yield response
 
 
+def _add_meta(response: APIResponse, **kwargs) -> APIResponse:
+    for key in kwargs:
+        response[key] = kwargs[key]
+
+    return response
 
 
+def _request_with_error_handling(
+    url: str, params: Dict[str, Union[str, int]]
+) -> requests.Response:
+    response = requests.get(url, params=params)
+    logger.info(f"Getting {response.url}.\nStatus: {response.status_code}.")
+
+    if response.status_code in [403, 400, 404]:
+        try:
+            errors = response.json()
+        except requests.exceptions.JSONDecodeError:
+            raise InvalidRequest("Check url and endpoint.")
+
+        logger.error(f"Error: {response.url}")
+        logger.error(json.dumps(errors))
+
+        for error in errors:
+            # ignore if comment is disabled
+            if error["reason"] == "commentsDisabled":
+                logger.warning(error["reason"])
+            elif "quotaExceeded" in error["reason"]:
+                # wait until reset time if quota exceeded
+                until_reset = _get_reset_remaining(datetime.now(tz=tz.UTC))
+                logger.error(error["reason"])
+                click.echo(error["reason"])
+                logger.warning(f"Sleeping for {until_reset} seconds til reset time")
+                click.echo(f"Sleeping for {until_reset} seconds til reset time")
+                time.sleep(until_reset)
+                _request_with_error_handling(url, params)
+            else:
+                logger.error(f"Reason: {error['message']}")
+                logger.error(json.dumps(response.json()))
+                click.echo(f"{error['message']}")
+                sys.exit(1)
+
+    return response
 
 
+def _get_reset_remaining(current: datetime) -> int:
+    next_reset = datetime.now(tz=tz.gettz("US/Pacific")) + timedelta(days=1)
+    next_reset = next_reset.replace(hour=0, minute=0, second=0, microsecond=0)
+    reset_remaining = next_reset - current
 
+    return reset_remaining.seconds + 1

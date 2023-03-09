@@ -4,8 +4,9 @@ import json
 import logging
 import re
 import sqlite3
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Mapping, Sequence, Union
+from typing import Iterable, Mapping, Sequence, TypedDict, Union
 
 import click
 from tqdm import tqdm
@@ -129,6 +130,20 @@ def tidy_search(filepath: str, output: Union[str, Path]) -> None:
     db.close()
     click.echo(f"{total} items processed.")
     click.echo(f"Data stored in {output} in `search_results` table.")
+
+
+@dataclass
+class Search:
+    kind: str
+    id: str
+    published_at: str
+    title: str
+    description: str
+    thumbnail_url: str
+    thumbnail_width: int
+    thumbnail_height: int
+    channel_title: str
+    live_broadcast_content: str
 
 
 def _get_mapping(item: dict, resource_kind) -> dict:

@@ -8,7 +8,7 @@ import os
 import sys
 from json.decoder import JSONDecodeError
 from pathlib import Path
-from typing import List, Sequence, Union, Iterable
+from typing import Iterable, List, Sequence, Union
 
 import click
 

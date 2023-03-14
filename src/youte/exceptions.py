@@ -20,3 +20,7 @@ class StopCollector(Exception):
 
 class ValueAlreadyExists(Exception):
     pass
+
+
+class APIError(Exception):
+    pass

@@ -1,18 +1,16 @@
+from __future__ import annotations
+
 import json
 import logging
 import random
-import sys
-import time
 from datetime import datetime, timedelta
-from typing import Dict, Iterator, List, Literal, Optional, Tuple, Union
+from typing import Iterator, Literal, Optional
 
-import click
 import requests
 from dateutil import tz
-from tqdm import tqdm
 
 from youte._typing import APIResponse, SearchOrder
-from youte.exceptions import InvalidRequest
+from youte.exceptions import APIError, InvalidRequest
 from youte.utilities import create_utc_datetime_string
 
 logger = logging.getLogger(__name__)
@@ -25,7 +23,7 @@ class Youte:
     def search(
         self,
         query: str,
-        type_: str = "video",
+        type_: str | list[str] = "video",
         start_time: Optional[str] = None,
         end_time: Optional[str] = None,
         order: SearchOrder = "relevance",
@@ -40,7 +38,7 @@ class Youte:
         video_embeddable: Literal["any", "true"] = "any",
         video_license: Literal["any", "creativeCommon", "youtube"] = "any",
         video_dimension: Literal["2d", "3d", "any"] = "any",
-        location: Optional[Tuple] = None,
+        location: Optional[tuple] = None,
         location_radius: Optional[str] = None,
         max_result: int = 50,
         max_pages_retrieved: Optional[int] = None,
@@ -50,12 +48,12 @@ class Youte:
         Parameters
         ----------
         query : str
-            The term to search for. You can also use the Boolean NOT (-)
-            and OR (|) operators to exclude videos or to find videos
-            matching one of several search terms.
+            The term to search for. You can also use the Boolean NOT (-) and OR (|)
+            operators to exclude videos or to find videos matching one of several
+            search terms.
         type_ : str, default: "video"
-            Type of resources to retrieve. Can be one or a comma-separated string
-            containing one or more of {"channel", "video", "playlist"}
+            Type of resources to retrieve. Can be one or a list containing one or more
+            of {"channel", "video", "playlist"}
         start_time : str, optional
             Retrieve resources after this date. Has to be in YYYY-MM-DD format
         end_time : str, optional
@@ -94,7 +92,7 @@ class Youte:
             Only include videos with a particular license.
         video_dimension : {"2d", "3d", "any"}, default: "any"
             Only retrieve 2D or 3D videos.
-        location : Tuple, optional
+        location : tuple, optional
             Along with location_radius, defines a circular geographic area and restricts
             a search to videos that specify, in their metadata, a geographic location
             within that area. Both location and location_radius have to be specified.
@@ -125,7 +123,7 @@ class Youte:
             "part": "snippet",
             "maxResults": max_result,
             "q": query,
-            "type": type_,
+            "type": type_ if isinstance(type_, str) else ",".join(type_),
             "order": order,
             "safeSearch": safe_search,
             "key": self.api_key,
@@ -151,28 +149,21 @@ class Youte:
 
     def get_video_metadata(
         self,
-        ids: List[str],
-        part: List[str] = [
-            "snippet",
-            "statistics",
-            "topicDetails",
-            "status",
-            "contentDetails",
-            "recordingDetails",
-            "id",
-        ],
+        ids: list[str],
+        part: Optional[list[str]] = None,
         max_results: int = 50,
     ) -> Iterator[APIResponse]:
         """Retrieve full metadata for videos using their IDs.
 
         Parameters
         ----------
-        ids : List[str]
+        ids : list[str]
             A list of one or multiple video IDs. If a single ID is specified, it should
             be wrapped in a list as well, e.g. ["video_id"].
-        part : List[str], default: ["snippet", "statistics", "topicDetails",
-                                "status", "contentDetails", "recordingDetails", "id"]
+        part : list[str], optional
             A list of video resource properties that the API response will include.
+            If not, these are the parts used: ["snippet", "statistics", "topicDetails",
+            "status", "contentDetails", "recordingDetails", "id"].
         max_results : int, default: 50
             Maximum number of results returned in one page of response.
             Accepted value is between 0 and 50.
@@ -188,6 +179,17 @@ class Youte:
             If the value passed to ids is not a dict, a TypeError will be raised.
         """
         url: str = r"https://www.googleapis.com/youtube/v3/videos"
+        if part is None:
+            part = [
+                "snippet",
+                "statistics",
+                "topicDetails",
+                "status",
+                "contentDetails",
+                "recordingDetails",
+                "id",
+                "liveStreamingDetails",
+            ]
         params: dict = {
             "part": ",".join(part),
             "maxResults": max_results,
@@ -216,30 +218,24 @@ class Youte:
 
     def get_channel_metadata(
         self,
-        ids: List[str],
-        part: List[str] = [
-            "snippet",
-            "statistics",
-            "topicDetails",
-            "status",
-            "contentDetails",
-            "brandingSettings",
-            "contentOwnerDetails",
-        ],
+        ids: list[str],
+        part: Optional[list[str]] = None,
         max_results: int = 50,
     ) -> Iterator[APIResponse]:
         """Retrieve full metadata for channels using their IDs.
-        Currently do not work with usernames. Channel IDs can be obtained in API
+        Currently, do not work with usernames. Channel IDs can be obtained in API
         responses to other methods such as search() or get_video_metadata().
 
         Parameters
         ----------
-        ids : List[str]
+        ids : list[str]
             A list of one or multiple channel IDs. If a single ID is specified, it
             should be wrapped in a list as well, e.g. ["video_id"].
-        part : List[str], default: [ "snippet", "statistics", "topicDetails", "status",
-                        "contentDetails", "brandingSettings", "contentOwnerDetails", ]
+        part : list[str], optional
             A list of video resource properties that the API response will include.
+            If nothing is passed, the parts used are [ "snippet", "statistics",
+            "topicDetails", "status", "contentDetails", "brandingSettings",
+            "contentOwnerDetails"]
         max_results : int, default: 50
             Maximum number of results returned in one page of response.
             Accepted value is between 0 and 50.
@@ -255,6 +251,16 @@ class Youte:
             If the value passed to ids is not a dict, a TypeError will be raised.
         """
         url: str = r"https://www.googleapis.com/youtube/v3/channels"
+        if part is None:
+            part = [
+                "snippet",
+                "statistics",
+                "topicDetails",
+                "status",
+                "contentDetails",
+                "brandingSettings",
+                "contentOwnerDetails",
+            ]
         params: dict = {
             "part": ",".join(part),
             "maxResults": max_results,
@@ -282,9 +288,9 @@ class Youte:
 
     def get_comment_threads(
         self,
-        video_ids: Optional[List[str]] = None,
-        related_channel_ids: Optional[List[str]] = None,
-        comment_ids: Optional[List[str]] = None,
+        video_ids: Optional[list[str]] = None,
+        related_channel_ids: Optional[list[str]] = None,
+        comment_ids: Optional[list[str]] = None,
         order: Literal["time", "relevance"] = "time",
         search_terms: Optional[str] = None,
         text_format: Literal["html", "plainText"] = "html",
@@ -300,23 +306,23 @@ class Youte:
 
         Parameters
         ----------
-        video_ids : Optional[List[str]], optional
-            List of video IDs. If a single ID, wrap in list, too, e.g. ["video_id"].
+        video_ids : Optional[list[str]], optional
+            list of video IDs. If a single ID, wrap in list, too, e.g. ["video_id"].
             If this parameter is specified, the call will retrieve all comment threads
             on the specified videos. Nothing should be passed for related_channel_ids or
-            comment_ids if this paramter is specified. A warning will be displayed if
+            comment_ids if this parameter is specified. A warning will be displayed if
             a video has disabled comments.
-        related_channel_ids : Optional[List[str]], optional
-            List of channel IDs. If a single ID, wrap in list, too, e.g. ["channel_id"].
+        related_channel_ids : Optional[list[str]], optional
+            list of channel IDs. If a single ID, wrap in list, too, e.g. ["channel_id"].
             If this parameter is specified, retrieve all comment threads associated with
             these channels, including comments about the channels or the channels'
             videos. Nothing should be passed for video_ids or comment_ids if this
-            paramter is specified.
-        comment_ids : Optional[List[str]], optional
-            List of comment IDs. If a single ID, wrap in list, too, e.g. ["cmt_id"].
-            If this paramter is specified, retrieve metadata for all specified comment
+            parameter is specified.
+        comment_ids : Optional[list[str]], optional
+            list of comment IDs. If a single ID, wrap in list, too, e.g. ["cmt_id"].
+            If this parameter is specified, retrieve metadata for all specified comment
             IDs. Nothing should be passed for video_ids or comment_ids if this
-            paramter is specified.
+            parameter is specified.
         order : {"time", "relevance"}, default: "time"
             How comment threads are sorted.
         search_terms : Optional[str], optional
@@ -343,12 +349,12 @@ class Youte:
 
         if sum([bool(video_ids), bool(related_channel_ids), bool(comment_ids)]) > 1:
             raise ValueError(
-                "Use only one of the following paramaters: "
+                "Use only one of the following parameters: "
                 "video_ids, related_channel_ids, comment_ids"
             )
 
         url: str = r"https://www.googleapis.com/youtube/v3/commentThreads"
-        params: Dict[str, Union[str, int]] = {
+        params: dict[str, str | int] = {
             "part": "snippet",
             "textFormat": text_format,
             "key": self.api_key,
@@ -373,7 +379,7 @@ class Youte:
                 yield from _paginate_search_results(url=url, **params)
 
         if comment_ids:
-            url: str = r"https://www.googleapis.com/youtube/v3/comments"
+            url: str = r"https://www.googleapis.com/youtube/v3/commentThreads"
 
             comment_ids = list(set(comment_ids))
             while comment_ids:
@@ -393,18 +399,18 @@ class Youte:
 
     def get_thread_replies(
         self,
-        thread_ids: List[str],
+        thread_ids: list[str],
         text_format: Literal["html", "plainText"] = "html",
         max_results: int = 100,
     ) -> Iterator[APIResponse]:
-        """Retrieve replies to comment threads. Currently the API only supports getting
+        """Retrieve replies to comment threads. Currently, the API only supports getting
         replies to top-level comments. Replies to replies are not supported as of this
         version.
 
         Parameters
         ----------
-        thread_ids : List[str]
-            List of comment thread IDs. If a single ID, wrap in list, too, e.g.
+        thread_ids : list[str]
+            list of comment thread IDs. If a single ID, wrap in list, too, e.g.
             ["thread_id"].
         text_format : {"html", "plainText"}, default: "html"
             Specify the format of returned data.
@@ -424,7 +430,7 @@ class Youte:
             comment_ids - are specified, a ValueError will be raised.
         """
         url: str = r"https://www.googleapis.com/youtube/v3/comments"
-        params: Dict = {
+        params: dict = {
             "part": "snippet",
             "maxResults": max_results,
             "textFormat": text_format,
@@ -444,15 +450,7 @@ class Youte:
         region_code: str = "us",
         video_category_id: Optional[str] = None,
         max_results: int = 100,
-        part: List[str] = [
-            "snippet",
-            "statistics",
-            "topicDetails",
-            "status",
-            "contentDetails",
-            "recordingDetails",
-            "id",
-        ],
+        part: list[str] = None,
     ) -> Iterator[APIResponse]:
         """Retrieve the most popular videos for a region and video category.
 
@@ -464,9 +462,10 @@ class Youte:
             The video category ID for which the most popular videos should be retrieved.
         max_results : int, default: 100
             Maximum number of results to be retrieved per page.
-        part : List[str], default: [ "snippet", "statistics", "topicDetails", "status",
-                                     "contentDetails", "recordingDetails", "id", ]
+        part : list[str], optional
             A list of video resource properties that the API response will include.
+            If noting is passed, the parts used are [ "snippet", "statistics",
+            "topicDetails", "status", "contentDetails", "recordingDetails", "id"]
 
         Yields
         ------
@@ -474,7 +473,17 @@ class Youte:
             Returns an Iterator of dictionaries.
         """
         url: str = r"https://www.googleapis.com/youtube/v3/videos"
-        params: Dict = {
+        if part is None:
+            part = [
+                "snippet",
+                "statistics",
+                "topicDetails",
+                "status",
+                "contentDetails",
+                "recordingDetails",
+                "id",
+            ]
+        params: dict = {
             "part": part,
             "maxResults": max_results,
             "key": self.api_key,
@@ -487,7 +496,7 @@ class Youte:
 
     def get_related_videos(
         self,
-        video_ids: List[str],
+        video_ids: list[str],
         region: Optional[str] = None,
         relevance_language: Optional[str] = None,
         safe_search: Literal["none", "moderate", "strict"] = "none",
@@ -500,7 +509,7 @@ class Youte:
 
         Parameters
         ----------
-        video_ids : List[str]
+        video_ids : list[str]
             A list of video IDs for each of which to retrieve related videos. The
             function will iterate through each ID and get all related videos for that
             ID before moving on to the next. If a single ID is passed, wrap that in a
@@ -514,7 +523,7 @@ class Youte:
             highly relevant to the video.
         safe_search : {"none", "moderate", "strict"}, default: "none"
             Include restricted content or not.
-        max_result : int, default: 50
+        max_results : int, default: 50
             Maximum number of items that should be returned in one page of the result.
             Accepted values are between 0 and 50, inclusive.
         max_pages_retrieved : Optional[int], optional
@@ -552,19 +561,21 @@ def _paginate_search_results(
     url: str, max_pages_retrieved: Optional[int] = None, **kwargs
 ) -> Iterator[APIResponse]:
     page: int = 0
-    logger.info("getting requests")
-    r = _request_with_error_handling(url=url, params=kwargs)
+    logger.info(f"Getting page {page + 1}")
+    r = _request(url=url, params=kwargs)
     page += 1
     response = _add_meta(r.json(), collection_time=datetime.now())
     yield response
 
     while "nextPageToken" in r.json():
         if max_pages_retrieved and page >= max_pages_retrieved:
+            logger.info("Max pages reached")
             break
         else:
+            logger.info(f"Getting page {page + 1}")
             next_page_token = r.json()["nextPageToken"]
             kwargs["pageToken"] = next_page_token
-            r = _request_with_error_handling(url=url, params=kwargs)
+            r = _request(url=url, params=kwargs)
             page += 1
             response = _add_meta(r.json(), collection_time=datetime.now())
             yield response
@@ -577,11 +588,10 @@ def _add_meta(response: APIResponse, **kwargs) -> APIResponse:
     return response
 
 
-def _request_with_error_handling(
-    url: str, params: Dict[str, Union[str, int]]
-) -> requests.Response:
+def _request(url: str, params: dict[str, str | int]) -> requests.Response:
     response = requests.get(url, params=params)
-    logger.info(f"Getting {response.url}.\nStatus: {response.status_code}.")
+    logger.debug(f"Getting {response.url}")
+    logger.info(f"Status code: {response.status_code}")
 
     if response.status_code in [403, 400, 404]:
         try:
@@ -589,27 +599,20 @@ def _request_with_error_handling(
         except requests.exceptions.JSONDecodeError:
             raise InvalidRequest("Check url and endpoint.")
 
-        logger.error(f"Error: {response.url}")
+        logger.error(f"Error {response.status_code}: {response.url}")
         logger.error(json.dumps(errors))
 
-        for error in errors:
+        for error in errors["error"]["errors"]:
             # ignore if comment is disabled
             if error["reason"] == "commentsDisabled":
                 logger.warning(error["reason"])
             elif "quotaExceeded" in error["reason"]:
-                # wait until reset time if quota exceeded
                 until_reset = _get_reset_remaining(datetime.now(tz=tz.UTC))
-                logger.error(error["reason"])
-                click.echo(error["reason"])
-                logger.warning(f"Sleeping for {until_reset} seconds til reset time")
-                click.echo(f"Sleeping for {until_reset} seconds til reset time")
-                time.sleep(until_reset)
-                _request_with_error_handling(url, params)
+                raise APIError(
+                    f"{error['reason']}\n{until_reset} seconds til quota reset time"
+                )
             else:
-                logger.error(f"Reason: {error['message']}")
-                logger.error(json.dumps(response.json()))
-                click.echo(f"{error['message']}")
-                sys.exit(1)
+                raise APIError(error["message"])
 
     return response
 

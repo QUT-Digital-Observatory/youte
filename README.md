@@ -4,7 +4,7 @@ A command line utility to get YouTube video metadata and comments from YouTube D
 
 ## Installation
 
-```shell
+```bash
 python -m pip install youte
 ```  
 
@@ -16,7 +16,7 @@ To get data from YouTube API, you will need a YouTube API key. Follow YouTube [i
 
 You can save your API key in the youte config file for reuse. To do so, run:
 
-```shell  
+```bash  
 youte config add-key
 ```  
 
@@ -30,7 +30,7 @@ When running queries, if no API key or name is specified, `youte` will automatic
 
 If you want to manually set an existing key as a default, run:  
 
-```shell  
+```bash  
 youte config set-default <name-of-existing-key>
 ```
 
@@ -40,7 +40,7 @@ Note that what is passed to this command is the _name_ of the API key, not the A
 
 To see the list of all keys, run:  
 
-```shell  
+```bash  
 youte config list-keys
 ```  
 
@@ -50,7 +50,7 @@ The default key, if there is one, will have an asterisk next to it.
 
 To remove a stored key, run:
 
-```shell
+```bash
 youte config remove <name-of-key>
 ```
 
@@ -62,29 +62,74 @@ youte's config file is stored in a central place whose exact location depends on
 - Mac OS X: ~/Library/Application Support/youte/
 - Windows: C:\Users\\\<user>\\AppData\Roaming\youte
 
-## Search  
+## Search
 
-```commandline  
-Usage: youte search [OPTIONS] QUERY [OUTPUT]
+Searching can be as simple as:
 
-  Do a YouTube search.
+```bash
+youte search <search-terms> --key <API-key> --outfile <name-of-file.json>
+```
 
-  QUERY: search query
+If you have a default key set up using `youte config`, then there is no need to specify an API key using `--key`.
 
-  OUTPUT: name of json file to store output data
+This will return the maximum number of results pages (around 12-13) matching the search terms and store them in a JSON file. <search-terms> and `--outfile` have to be specified.
 
+In the search terms, you can also use the Boolean NOT (-) and OR (|) operators to exclude videos or to find videos that match one of several search terms. If the terms contain spaces, the entire search term value has to be wrapped in quotes.
+
+Prettify JSON results by using the flag `--pretty`:
+
+```bash
+youte search <search-terms> --key <API-key> --outfile <name-of-file> --pretty
+```
+
+### Limit pages returned
+
+Searching is very expensive in terms of API usage - a single results page uses up 100 points - 1% of your daily quota. Therefore, you can limit the maximum number of result pages returned, so that a search doesn't go on and exhaust your API quota.
+
+```bash
+youte search <search-terms> --max-pages 5
+```
+
+### Tidy data
+
+Raw JSONs from YouTube API contain query metadata and nested fields. You can tidy these data into a CSV or a flat JSON using `--tidy-to`. The default format that youte will tidy raw JSON into will be CSV.
+
+```bash
+youte search <search-terms> --limit 5 --to-csv <file-name.csv>
+```
+
+Specify `--format json` if you want to tidy raw data into an array of flat JSON objects.
+
+```bash
+youte search <search-terms> --limit 5 --to-csv <file-name.json> --format json
+```
+
+You can save results in both JSON and CSV format by specifying both a JSON name and a `--to-csv` option.
+
+```bash
+youte search <search-terms> -o <file-name.json> --limit 5 --to-csv <file-name.csv>
+```
+
+### Advanced search
+
+There are multiple filters to refine your search. A full list of these are provided below:
+
+``` {.bash .no-copy}
 Options:
   --from TEXT                     Start date (YYYY-MM-DD)
   --to TEXT                       End date (YYYY-MM-DD)
   --type TEXT                     Type of resource to search for  [default:
                                   video]
-  --name TEXT                     Specify an API name added to youte config
-  --key TEXT                      Specify a YouTube API key
   --order [date|rating|relevance|title|videoCount|viewCount]
                                   Sort results  [default: date]
   --safe-search [none|moderate|strict]
                                   Include or exclude restricted content
                                   [default: none]
+  --lang TEXT                     Return results most relevant to a language
+                                  (ISO 639-1 two-letter code)
+  --region TEXT                   Return videos viewable in the specified
+                                  country (ISO 3166-1 alpha-2 code)  [default:
+                                  US]
   --video-duration [any|long|medium|short]
                                   Include videos of a certain duration
   --channel-type [any|show]       Restrict search to a particular type of
@@ -101,75 +146,29 @@ Options:
                                   Search only embeddable videos
   --license, --video-license [any|creativeCommon|youtube]
                                   Include videos with a certain license
-  --max-results INTEGER RANGE     Maximum number of results returned per page
-                                  [default: 50; 0<=x<=50]
-  -l, --limit INTEGER RANGE       Maximum number of result pages to retrieve
-                                  [1<=x<=13]                           
-  --resume TEXT                   Resume progress from this file
-  --to-csv PATH                   Tidy data to CSV file
-  --help                          Show this message and exit.
-
-```  
-
-### Example  
-
-```commandline  
-youte search 'study with me' --from 2022-08-01 --to 2022-08-07
-
-youte search gaza --from 2022-07-25 --name user_2 --safe-search moderate --order=title gaza.json
 ```
 
-### Arguments and options  
+#### Restrict by date range
 
-#### `QUERY`  
+The `--from` and `--to` options allow you to restrict your search to a specific period. The input values have to be in ISO format (YYYY-MM-DD). Currently, all dates and times in youte are in UTC.
 
-The terms to search for. You can also use the Boolean NOT (-) and OR (|) operators to exclude videos or to find videos that match one of several search terms. If the terms contain spaces, the entire QUERY value has to be wrapped in quotes.  
+#### Restrict by type
 
-```commandline  
-youte search "koala|australia zoo -kangaroo"
-```  
+The `--type` option specifies the type of results returned, which by default is videos. The accepted values are `channel`, `playlist`, `video`, or a combination of these three. If more than one type is specified, separate each by a comma.
 
-If you are looking for exact phrases, the exact phrases can be wrapped in double quotes, then wrapped again in single quotes.  
+```shell
+youte search <search-terms> --limit 5 --type channel,video
+```
 
-```commandline  
-youte search '"australia zoo"' aussie_zoo.jsonl
-```  
+#### Restrict by language and region
 
-#### `OUTPUT` (optional)
+The `--lang` returns results most relevant to a language. Not all results will be in the specified language: results in other languages will still be returned if they are highly relevant to the search query term. To specify the language, use [ISO 639-1 two letter code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes), except that you should use the values `zh-Hans` for simplified Chinese and `zh-Hant` for traditional Chinese.
 
-Path of the output file where raw JSON responses will be stored. Must have `.json` file endings (e.g., `.json` or `.jsonl`). If the output file already exists, `youte` will **_update_** the existing file, instead of overwriting it.
+The `--region` returns results viewable in a region. It does *not* filter videos uploaded in that region only. To specify the region, use [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2).
 
-If no OUTPUT argument is passed, results will be printed to the terminal.
+### Sort results
 
-#### `--from` (optional)  
-
-Start date limit for the search results returned - the results returned by the API should only contain videos created on or after this date (UTC time, which is the default time zone for the YouTube API). Has to be in ISO format (YYYY-MM-DD).
-
-#### `--to` (optional)  
-
-End date limit for the search results returned - the results returned by the API should only contain videos created on or before this date (UTC time, which is the default time zone for the YouTube API). Has to be in ISO format (YYYY-MM-DD).
-
-#### `--name` (optional)  
-
-Name of the API key, if you don't want to use the default API key or if no default API key has been set.  
-
-The API key name has to be added to the config file first using `youte config add-key`.  
-
-#### `--key` (optional)
-
-The API key to use, if you want to use a key not configured with youte.
-
-#### `--type` (optional)
-
-Type of Youtube resource to retrieve. Can be one type or a comma-separated list of acceptable types, which are `channel`, `playlist`, `video`.
-
-#### `--limit` (optional)
-
-Specify the number of result pages to retrieve. Useful when you want to test search terms without using up your quota. 
-
-#### `--order` (optional)
-
-Specify how results will be sorted.
+The `--order` option specifies how results will be sorted. The following values are accepted:
 
 - `date`: Resources are sorted in reverse chronological order based on the date they were created (default value).
 - `rating`: Resources are sorted from highest to lowest rating.
@@ -177,66 +176,6 @@ Specify how results will be sorted.
 - `title` – Resources are sorted alphabetically by title.
 - `videoCount` – Channels are sorted in descending order of their number of uploaded videos.
 - `viewCount` – Resources are sorted from highest to lowest number of views. For live broadcasts, videos are sorted by number of concurrent viewers while the broadcasts are ongoing.
-
-#### `--safe-search` (optional)
-
-Specify whether restricted content is included or exclude.
-
-#### `--video-duration` (optional)
-
-Include videos of a certain duration.
-
-#### `--channel-type` (optional)
-
-Restrict search to a particular type of channel. `--type` has to include `channel`.
-
-#### `--caption` (optional)
-
-Restrict search to videos with or without captions. `--type` has to include `video`.
-
-#### `--definition` (optional)
-
-Restrict search to videos with a certain definition. `--type` has to include `video`.
-
-#### `--dimension` (optional)
-
-Restrict search to 2D or 3D videos. `--type` has to include `video`.
-
-#### `--embeddable` (optional)
-
-Only search for embeddable videos. `--type` has to include `video`.
-
-#### `--license` (optional)
-
-Only include videos with a certain licence.
-
-#### `--max-results` (optional)
-
-Maximum number of results returned per page. The default value is 50.
-
-#### `--resume` (optional)
-
-Resume progress from a progress file.
-
-Searching is very expensive in terms of API quota (100 units per search results page). Therefore, `youte` saves the progress of a search so that if you exit the program prematurely, you can choose to resume the search to avoid wasting valuable quota.
-
-When you exit the program in the middle of a search, a prompt will ask if you want to save progress. If yes, all search page tokens are stored to a database in the **.youte.history** folder inside your current directory. 
-
-The name of the progress file is printed on the terminal, as demonstrated below:
-
-```commandline
-Do you want to save your current progress? [y/N]: y
-Progress saved at /home/boyd/Documents/youte/.youte.history/search_1669178310.db
-To resume progress, run the same youte search command and add `--resume search_1669178310`
-```
-
-To resume progress of this query, run the same query again and add `--resume <NAME OF PROGRESS>`. 
-
-You can also run `youte list-history` to see the list of resumable progress files found in ***.youte.history*** folder inside your current directory.
-
-#### `--to-csv` (optional)  
-
-Tidy results into a CSV file.
 
 ## Hydrate a list of IDs
 

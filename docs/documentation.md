@@ -278,6 +278,28 @@ For example:
 youte chart -r <region-code> -o <file.json>
 ```
 
+## related-to
+
+`youte related-to` retrieves a list of videos related to a video.
+
+```shell
+youte related-to <video-ids>... -o <file.json>
+```
+
+If multiple video IDs are inputted, youte will iterate through each video ID separately, retrieving all related videos to each video, one by one.
+
+Other options include:
+
+```{.bash .no-copy}
+  --safe-search [none|moderate|strict]
+                                  Include or exclude restricted content
+                                  [default: none]
+  --region TEXT                   Specify region the videos can be viewed in
+                                  (ISO 3166-1 alpha-2 country code)
+  --lang TEXT                     Return results most relevant to a language
+                                  (ISO 639-1 two-letter code)
+```
+
 ## dehydrate
 
 `dehydrate` extracts the IDs from a JSON file returned from YouTube API.

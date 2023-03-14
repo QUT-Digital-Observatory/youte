@@ -4,17 +4,18 @@ A command line utility to get YouTube video metadata and comments from YouTube D
 
 ## Changes from youte 1.3.0
 
-Several major changes are made in youte 2.0. To better correspond with YouTube API endpoints and avoid confusion:
+Several major changes are made in youte 2.0. To better correspond with YouTube API endpoints and avoid confusion, some commands have been changed.
 
-- `youte hydrate` is now broken down to `youte videos` and `youte channels`, 
+- `youte hydrate` is now broken down to `youte videos` and `youte channels`.
 - `youte get-comments` is now `youte comments` and `youte replies`.
-- `youte most-popular` is now `youte chart`
-- `youte get-related` is now `youte related-to`
+- `youte most-popular` is now `youte chart`.
+- `youte get-related` is now `youte related-to`.
 
 Furthermore:
 
 - Resuming search is no longer available. Instead, you can set a limit on the number of search pages returned to avoid exhausting your API quota.
 - All youte commands that retrieve data from YouTube API now won't print results to the shell, but store them in a specified json or jsonl file. This is to avoid clogging up the shell.
+- You can now tidy data into a CSV or a flat JSON array.
 
 Big thanks to @Lingomat (Mat Bettinson) for code review and suggestions.
 
@@ -90,11 +91,11 @@ youte search <search-terms> --key <API-key> -o <name-of-file.json>
 
 If you have a default key set up using `youte config`, then there is no need to specify an API key using `--key`.
 
-This will return the maximum number of results pages (around 12-13) matching the search terms and store them in a JSON file. Unlike version 1.3, youte 2.0 does not print results to the terminal to avoid clogging it up. Instead, `--outfile` is now a required option. <search-terms> and `--outfile` must be specified. 
+This will return the maximum number of results pages (around 12-13) matching the search terms and store them in a JSON file. Unlike version 1.3, youte 2.0 does not print results to the terminal. Instead, `--outfile` is now a required option. <search-terms> and `--outfile` must be specified. 
 
 In the search terms, you can also use the Boolean NOT (-) and OR (|) operators to exclude videos or to find videos that match one of several search terms. If the terms contain spaces, the entire search term value has to be wrapped in quotes.
 
-Prettify JSON results by using the flag `--pretty`:
+Use the flag `--pretty` to pretty format the JSON output.
 
 ```bash
 youte search <search-terms> --key <API-key> --outfile <name-of-file> --pretty
@@ -112,7 +113,7 @@ youte search <search-terms> -m 5
 
 ### Tidy data
 
-Raw JSONs from YouTube API contain query metadata and nested fields. You can tidy these data into a CSV or a flat JSON using `--tidy-to`. The default format that youte will tidy raw JSON into will be CSV.
+Raw JSONs from YouTube API contain request metadata and nested fields. You can tidy these data into a CSV or a flat JSON using `--tidy-to`. The default format that youte will tidy raw JSON into will be CSV.
 
 ```bash
 youte search <search-terms> --tidy-to <file.csv>
@@ -182,9 +183,9 @@ youte search <search-terms> --limit 5 --type playlist,video
 
 The `--lang` returns results most relevant to a language. Not all results will be in the specified language: results in other languages will still be returned if they are highly relevant to the search query term. To specify the language, use [ISO 639-1 two letter code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes), except that you should use the values `zh-Hans` for simplified Chinese and `zh-Hant` for traditional Chinese.
 
-The `--region` returns results viewable in a region. It does *not* filter videos uploaded in that region only. To specify the region, use [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2).
+The `--region` returns results viewable in a region. To specify the region, use [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2). Note that this option does *not* filter videos uploaded in that region, but rather videos that can be _viewed_ in that region.
 
-The `--location` and `--radius` options define a circular geographic area to filter videos that specify, in their metadata, a location within this area. This is *not* a robust and reliable way to geolocate YouTube videos, hence should be used with care.
+The `--location` and `--radius` options define a circular geographic area to filter videos that specify, in their metadata, a location within this area. This is *not* a robust and reliable way to geolocate YouTube videos, and hence should be used with care.
 
 -  `--location` takes in 2 values - the latitude/longitude coordinates that represent the centre of the area
 -  `--radius` specifies the maximum distance that the location associated with a video can be from that point for the video to still be included in the search results. It must be a number followed by a unit. Valid units are `m`, `km`, `ft`, and `mi`. For example, `1500m`, `5km`, `10000ft`, and `0.75mi`.
@@ -246,7 +247,7 @@ youte comments <id>... -v --outfile <file.json>
 
 To retrieve comments on channels, specify channel ids and pass the `--by-channel-id` or `-c` flag.
 
-```shell
+```bash
 youte comments <id>... --by-channel-id --outfile <file.json>
 OR
 youte comments <id>... -c --outfile <file.json>
@@ -254,9 +255,9 @@ youte comments <id>... -c --outfile <file.json>
 
 If neither of the flags are specified, `youte comments` will assume the ids are thread ids and retrieve the full metadata for those threads.
 
-You can search within the threads and filter threads matching the search terms, by using the `--query` or `-q` option.
+You can search within the threads and filter threads that match the search terms, by using the `--query` or `-q` option.
 
-```shell
+```bash
 youte comments <ids>... -v --outfile <file.json> -q "search term"
 ```
 
@@ -266,6 +267,28 @@ While `youte comments` only retrieve top-level comment threads, if those threads
 
 ```shell
 youte replies <ids>... --outfile <file.json>
+```
+
+## related-to
+
+`related-to` retrieves videos related to a video.
+
+```shell
+youte related-to <video-ids>... -o <file.json>
+```
+
+If multiple video IDs are inputted, youte will iterate through each video ID separately, retrieving all related videos to each video, one by one.
+
+Other options include:
+
+```{.bash .no-copy}
+  --safe-search [none|moderate|strict]
+                                  Include or exclude restricted content
+                                  [default: none]
+  --region TEXT                   Specify region the videos can be viewed in
+                                  (ISO 3166-1 alpha-2 country code)
+  --lang TEXT                     Return results most relevant to a language
+                                  (ISO 639-1 two-letter code)
 ```
 
 ## chart

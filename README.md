@@ -1,6 +1,22 @@
-# youte  
+# youte 2.0
 
 A command line utility to get YouTube video metadata and comments from YouTube Data API.
+
+## Changes from youte 1.3.0
+
+Several major changes are made in youte 2.0. To better correspond with YouTube API endpoints and avoid confusion:
+
+- `youte hydrate` is now broken down to `youte videos` and `youte channels`, 
+- `youte get-comments` is now `youte comments` and `youte replies`.
+- `youte most-popular` is now `youte chart`
+- `youte get-related` is now `youte related-to`
+
+Furthermore:
+
+- Resuming search is no longer available. Instead, you can set a limit on the number of search pages returned to avoid exhausting your API quota.
+- All youte commands that retrieve data from YouTube API now won't print results to the shell, but store them in a specified json or jsonl file. This is to avoid clogging up the shell.
+
+Big thanks to @Lingomat (Mat Bettinson) for code review and suggestions.
 
 ## Installation
 
@@ -62,17 +78,19 @@ youte's config file is stored in a central place whose exact location depends on
 - Mac OS X: ~/Library/Application Support/youte/
 - Windows: C:\Users\\\<user>\\AppData\Roaming\youte
 
-## Search
+## search
 
 Searching can be as simple as:
 
 ```bash
 youte search <search-terms> --key <API-key> --outfile <name-of-file.json>
+# OR
+youte search <search-terms> --key <API-key> -o <name-of-file.json>
 ```
 
 If you have a default key set up using `youte config`, then there is no need to specify an API key using `--key`.
 
-This will return the maximum number of results pages (around 12-13) matching the search terms and store them in a JSON file. <search-terms> and `--outfile` have to be specified.
+This will return the maximum number of results pages (around 12-13) matching the search terms and store them in a JSON file. Unlike version 1.3, youte 2.0 does not print results to the terminal to avoid clogging it up. Instead, `--outfile` is now a required option. <search-terms> and `--outfile` must be specified. 
 
 In the search terms, you can also use the Boolean NOT (-) and OR (|) operators to exclude videos or to find videos that match one of several search terms. If the terms contain spaces, the entire search term value has to be wrapped in quotes.
 
@@ -84,10 +102,12 @@ youte search <search-terms> --key <API-key> --outfile <name-of-file> --pretty
 
 ### Limit pages returned
 
-Searching is very expensive in terms of API usage - a single results page uses up 100 points - 1% of your daily quota. Therefore, you can limit the maximum number of result pages returned, so that a search doesn't go on and exhaust your API quota.
+Searching is very expensive in terms of API usage - a single results page uses up 100 points - 1% of your standard daily quota. Therefore, you can limit the maximum number of result pages returned, so that a search doesn't go on and exhaust your API quota.
 
 ```bash
 youte search <search-terms> --max-pages 5
+# OR
+youte search <search-terms> -m 5
 ```
 
 ### Tidy data
@@ -95,20 +115,16 @@ youte search <search-terms> --max-pages 5
 Raw JSONs from YouTube API contain query metadata and nested fields. You can tidy these data into a CSV or a flat JSON using `--tidy-to`. The default format that youte will tidy raw JSON into will be CSV.
 
 ```bash
-youte search <search-terms> --limit 5 --to-csv <file-name.csv>
+youte search <search-terms> --tidy-to <file.csv>
 ```
 
 Specify `--format json` if you want to tidy raw data into an array of flat JSON objects.
 
 ```bash
-youte search <search-terms> --limit 5 --to-csv <file-name.json> --format json
+youte search <search-terms> --tidy-to <file-name.json> --format json
 ```
 
-You can save results in both JSON and CSV format by specifying both a JSON name and a `--to-csv` option.
-
-```bash
-youte search <search-terms> -o <file-name.json> --limit 5 --to-csv <file-name.csv>
-```
+`--tidy-to` option is available for all `youte` commands that retrieve data, and works the same way.
 
 ### Advanced search
 
@@ -116,8 +132,6 @@ There are multiple filters to refine your search. A full list of these are provi
 
 ``` {.bash .no-copy}
 Options:
-  --from TEXT                     Start date (YYYY-MM-DD)
-  --to TEXT                       End date (YYYY-MM-DD)
   --type TEXT                     Type of resource to search for  [default:
                                   video]
   --order [date|rating|relevance|title|videoCount|viewCount]
@@ -146,6 +160,10 @@ Options:
                                   Search only embeddable videos
   --license, --video-license [any|creativeCommon|youtube]
                                   Include videos with a certain license
+  --location FLOAT...             Lat and long coordinates to restrict search
+                                  to. --radius must be specified
+  --radius TEXT                   Define the geographic area to restrict
+                                  search. Must be a number with a unit
 ```
 
 #### Restrict by date range
@@ -157,7 +175,7 @@ The `--from` and `--to` options allow you to restrict your search to a specific 
 The `--type` option specifies the type of results returned, which by default is videos. The accepted values are `channel`, `playlist`, `video`, or a combination of these three. If more than one type is specified, separate each by a comma.
 
 ```shell
-youte search <search-terms> --limit 5 --type channel,video
+youte search <search-terms> --limit 5 --type playlist,video
 ```
 
 #### Restrict by language and region
@@ -165,6 +183,13 @@ youte search <search-terms> --limit 5 --type channel,video
 The `--lang` returns results most relevant to a language. Not all results will be in the specified language: results in other languages will still be returned if they are highly relevant to the search query term. To specify the language, use [ISO 639-1 two letter code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes), except that you should use the values `zh-Hans` for simplified Chinese and `zh-Hant` for traditional Chinese.
 
 The `--region` returns results viewable in a region. It does *not* filter videos uploaded in that region only. To specify the region, use [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2).
+
+The `--location` and `--radius` options define a circular geographic area to filter videos that specify, in their metadata, a location within this area. This is *not* a robust and reliable way to geolocate YouTube videos, hence should be used with care.
+
+-  `--location` takes in 2 values - the latitude/longitude coordinates that represent the centre of the area
+-  `--radius` specifies the maximum distance that the location associated with a video can be from that point for the video to still be included in the search results. It must be a number followed by a unit. Valid units are `m`, `km`, `ft`, and `mi`. For example, `1500m`, `5km`, `10000ft`, and `0.75mi`.
+
+Both `--location` and `--radius` have to be specified if they are to be used, otherwise an API error will be thrown.
 
 ### Sort results
 
@@ -177,165 +202,95 @@ The `--order` option specifies how results will be sorted. The following values 
 - `videoCount` – Channels are sorted in descending order of their number of uploaded videos.
 - `viewCount` – Resources are sorted from highest to lowest number of views. For live broadcasts, videos are sorted by number of concurrent viewers while the broadcasts are ongoing.
 
-## Hydrate a list of IDs
+## videos
 
-`youte hydrate` takes a list of resource IDs, and get the full data associated with them.
+`youte videos` takes in one or multiple video IDs and retrieve all public metadata for those videos. This complements results returned from `youte search`, as they contain only limited information.
 
-```commandline  
-Usage: youte hydrate [OPTIONS] [ITEMS]...
-
-  Hydrate YouTube resource IDs.
-
-  Get all metadata for a list of resource IDs. By default, the function hydrates video IDs.
-
-  All IDs passed in the command must be of one kind.
-
-  OUTPUT: name of JSON file to store output
-
-  ITEMS: ID(s) of item as provided by YouTube
-
-Options:
-  -o, --output FILENAME
-  -f, --file-path TEXT            Get IDs from file
-  --kind [videos|channels|comments]
-                                  Sort results  [default: videos]
-  --name TEXT                     Specify an API name added to youte config
-  --key TEXT                      Specify a YouTube API key
-  --to-csv PATH                   Tidy data to CSV file
-  --help                          Show this message and exit.
-
-``` 
-
-### Examples  
-
-```commandline
-# one video
-youte hydrate _KrKdj50mPk
-
-# two video
-youte hydrate _KrKdj50mPk hpwPciW74b8 --output videos.json
-
-# hydrate channel information and use IDs from a text file
-youte hydrate -f channel_ids.txt --kind channel
+```shell
+youte hydrate <resource-id>.... --outfile <file.json>
 ```
 
-### Arguments and options  
+You can put as many IDs as you need, separating each with a space.
 
-#### `ITEMS`
+Like search, you can also tidy the data to a CSV using the `--tidy-to` option.
 
-YouTube resource IDs. If there are multiple IDs, separate each one with a space.
+```shell
+youte hydrate <resource-id>... --outfile <file.json> --tidy-to <file-name.csv>
+```
 
-The IDs should all belong to one type, i.e. either video, channel, or comment. For example, you cannot mix both video AND channel IDs in one command.
+### Use IDs from text file
 
-#### `-f` or `--file-path`  
+You can hydrate a list of video ids stored in a text file by using `--file-path` or `-f`. The text file should contain a line-separated list of video ids, with no header.
 
-If you want to use IDs from a text file, specify this option with the path to the text file (e.g., `.csv` or `.txt`). The text file should contain a line-separated list of IDs. 
+```shell
+youte hydrate -f <id-file.csv>
+```
 
-One file should contain one type of IDs.
+This option is often used in combination with `youte dehydrate`, which retrieves the ids from raw JSON returned by `youte search` and stores them in a text file.
 
-#### `--kind` 
+## channels
 
-Specify which kind of resources the IDs are. The default value is `videos`.
+`youte channels` works the same as `youte videos`, except it retrieves channel metadata given channel ids.
 
-## Get all comments of a video or all replies to a top-level comment thread  
+## comments
 
-```commandline  
-Usage: youte get-comments [OPTIONS] [ITEMS]...
+`youte comments` retrieves top-level comments (comment threads) on one or multiple videos or channels. It takes in a list of ids and a flag indicating which type these ids are (i.e. videos or channels).
 
-  Get YouTube comments by video IDs or thread IDs.
+To retrieve comments on videos, specify the video ids and pass the `--by-video-id` or `-v` flag.
 
-  OUTPUT: name of JSON file to store output
+```shell
+youte comments <id>... --by-video-id --outfile <file.json>
+#OR
+youte comments <id>... -v --outfile <file.json>
+```
 
-  ITEMS: ID(s) of item as provided by YouTube
+To retrieve comments on channels, specify channel ids and pass the `--by-channel-id` or `-c` flag.
 
-Options:
-  -o, --output FILENAME
-  -f, --file-path TEXT   Get IDs from file
-  -t, --by-thread        Get all replies to a parent comment
-  -v, --by-video         Get all comments for a video ID
-  --name TEXT            Specify an API name added to youte config
-  --key TEXT             Specify a YouTube API key
-  --to-csv PATH          Tidy data to CSV file
-  --help                 Show this message and exit.
-```  
+```shell
+youte comments <id>... --by-channel-id --outfile <file.json>
+OR
+youte comments <id>... -c --outfile <file.json>
+```
 
-### Example  
+If neither of the flags are specified, `youte comments` will assume the ids are thread ids and retrieve the full metadata for those threads.
 
-```  
-# get comments on a video
-youte get-comments -v comments_for_videos.json WOoQOd33ZTY
+You can search within the threads and filter threads matching the search terms, by using the `--query` or `-q` option.
 
-# get replies to a thread
-youte get-comments -t replies.json UgxkjPsKbo2pUEAJju94AaABAg
-```  
+```shell
+youte comments <ids>... -v --outfile <file.json> -q "search term"
+```
 
-### Arguments and options  
+## replies
 
-#### `ITEMS`
+While `youte comments` only retrieve top-level comment threads, if those threads have replies, they can be retrieved using `youte replies`. `youte replies` takes a list of thread ids and return the replies to those threads.
 
-Video or comment thread IDs (unique identifiers provided by YouTube). If there are multiple IDs, separate each one with a space.
+```shell
+youte replies <ids>... --outfile <file.json>
+```
 
-The IDs should all belong to one type, i.e. either video or comment thread. You cannot mix both video AND comment thread IDs in one command.
+## chart
 
-#### `-f` or `--file-path`  
+`youte chart` retrieves the most popular videos in a region, specified by [ISO 3166-1 alpha-2 country codes](https://www.iso.org/obp/ui/#search). If no argument or option is given, it retrieves the most popular videos in the United States.
 
-If you want to use IDs from a text file, specify this option with the path to the text file (e.g., `.csv` or `.txt`). The text file should contain a line-separated list of IDs.
+You specify the region with the `-r` or `--region` option.
 
-One file should contain one type of IDs (i.e. either video or comment thread). You cannot add both video and comment thread IDs in the same file.
+For example:
 
-#### `--by-thread`, `--by-video`  
+```shell
+youte chart -r <region-code> -o <file.json>
+```
 
-- Get all replies to a comment thread (`--by-thread`, `-t`)  
-- Get all comments on a video (`--by-video`, `-v`)  
+## dehydrate
 
-If none of these flags are passed, the `get-comments` command works similarly to `hydrate` - getting full data for a list of comment IDs.
+`dehydrate` extracts the IDs from a JSON file returned from YouTube API.
 
-Only one flag can be used in one command.
+```shell
+youte dehydrate <file-name.json>
+```
 
-## Tidy JSON responses  
-
-```commandline  
-Usage: youte tidy [OPTIONS] FILEPATH... OUTPUT
-
-  Tidy raw JSON response into relational SQLite databases
-
-Options:
-  --help  Show this message and exit.
-```  
-
-The `tidy` command will detect the type of resources in the JSON file (i.e. video, channel, search results, or comments) and process the data accordingly. It's important that each JSON file contains just **one** type of resource. You can specify multiple JSON files, but the final argument has to be the output database. 
-
-
-### Database schemas
-
-`youte tidy` processes JSON data into different schemas depending on the type of resource in the JSON file. Here are the schema names with their corresponding YouTube resources.
-
-| Resource                             | Schema         |
-|--------------------------------------|----------------|
-| Search results (from `youte search`) | search_results |
-| Videos                               | videos         |
-| Channels                             | channels       |
-| Comment threads (top-level comments) | comments       |
-| Replies to comment threads           | comments       |
-
-
-### Data dictionary
-
-Refer to [YouTube Data API](https://developers.google.com/youtube/v3/docs) for definitions of the properties or fields returned in the data. Some fields such as `likeCount`, `viewCount`, and `commentCount` will show as null if these statistics are disabled.
-
-
-## Dehydrate
-
-```commandline  
-Usage: youte dehydrate [OPTIONS] INFILE
-
-  Extract an ID list from a file of YouTube resources
-
-  INFILE: JSON file of YouTube resources
-
+```{.shell .no-copy}
 Options:
   -o, --output FILENAME  Output text file to store IDs in
-  --help                 Show this message and exit.
 ```
 
 ## YouTube API Quota system and youte handling of quota 
@@ -349,7 +304,5 @@ For example:
 
 Free accounts get an API quota cap of 10,000 units per project per day, which resets at midnight Pacific Time.
 
-At present, you can only check your quota usage on the [Quotas](https://console.developers.google.com/iam-admin/quotas?pli=1&project=google.com:api-project-314373636293&folder=&organizationId=) page in the API Console. It is not possible to monitor quota usage via metadata returned in the API response.   
-
-`youte` does not monitor quota usage. However, it handles errors when quota is exceeded by sleeping until quota reset time. 
+At present, you can only check your quota usage on the [Quotas](https://console.developers.google.com/iam-admin/quotas?pli=1&project=google.com:api-project-314373636293&folder=&organizationId=) page in the API Console. It is not possible to monitor quota usage via metadata returned in the API response. `youte` does not monitor quota usage.
 

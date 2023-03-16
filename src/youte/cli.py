@@ -2,34 +2,41 @@
 Copyright: Digital Observatory 2022 <digitalobservatory@qut.edu.au>
 Author: Boyd Nguyen <thaihoang.nguyen@qut.edu.au>
 """
-import json
+from __future__ import annotations
+
 import logging
-import os
 import sys
 from json.decoder import JSONDecodeError
 from pathlib import Path
-from typing import List, Sequence, Union, Iterable
+from typing import IO, Literal
 
 import click
 
-from youte import tidier
-from youte.collector import Youte, ProgressSaver
+import youte.parser as parser
+from youte.collector import Youte
 from youte.config import YouteConfig
-from youte.exceptions import StopCollector, ValueAlreadyExists
-from youte.utilities import validate_date_string
+from youte.exceptions import ValueAlreadyExists
+from youte.utilities import export_file, retrieve_ids_from_file, validate_date_string
 
 # Logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-file_handler = logging.FileHandler("youte.log")
-file_handler.setLevel(logging.INFO)
-file_formatter = logging.Formatter(
-    "%(asctime)s - %(module)s: %(message)s (%(levelname)s)"
-)
-file_handler.setFormatter(file_formatter)
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+console_formatter = logging.Formatter("%(levelname)s: %(message)s")
+console_handler.setFormatter(console_formatter)
+logger.addHandler(console_handler)
 
-logger.addHandler(file_handler)
+
+# file_handler = logging.FileHandler("youte.log")
+# file_handler.setLevel(logging.INFO)
+# file_formatter = logging.Formatter(
+#     "%(asctime)s - %(module)s: %(message)s (%(levelname)s)"
+# )
+# file_handler.setFormatter(file_formatter)
+#
+# logger.addHandler(file_handler)
 
 
 def _validate_date(ctx, param, value):
@@ -38,17 +45,6 @@ def _validate_date(ctx, param, value):
             return value
         else:
             raise click.BadParameter("Date not in correct format (YYYY-MM-DD)")
-
-
-def _get_history_path(outfile: Union[str, Path]) -> Path:
-    history_dir = Path(".youte.history")
-
-    if not history_dir.exists():
-        os.mkdir(history_dir)
-
-    db_file = Path(outfile).with_suffix(".db")
-
-    return history_dir / db_file.name
 
 
 # CLI argument set up:
@@ -63,13 +59,22 @@ def youte():
 
 
 @youte.command()
-@click.argument("query", required=False)
+@click.argument("query")
 @click.option(
     "-o",
-    "--output",
-    type=click.File(mode="w"),
+    "--outfile",
+    type=click.Path(),
     help="Name of json file to store results to",
+    required=True,
 )
+@click.option(
+    "--output-format",
+    default="json",
+    type=click.Choice(["json", "jsonl"]),
+    help="Format of the output file",
+    show_default=True,
+)
+@click.option("--pretty", "-p", is_flag=True, help="Pretty print JSON")
 @click.option(
     "--from", "from_", help="Start date (YYYY-MM-DD)", callback=_validate_date
 )
@@ -159,6 +164,16 @@ def youte():
     help="Include videos with a certain license",
 )
 @click.option(
+    "--location",
+    nargs=2,
+    type=click.FLOAT,
+    help="Lat and long coordinates to restrict search to. --radius must be specified",
+)
+@click.option(
+    "--radius",
+    help="Define the geographic area to restrict search. Must be a number with a unit",
+)
+@click.option(
     "--max-results",
     type=click.IntRange(0, 50),
     help="Maximum number of results returned per page",
@@ -166,218 +181,476 @@ def youte():
     show_default=True,
 )
 @click.option(
-    "--limit",
-    "-l",
-    type=click.IntRange(1, 13),
+    "--max-pages",
+    "-m",
+    type=click.INT,
     help="Maximum number of result pages to retrieve",
 )
-@click.option("--resume", help="Resume progress from this file")
-@click.option("--to-csv", type=click.Path(), help="Tidy data to CSV file")
+@click.option("--tidy-to", type=click.Path(), help="Parse data and export to file")
+@click.option(
+    "--format",
+    "format_",
+    type=click.Choice(["json", "csv"]),
+    default="csv",
+    help="Format data is parsed into. Can be 'json', 'jsonl', or 'csv'",
+    show_default=True,
+)
 def search(
     query: str,
-    output: str,
+    outfile: Path,
+    output_format: Literal["json", "jsonl"],
+    pretty: bool,
     from_: str,
     to: str,
     name: str,
     key: str,
-    order: str,
-    video_duration: str,
+    order: Literal["date", "rating", "relevance", "title", "videoCount", "viewCount"],
+    video_duration: Literal["any", "long", "medium", "short"],
     lang: str,
     region: str,
     type_: str,
-    channel_type: str,
-    video_type: str,
-    caption: str,
-    video_definition: str,
-    video_dimension: str,
-    video_embeddable: str,
-    video_license: str,
-    safe_search: str,
-    resume: str,
-    to_csv: str,
-    limit: int,
+    channel_type: Literal["any", "show"],
+    video_type: Literal["any", "episode", "movie"],
+    caption: Literal["any", "closedCaption", "none"],
+    video_definition: Literal["any", "high", "standard"],
+    video_dimension: Literal["any", "2d", "3d"],
+    video_embeddable: Literal["any", "true"],
+    video_license: Literal["any", "creativeCommon", "youtube"],
+    safe_search: Literal["none", "moderate", "strict"],
+    location: tuple[float],
+    radius: str,
+    tidy_to: Path,
+    format_: Literal["json", "csv"],
+    max_pages: int,
     max_results: int,
 ) -> None:
     """Do a YouTube search
 
-    QUERY: search query
+    Retrieve pages of results matching query and other search criteria.
+
+    QUERY: The term to search for. You can also use the Boolean NOT (-) and OR (|)
+    operators to exclude videos or to find videos matching one of several search terms.
+
+    --outfile must be specified as the place to store raw output. Default format is JSON,
+    but you can save it as JSONL by specifying --output-format.
     """
     api_key = key if key else _get_api_key(name=name)
-    search_collector = _set_up_collector(api_key=api_key)
+    yob = Youte(api_key=api_key)
 
-    params = {
-        "part": "snippet",
-        "q": query,
-        "maxResults": max_results,
-        "order": order,
-        "safeSearch": safe_search,
-        "videoDuration": video_duration,
-        "type": type_,
-        "channelType": channel_type,
-        "videoCaption": caption,
-        "videoDefinition": video_definition,
-        "videoDimension": video_dimension,
-        "videoEmbeddable": video_embeddable,
-        "videoLicense": video_license,
-        "videoType": video_type,
-        "relevanceLanguage": lang,
-        "regionCode": region,
-    }
-
-    if from_:
-        params["publishedAfter"] = from_
-    if to:
-        params["publishedBefore"] = to
-
-    try:
-        if resume:
-            if not _get_history_path(resume).exists():
-                raise click.BadParameter("No such history file found")
-
-            resume_source = ProgressSaver(_get_history_path(resume))
-            params = resume_source.get_meta()
-
-        results = search_collector.search(
-            save_progress_to=resume, limit=limit, **params
+    results = [
+        result
+        for result in yob.search(
+            query=query,
+            type_=type_,
+            start_time=from_,
+            end_time=to,
+            order=order,
+            safe_search=safe_search,
+            language=lang,
+            region=region,
+            video_duration=video_duration,
+            video_type=video_type,
+            caption=caption,
+            video_definition=video_definition,
+            video_embeddable=video_embeddable,
+            location=location,
+            location_radius=radius,
+            video_dimension=video_dimension,
+            max_pages_retrieved=max_pages,
+            max_result=max_results,
+            video_license=video_license,
+            channel_type=channel_type,
         )
+    ]
 
-        click.echo(params)
+    export_file(
+        results, fp=outfile, file_format=output_format, pretty=pretty, ensure_ascii=True
+    )
 
-        for result in results:
-            click.echo(json.dumps(result), file=output)
-
-            if to_csv:
-                items = result["items"]
-                tidier.tidy_to_csv(items=items, output=to_csv, resource_kind="search")
-
-        if output:
-            click.echo(f"Results are stored in {output.name}")
-
-    except StopCollector:
-        _prompt_save_progress(search_collector.history_file)
+    if tidy_to:
+        if format_ == "csv":
+            parser.parse_searches(results).to_csv(tidy_to)
+        elif format_ == "json":
+            parser.parse_searches(results).to_json(tidy_to)
 
 
 @youte.command()
 @click.argument("items", nargs=-1, required=False)
-@click.option("-o", "--output", type=click.File(mode="w"), required=False)
-@click.option("-f", "--file-path", help="Get IDs from file", default=None)
 @click.option(
-    "-t",
-    "--by-thread",
-    "by_parent",
-    help="Get all replies to a parent comment",
+    "-o",
+    "--outfile",
+    type=click.Path(),
+    help="Name of json file to store results to",
+    required=True,
+)
+@click.option(
+    "--output-format",
+    default="json",
+    type=click.Choice(["json", "jsonl"]),
+    help="Format of the output file",
+    show_default=True,
+)
+@click.option("--pretty", "-p", is_flag=True, help="Pretty print JSON")
+@click.option("-f", "--file-path", help="Use IDs from file", default=None)
+@click.option(
+    "--order",
+    type=click.Choice(["time", "relevance"]),
+    default="time",
+    show_default=True,
+    help="Specify how comment threads are sorted",
+)
+@click.option(
+    "--text-format",
+    type=click.Choice(["html", "plainText"]),
+    default="html",
+    show_default=True,
+    help="Specify the text format of the returned data",
+)
+@click.option(
+    "--query", "-q", help="Only retrieve comment threads matching search terms"
+)
+@click.option(
+    "-c",
+    "--by-channel-id",
+    help="Get comments associated with one or a list channel",
     is_flag=True,
 )
-@click.option("-v", "--by-video", help="Get all comments for a video ID", is_flag=True)
+@click.option(
+    "--max-results",
+    type=click.IntRange(0, 100),
+    help="Maximum number of results returned per page",
+    default=100,
+    show_default=True,
+)
+@click.option(
+    "-v",
+    "--by-video-id",
+    help="Get all comments for one or a list of videos",
+    is_flag=True,
+)
 @click.option("--name", help="Specify an API key name added to youte config")
 @click.option("--key", help="Specify a YouTube API key")
-@click.option("--to-csv", type=click.Path(), help="Tidy data to CSV file")
-def get_comments(
-    items: Sequence[str],
-    output: str,
+@click.option("--tidy-to", type=click.Path(), help="Parse data and export to file")
+@click.option(
+    "--format",
+    "format_",
+    type=click.Choice(["json", "csv"]),
+    default="csv",
+    help="Format data is parsed into. Can be 'json', 'jsonl', or 'csv'",
+    show_default=True,
+)
+def comments(
+    items: list[str],
+    outfile: Path,
+    output_format: Literal["json", "jsonl"],
+    pretty: bool,
+    order: Literal["time", "relevance"],
+    text_format: Literal["html", "plainText"],
+    query: str,
     name: str,
     key: str,
-    file_path: str,
-    by_video: bool,
-    by_parent: bool,
-    to_csv,
+    file_path: Path,
+    by_video_id: bool,
+    by_channel_id: bool,
+    tidy_to: Path,
+    format_: Literal["json", "csv"],
+    max_results: int,
 ) -> None:
-    """
-    Get YouTube comments by video IDs or thread IDs
+    """Get YouTube comment threads (top-level comments)
 
-    The IDs should all belong to one type, i.e. either video or comment thread.
-    You cannot mix both video AND comment thread IDs in one command.
+    Retrieve comments in three ways:
+    1) Get comment threads on a video or a list of videos, using video ids
+    2) Get comment threads associated with a channel or a list of channels,
+    including comments about the channels' videos, using channel ids
+    3) Get all metadata around a comment or a list of comments, using comment thread ids
 
-    OUTPUT: name of JSON file to store output
+    ITEMS: id(s) of item as provided by YouTube
 
-    ITEMS: ID(s) of item as provided by YouTube
+    You have to specify which kind these ids are, by using --by-video-id or -v if the
+    ids are video ids, and --by-channel-id or -c if the ids are channel ids. If neither
+    of these flags are specified, it is assumed that the ids are comment thread ids.
+
+    You can use ids stored in a text file by using --file-path <FILENAME>. The file
+    has to contain a line-separated list of ids, with no header.
+
+    All ids specified have to be the same kind.
     """
     api_key = key if key else _get_api_key(name=name)
-    collector = _set_up_collector(api_key=api_key)
+    yob = Youte(api_key=api_key)
 
-    ids = _get_ids(string=items, file=file_path)
+    vid_ids: list[str] | None = None
+    channel_ids: list[str] | None = None
+    comment_ids: list[str] | None = None
 
-    if by_video and by_parent:
-        click.secho(
-            "Both video and parent flags are on. Only one is allowed.",
-            fg="red",
-            bold=True,
-        )
-        sys.exit(1)
-
-    item_type = "comments" if by_parent else "comment_threads"
-
-    if by_video:
-        by = "video"
-    elif by_parent:
-        by = "parent"
+    if by_video_id:
+        vid_ids = _get_ids(items, file_path)
+    elif by_channel_id:
+        channel_ids = _get_ids(items, file_path)
     else:
-        by = None
+        comment_ids = _get_ids(items, file_path)
 
-    results = collector.list_items(item_type=item_type, ids=ids, by=by)
+    results = [
+        result
+        for result in yob.get_comment_threads(
+            video_ids=vid_ids,
+            related_channel_ids=channel_ids,
+            comment_ids=comment_ids,
+            order=order,
+            search_terms=query,
+            text_format=text_format,
+            max_results=max_results,
+        )
+    ]
 
-    for result in results:
-        click.echo(json.dumps(result), file=output)
+    export_file(
+        results, outfile, file_format=output_format, pretty=pretty, ensure_ascii=True
+    )
 
-        if to_csv:
-            items = result["items"]
-            tidier.tidy_to_csv(items=items, output=to_csv, resource_kind="comments")
-
-    if output:
-        click.echo(f"Results are stored in {output.name}")
+    if tidy_to:
+        if format_ == "csv":
+            parser.parse_comments(results).to_csv(tidy_to)
+        elif format_ == "json":
+            parser.parse_comments(results).to_json(tidy_to, pretty=pretty)
 
 
 @youte.command()
 @click.argument("items", nargs=-1, required=False)
-@click.option("-o", "--output", type=click.File(mode="w"), required=False)
-@click.option("-f", "--file-path", help="Get IDs from file", default=None)
 @click.option(
-    "--kind",
-    type=click.Choice(["videos", "channels", "comments"], case_sensitive=False),
-    help="Sort results",
+    "-o",
+    "--outfile",
+    type=click.Path(),
+    help="Name of json file to store results to",
+    required=True,
+)
+@click.option(
+    "--output-format",
+    default="json",
+    type=click.Choice(["json", "jsonl"]),
+    help="Format of the output file",
     show_default=True,
-    default="videos",
+)
+@click.option("--pretty", "-p", is_flag=True, help="Pretty print JSON")
+@click.option("-f", "--file-path", help="Use IDs from file", default=None)
+@click.option(
+    "--text-format",
+    type=click.Choice(["html", "plainText"]),
+    default="html",
+    show_default=True,
+    help="Specify the text format of the returned data",
+)
+@click.option(
+    "--max-results",
+    type=click.IntRange(0, 100),
+    help="Maximum number of results returned per page",
+    default=100,
+    show_default=True,
 )
 @click.option("--name", help="Specify an API key name added to youte config")
 @click.option("--key", help="Specify a YouTube API key")
-@click.option("--to-csv", type=click.Path(), help="Tidy data to CSV file")
-def hydrate(
-    items: Sequence[str],
-    output: str,
-    kind: str,
-    file_path: str,
+@click.option("--tidy-to", type=click.Path(), help="Parse data and export to file")
+@click.option(
+    "--format",
+    "format_",
+    type=click.Choice(["json", "csv"]),
+    default="csv",
+    help="Format data is parsed into. Can be 'json', 'jsonl', or 'csv'",
+    show_default=True,
+)
+def replies(
+    items: list[str],
+    outfile: Path,
+    output_format: Literal["json", "jsonl"],
+    pretty: bool,
+    text_format: Literal["html", "plainText"],
     name: str,
     key: str,
-    to_csv,
-) -> Union[str, None]:
-    """Hydrate YouTube resource IDs
+    file_path: Path,
+    tidy_to: Path,
+    format_: Literal["json", "csv"],
+    max_results: int,
+) -> None:
+    """Get replies to comment threads
 
-    Get all metadata for a list of resource IDs.
-    By default, the function hydrates video IDs.
+    ITEMS: ID(s) of comment thread
 
-    The IDs should all belong to one type, i.e. either video, channel, or comment.
-    For example, you cannot mix both video AND channel IDs in one command.
-
-    OUTPUT: name of JSON file to store output
-
-    ITEMS: ID(s) of items as provided by YouTube
+    You can use ids stored in a text file by using --file-path <FILENAME>. The file
+    has to contain a line-separated list of ids, with no header.
     """
     api_key = key if key else _get_api_key(name=name)
-    collector = _set_up_collector(api_key=api_key)
+    yob = Youte(api_key=api_key)
+
+    ids = _get_ids(items, file_path)
+
+    results = [
+        result
+        for result in yob.get_thread_replies(
+            thread_ids=ids, text_format=text_format, max_results=max_results
+        )
+    ]
+
+    export_file(
+        results, outfile, file_format=output_format, pretty=pretty, ensure_ascii=True
+    )
+
+    if tidy_to:
+        if format_ == "csv":
+            parser.parse_comments(results).to_csv(tidy_to)
+        elif format_ == "json":
+            parser.parse_comments(results).to_json(tidy_to, pretty=pretty)
+
+
+@youte.command()
+@click.argument("items", nargs=-1, required=False)
+@click.option(
+    "-o",
+    "--outfile",
+    type=click.Path(),
+    help="Name of json file to store results to",
+    required=True,
+)
+@click.option(
+    "--output-format",
+    default="json",
+    type=click.Choice(["json", "jsonl"]),
+    help="Format of the output file",
+    show_default=True,
+)
+@click.option("--pretty", "-p", is_flag=True, help="Pretty print JSON")
+@click.option("-f", "--file-path", help="Get IDs from file", default=None)
+@click.option("--name", help="Specify an API key name added to youte config")
+@click.option("--key", help="Specify a YouTube API key")
+@click.option(
+    "--max-results",
+    type=click.IntRange(0, 50),
+    help="Maximum number of results returned per page",
+    default=50,
+    show_default=True,
+)
+@click.option("--tidy-to", type=click.Path(), help="Parse data and export to file")
+@click.option(
+    "--format",
+    "format_",
+    type=click.Choice(["json", "csv"]),
+    default="csv",
+    help="Format data is parsed into. Can be 'json', 'jsonl', or 'csv'",
+    show_default=True,
+)
+def videos(
+    items: list[str],
+    outfile: Path,
+    output_format: Literal["json", "jsonl"],
+    pretty: bool,
+    file_path: Path,
+    name: str,
+    key: str,
+    tidy_to: Path,
+    format_: Literal["json", "csv"],
+    max_results: int,
+) -> None:
+    """Retrieve video metadata
+
+    Get all metadata for one or multiple videos given their ids.
+
+    ITEMS: ID(s) of videos
+
+    You can use ids stored in a text file by using --file-path <FILENAME>. The file
+    has to contain a line-separated list of ids, with no header.
+    """
+    api_key = key if key else _get_api_key(name=name)
+    yob = Youte(api_key=api_key)
 
     ids = _get_ids(string=items, file=file_path)
 
-    results = collector.list_items(item_type=kind, ids=ids)
+    results = [
+        result for result in yob.get_video_metadata(ids, max_results=max_results)
+    ]
 
-    for result in results:
-        click.echo(json.dumps(result), file=output)
+    export_file(
+        results, outfile, file_format=output_format, pretty=pretty, ensure_ascii=True
+    )
 
-        if to_csv:
-            items = result["items"]
-            tidier.tidy_to_csv(items=items, output=to_csv, resource_kind=kind)
+    if tidy_to:
+        if format_ == "csv":
+            parser.parse_videos(results).to_csv(tidy_to)
+        elif format_ == "json":
+            parser.parse_videos(results).to_json(tidy_to, pretty=pretty)
 
-    if output:
-        click.echo(f"Results are stored in {output.name}")
+
+@youte.command()
+@click.argument("items", nargs=-1, required=False)
+@click.option(
+    "-o",
+    "--outfile",
+    type=click.Path(),
+    help="Name of json file to store results to",
+    required=True,
+)
+@click.option(
+    "--output-format",
+    default="json",
+    type=click.Choice(["json", "jsonl"]),
+    help="Format of the output file",
+    show_default=True,
+)
+@click.option("--pretty", "-p", is_flag=True, help="Pretty print JSON")
+@click.option("-f", "--file-path", help="Get IDs from file", default=None)
+@click.option("--name", help="Specify an API key name added to youte config")
+@click.option("--key", help="Specify a YouTube API key")
+@click.option(
+    "--max-results",
+    type=click.IntRange(0, 50),
+    help="Maximum number of results returned per page",
+    default=50,
+    show_default=True,
+)
+@click.option("--tidy-to", type=click.Path(), help="Parse data and export to file")
+@click.option(
+    "--format",
+    "format_",
+    type=click.Choice(["json", "csv"]),
+    default="csv",
+    help="Format data is parsed into. Can be 'json', 'jsonl', or 'csv'",
+    show_default=True,
+)
+def channels(
+    items: list[str],
+    outfile: Path,
+    output_format: Literal["json", "jsonl"],
+    pretty: bool,
+    file_path: Path,
+    name: str,
+    key: str,
+    tidy_to: Path,
+    format_: Literal["json", "csv"],
+    max_results: int,
+) -> None:
+    """Retrieve channel metadata
+
+    Get all metadata for one or multiple channels given their ids.
+
+    ITEMS: ID(s) of channels
+
+    You can use ids stored in a text file by using --file-path <FILENAME>. The file
+    has to contain a line-separated list of ids, with no header.
+    """
+    api_key = key if key else _get_api_key(name=name)
+    yob = Youte(api_key=api_key)
+
+    ids = _get_ids(string=items, file=file_path)
+
+    results = [
+        result for result in yob.get_channel_metadata(ids=ids, max_results=max_results)
+    ]
+
+    export_file(
+        results, outfile, file_format=output_format, pretty=pretty, ensure_ascii=True
+    )
+
+    if tidy_to:
+        if format_ == "csv":
+            parser.parse_channels(results).to_csv(tidy_to)
+        elif format_ == "json":
+            parser.parse_channels(results).to_json(tidy_to, pretty=pretty)
 
 
 @youte.command()
@@ -387,16 +660,34 @@ def hydrate(
 )
 @click.option(
     "-o",
-    "--output",
-    type=click.File(mode="w"),
+    "--outfile",
+    type=click.Path(),
     help="Name of JSON file to store output",
+    required=True,
 )
+@click.option(
+    "--output-format",
+    default="json",
+    type=click.Choice(["json", "jsonl"]),
+    help="Format of the output file",
+    show_default=True,
+)
+@click.option("--pretty", "-p", is_flag=True, help="Pretty print JSON")
 @click.option(
     "--safe-search",
     type=click.Choice(["none", "moderate", "strict"], case_sensitive=False),
     help="Include or exclude restricted content",
     default="none",
     show_default=True,
+)
+@click.option(
+    "--region",
+    type=click.STRING,
+    help="Specify region the videos can be viewed in (ISO 3166-1 alpha-2 country code)",
+)
+@click.option(
+    "--lang",
+    help="Return results most relevant to a language (ISO 639-1 two-letter code)",
 )
 @click.option("--name", help="Specify an API key name added to youte config")
 @click.option("--key", help="Specify a YouTube API key")
@@ -407,81 +698,153 @@ def hydrate(
     default=50,
     show_default=True,
 )
-@click.option("--to-csv", type=click.Path(), help="Tidy data to CSV file")
-def get_related(
-    items: Sequence[str],
-    output: str,
-    safe_search: str,
-    to_csv: str,
+@click.option("--tidy-to", type=click.Path(), help="Parse data and export to file")
+@click.option(
+    "--format",
+    "format_",
+    type=click.Choice(["json", "csv"]),
+    default="csv",
+    help="Format data is parsed into. Can be 'json', 'jsonl', or 'csv'",
+    show_default=True,
+)
+@click.option(
+    "--max-pages",
+    "-m",
+    type=click.INT,
+    help="Maximum number of result pages to retrieve",
+)
+def related_to(
+    items: list[str],
+    outfile: Path,
+    output_format: Literal["json", "jsonl"],
+    pretty: bool,
+    safe_search: Literal["none", "moderate", "strict"],
+    region: str,
+    lang: str,
     file_path: str,
     name: str,
     key: str,
     max_results: int,
+    max_pages: int,
+    tidy_to: Path,
+    format_: Literal["json", "csv"],
 ):
     """Get videos related to a video
+
+    Retrieve a list of videos related to a video using video id. If multiple ids are
+    specified, this will iterate over them and retrieve related videos for each of the
+    videos separately.
 
     ITEMS: ID(s) of videos as provided by YouTube
     """
     api_key = key if key else _get_api_key(name=name)
-    collector = _set_up_collector(api_key=api_key)
+    yob = Youte(api_key=api_key)
 
     ids = _get_ids(string=items, file=file_path)
 
-    for id_ in ids:
-        params = {
-            "part": "snippet",
-            "maxResults": max_results,
-            "safeSearch": safe_search,
-            "type": "video",
-            "relatedToVideoId": id_,
-        }
+    results = [
+        result
+        for result in yob.get_related_videos(
+            video_ids=ids,
+            region=region,
+            relevance_language=lang,
+            safe_search=safe_search,
+            max_results=max_results,
+            max_pages_retrieved=max_pages,
+        )
+    ]
 
-        results = collector.search(**params)
+    export_file(
+        results, outfile, file_format=output_format, pretty=pretty, ensure_ascii=True
+    )
 
-        click.echo(params)
-
-        for result in results:
-            click.echo(json.dumps(result), file=output)
-
-            if to_csv:
-                items = result["items"]
-                tidier.tidy_to_csv(items=items, output=to_csv, resource_kind="search")
-
-        if output:
-            click.echo(f"Results are stored in {output.name}")
+    if tidy_to:
+        if format_ == "csv":
+            parser.parse_searches(results).to_csv(tidy_to)
+        elif format_ == "json":
+            parser.parse_searches(results).to_json(tidy_to)
 
 
 @youte.command()
-@click.argument("output", type=click.File(mode="w"), required=False)
+@click.argument("region_code", default="us")
 @click.option(
-    "-r", "--region-code", help="ISO 3166-1 alpha-2 country codes to retrieve videos"
+    "-o",
+    "--outfile",
+    type=click.Path(),
+    help="Name of JSON file to store output",
+    required=True,
+)
+@click.option(
+    "--output-format",
+    default="json",
+    type=click.Choice(["json", "jsonl"]),
+    help="Format of the output file",
+    show_default=True,
+)
+@click.option("--pretty", "-p", is_flag=True, help="Pretty print JSON")
+@click.option(
+    "--video-category",
+    help="Video category ID for which the most popular videos should be retrieved",
 )
 @click.option("--name", help="Specify an API key name added to youte config")
 @click.option("--key", help="Specify a YouTube API key")
-@click.option("--to-csv", type=click.Path(), help="Tidy data to CSV file")
-def most_popular(region_code, output, name, key, to_csv):
+@click.option(
+    "--max-results",
+    type=click.IntRange(0, 50),
+    help="Maximum number of results returned per page",
+    default=50,
+    show_default=True,
+)
+@click.option("--tidy-to", type=click.Path(), help="Parse data and export to file")
+@click.option(
+    "--format",
+    "format_",
+    type=click.Choice(["json", "csv"]),
+    default="csv",
+    help="Format data is parsed into. Can be 'json' or 'csv'",
+    show_default=True,
+)
+def chart(
+    region_code: str,
+    outfile: Path,
+    output_format: Literal["json", "jsonl"],
+    pretty: bool,
+    video_category: str,
+    name: str,
+    key: str,
+    tidy_to: Path,
+    format_: Literal["json", "jsonl", "csv"],
+    max_results: int,
+):
     """Return the most popular videos for a region and video category
 
     By default, if nothing is else is provided, the command retrieves the most
     popular videos in the US.
 
-    OUTPUT: name of JSON file to store results
+    REGION_CODE: ISO 3166-1 alpha-2 country codes to retrieve videos, default "us"
     """
 
     api_key = key if key else _get_api_key(name=name)
-    collector = _set_up_collector(api_key=api_key)
+    yob = Youte(api_key=api_key)
 
-    results = collector.list_most_popular(region_code=region_code)
+    results = [
+        result
+        for result in yob.get_most_popular(
+            region_code=region_code,
+            video_category_id=video_category,
+            max_results=max_results,
+        )
+    ]
 
-    for result in results:
-        click.echo(json.dumps(result), file=output)
+    export_file(
+        results, outfile, file_format=output_format, pretty=pretty, ensure_ascii=True
+    )
 
-        if to_csv:
-            items = result["items"]
-            tidier.tidy_to_csv(items=items, output=to_csv, resource_kind="videos")
-
-    if output:
-        click.echo(f"Results are stored in {output.name}")
+    if tidy_to:
+        if format_ == "csv":
+            parser.parse_videos(results).to_csv(tidy_to)
+        elif format_ == "json":
+            parser.parse_videos(results).to_json(tidy_to, pretty=pretty)
 
 
 @youte.command()
@@ -489,62 +852,24 @@ def most_popular(region_code, output, name, key, to_csv):
 @click.option(
     "-o", "--output", type=click.File(mode="w"), help="Output text file to store IDs in"
 )
-def dehydrate(infile, output: str) -> None:
+def dehydrate(infile: Path, output: IO) -> None:
     """Extract an ID list from a file of YouTube resources
 
-    INFILE: JSON file of YouTube resources
+    This will take in a raw JSON or JSONL output file from YouTube Data API and extract
+    the item ids from it. The extracted ids are printed in the terminal or can be piped
+    into a text file.
+
+    INFILE: Raw JSON or JSONL containing output from YouTube Data API. Any raw output
+    from youte search, youte chart, youte videos, youte channels, youte comments,
+    youte replies, youte related-to is accepted. Parsed or tidied JSON is not accepted.
     """
     try:
-        items = tidier.get_items(infile)
-        ids = tidier.get_id(items)
+        ids = retrieve_ids_from_file(infile)
         for id_ in ids:
             click.echo(id_, file=output)
     except JSONDecodeError:
-        raise click.BadParameter("File is not JSON.")
-
-
-@youte.command()
-@click.argument("filepath", nargs=-1, type=click.Path(), required=True)
-@click.argument("output", type=click.Path(), required=True)
-def tidy(filepath, output):
-    """Tidy raw JSON response into relational SQLite databases"""
-    for file in filepath:
-        tidier.master_tidy(filepath=file, output=output)
-
-
-@youte.command()
-@click.option("-v", "--verbose", is_flag=True, help="Display full search info")
-@click.option("-c", "--clear", help="Clear searches by ID")
-@click.option("-C", "--clear-all", is_flag=True, help="Clear all search IDs")
-def history(verbose: bool = False, clear: str = None, clear_all: bool = False):
-    """List resumable search IDs"""
-    if not os.path.exists(".youte.history"):
-        click.echo("No history file found")
-
-    files = os.listdir(".youte.history")
-    if not files:
-        click.echo("No history file found")
-    else:
-        if clear_all:
-            for file in files:
-                try:
-                    os.remove(f".youte.history/{file}")
-                except FileNotFoundError:
-                    pass
-            sys.exit(0)
-        if clear:
-            try:
-                os.remove(f".youte.history/{clear}.db")
-                sys.exit(0)
-            except FileNotFoundError:
-                raise click.ClickException(f"No search found for {clear}")
-        if not verbose:
-            click.echo("\nsearch ID")
-            click.echo("--" * 20)
-            for file in files:
-                click.echo(file.replace(".db", ""))
-        else:
-            click.echo_via_pager(_generate_meta_from_search_id(files))
+        logging.exception("Error occurred")
+        raise click.BadParameter("File is not JSON or there is formatting error")
 
 
 @youte.group()
@@ -655,12 +980,6 @@ def list_keys():
         click.echo()
 
 
-def _set_up_collector(api_key: str) -> Youte:
-    collector = Youte(api_key=api_key)
-
-    return collector
-
-
 def _get_config_path(filename="config"):
     config_file_path = Path(click.get_app_dir("youte")).joinpath(filename)
     return str(config_file_path)
@@ -668,44 +987,18 @@ def _get_config_path(filename="config"):
 
 def _set_up_config(filename=_get_config_path()) -> YouteConfig:
     config_file = YouteConfig(filename=filename)
-
     return config_file
 
 
-def _get_ids(string: Sequence[str] = None, file: str = None) -> List[str]:
-    _raise_no_item_error(items=string, file_path=file)
-
+def _get_ids(string: list[str] = None, file: str | Path = None) -> list[str]:
+    if not (string or file):
+        raise click.BadParameter("No ids are specified.")
     if string:
         ids = list(string)
-
     if file:
         with open(file, mode="r") as f:
             ids = [row.rstrip() for row in f.readlines()]
-
     return ids
-
-
-def _raise_no_item_error(items: Sequence[str], file_path: str) -> None:
-    if not (items or file_path):
-        click.secho(
-            "No item ID is specified. Pass some item IDs or specify a file.",
-            fg="red",
-            bold=True,
-        )
-        sys.exit(1)
-
-
-def _prompt_save_progress(filename) -> None:
-    if click.confirm("Do you want to save your current progress?"):
-        full_path = Path(filename).resolve()
-        click.echo(f"Progress saved at {full_path}")
-        click.echo(f"To resume progress, run `search --resume {full_path.stem}`")
-    else:
-        try:
-            os.remove(filename)
-        except FileNotFoundError:
-            pass
-    sys.exit(0)
 
 
 def _get_api_key(name=None, filename="config"):
@@ -714,11 +1007,11 @@ def _get_api_key(name=None, filename="config"):
     """
     logger.info("Getting API key from config file.")
     config_file_path = Path(click.get_app_dir("youte")).joinpath(filename)
-    config = YouteConfig(filename=str(config_file_path))
+    config_obj = YouteConfig(filename=str(config_file_path))
 
     if name:
         try:
-            api_key = config[name]["key"]
+            api_key = config_obj[name]["key"]
         except KeyError:
             click.secho("ERROR", fg="red", bold=True)
             click.secho(
@@ -733,8 +1026,8 @@ def _get_api_key(name=None, filename="config"):
             sys.exit(1)
     else:
         default_check = []
-        for name in config:
-            if "default" in config[name]:
+        for name in config_obj:
+            if "default" in config_obj[name]:
                 default_check.append(name)
         if not default_check:
             click.secho(
@@ -744,12 +1037,6 @@ def _get_api_key(name=None, filename="config"):
             )
             sys.exit(1)
         else:
-            api_key = config[default_check[0]]["key"]
+            api_key = config_obj[default_check[0]]["key"]
 
     return api_key
-
-
-def _generate_meta_from_search_id(files: Iterable[str]) -> Sequence:
-    for file in files:
-        meta = ProgressSaver(_get_history_path(file)).get_meta()
-        yield f"Search ID: {file.replace('.db', '')}\n{json.dumps(meta)}\n--------------------------------------------------------\n"

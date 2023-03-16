@@ -1,238 +1,110 @@
 import os
-import json
+
 import pytest
-from click.testing import CliRunner
-from pathlib import Path
 
-from youte.config import YouteConfig
 from youte.collector import Youte
-from youte.cli import youte
-
 
 API_KEY = os.environ["STAGING_API_KEY"]
 NAME = "tester"
 
 
 @pytest.fixture()
-def config_path(tmp_path):
-    config_name = "test_config"
-    return tmp_path / config_name
+def yob() -> Youte:
+    return Youte(api_key=API_KEY)
 
 
-def test_config_empty(config_path):
-    youte_conf = YouteConfig(filename=str(config_path))
-    assert not config_path.exists()
+def test_search(yob):
+    searches = [
+        search for search in yob.search(query="harry potter", max_pages_retrieved=2)
+    ]
+    assert len(searches) == 2
+    assert "items" in searches[0]
+    assert len(searches[0]["items"]) > 5
 
 
-def test_config_add(config_path):
-    youte_conf = YouteConfig(filename=str(config_path))
-    youte_conf.add_profile(NAME, API_KEY)
-
-    assert config_path.exists()
-
-
-@pytest.fixture()
-def youte_obj(config_path) -> Youte:
-    youte_obj = Youte(api_key=API_KEY)
-    yield youte_obj
-    if os.path.exists(".youte.history"):
-        os.rmdir(".youte.history")
+def test_video_hydrate(yob):
+    ids = ["4MQyV7Wluhs", "6m0qaN2sGDg"]
+    videos = [vid for vid in yob.get_video_metadata(ids=ids)]
+    assert len(videos)
+    assert len(videos[0]["items"]) == 2
 
 
-@pytest.fixture()
-def runner() -> CliRunner:
-    runner = CliRunner()
-    yield runner
-    try:
-        os.remove("youte.log")
-    except FileNotFoundError:
-        pass
+def test_channel_hydrate_ids(yob):
+    ids = ["UC_NN7u1HKTQR6vurmS9iQ1A", "UCMhRG26kBpMp3GAZv5Iv7sw"]
+    channels = [ch for ch in yob.get_channel_metadata(ids=ids)]
+    assert len(channels)
+    assert len(channels[0]["items"]) == 2
 
 
-def test_empty_youte(youte_obj):
-    assert youte_obj.api_key == API_KEY
+# def test_channel_hydrate_username(yob):
+#     usernames = ["@brilliantclassics", "@TED"]
+#     channels = [ch
+#                 for ch in
+#                 yob.get_channel_metadata(usernames=usernames)]
+#     print(channels)
+#     assert len(channels)
+#     assert len(channels[0]["items"]) == 2
 
 
-@pytest.fixture()
-def search_params() -> dict:
-    params = {
-        "standard-no-output": [
-            "search",
-            "harry potter",
-            "--from",
-            "2021-01-01",
-            "--key",
-            API_KEY,
-            "--limit",
-            "2"
-        ],
-        "standard-output": [
-            "search",
-            "harry potter",
-            "--from",
-            "2021-01-01",
-            "--to",
-            "2021-01-02",
-            "--key",
-            API_KEY,
-            "--output",
-            "output.json",
-            "--limit",
-            "2"
-        ],
-        "wrong-date-format": [
-            "search",
-            "harry potter",
-            "--from",
-            "10-01-2021",
-            "--to",
-            "2021-02-01",
-            "--key",
-            API_KEY,
-            "--limit",
-            "2"
-        ],
-        "ordered-by-relevance": [
-            "search",
-            "harry potter",
-            "--order",
-            "relevance",
-            "--key",
-            API_KEY,
-            "--limit",
-            "2"
-        ],
-        "wrong-order-option": [
-            "search",
-            "harry potter",
-            "--from",
-            "2021-01-01",
-            "--order",
-            "alphabet",
-            "--key",
-            API_KEY,
-            "--limit",
-            "2"
-        ],
-        "safe-search": [
-            "search",
-            "harry potter",
-            "--from",
-            "2021-01-01",
-            "--to",
-            "2021-01-02",
-            "--safe-search",
-            "moderate",
-            "--key",
-            API_KEY,
-            "--limit",
-            "2"
-        ],
-        "long-videos": [
-            "search",
-            "harry potter",
-            "--from",
-            "2021-01-01",
-            "--to",
-            "2021-01-02",
-            "--safe-search",
-            "moderate",
-            "--video-duration",
-            "long",
-            "--key",
-            API_KEY,
-            "--limit",
-            "2"
-        ],
-        "no-query": ["search", "--from", "2022-08-01", "--key", API_KEY],
-    }
-
-    return params
+def test_comments_by_videos(yob):
+    vid_ids = ["4MQyV7Wluhs", "6m0qaN2sGDg"]
+    channel_ids = ["UC_NN7u1HKTQR6vurmS9iQ1A", "UCMhRG26kBpMp3GAZv5Iv7sw"]
+    comments = [cmt for cmt in yob.get_comment_threads(video_ids=vid_ids)]
+    assert len(comments) > 2
+    assert len(comments[0]["items"]) > 50
 
 
-@pytest.mark.parametrize(
-    "command", ["wrong-date-format", "wrong-order-option"]
-)
-def test_cli_search_fail(runner, search_params, command):
-    results = runner.invoke(youte, search_params[command])
-    assert results.exception
+def test_comments_by_channels(yob):
+    channel_id = ["UC_NN7u1HKTQR6vurmS9iQ1A"]
+    comments = [cmt for cmt in yob.get_comment_threads(related_channel_ids=channel_id)]
+    assert len(comments)
+    assert len(comments[0]["items"]) > 50
 
 
-@pytest.mark.parametrize(
-    "command",
-    ["standard-no-output", "ordered-by-relevance", "safe-search", "long-videos"],
-)
-def test_cli_search(runner, search_params, command):
-    results = runner.invoke(youte, search_params[command])
-    assert results.exit_code == 0
-    assert "youtube#searchListResponse" in results.output
+def test_comments_by_id(yob):
+    cmt_ids = ["Ugxk_z1g6ZmYZ9-ldXF4AaABAg", "UgyXx-EYT7oYvqwp_bJ4AaABAg"]
+    comments = [cmt for cmt in yob.get_comment_threads(comment_ids=cmt_ids)]
+    assert len(comments)
+    assert len(comments[0]["items"]) == 2
 
 
-def test_cli_search_output(runner, tmp_path, search_params):
-    with runner.isolated_filesystem(temp_dir=tmp_path) as td:
-        runner.invoke(youte, search_params["standard-output"])
-        assert os.path.exists("output.json")
-
-        with open("output.json", "r") as file:
-            row = file.readline()
-            r = json.loads(row)
-
-            assert len(r["items"]) > 5
-
-
-@pytest.fixture()
-def related_params() -> dict:
-    return {
-        "one-id": [
-            "get-related",
-            "f3m_WqxhL4o",
-            "--output",
-            "related.json"
-        ],
-        "multi-ids": [
-            "get-related",
-            "f3m_WqxhL4o",
-            "17yO5AssjAI",
-            "--output",
-            "related.json"
-        ],
-        "from-file": [
-            "get-related",
-            "-f",
-            (Path("tests") / "related_ids.csv").resolve(),
-            "--output",
-            "related.json"
+def test_comment_fail(yob):
+    vid_ids = ["4MQyV7Wluhs", "6m0qaN2sGDg"]
+    channel_ids = ["UC_NN7u1HKTQR6vurmS9iQ1A", "UCMhRG26kBpMp3GAZv5Iv7sw"]
+    with pytest.raises(ValueError):
+        comments = [
+            cmt
+            for cmt in yob.get_comment_threads(
+                video_ids=vid_ids, related_channel_ids=channel_ids
+            )
         ]
-    }
 
 
-@pytest.mark.parametrize(
-    "command",
-    ["one-id", "multi-ids", "from-file"]
-)
-def test_cli_related_search(runner, tmp_path, related_params, command):
-    with runner.isolated_filesystem(temp_dir=tmp_path) as td:
-        runner.invoke(youte, related_params[command])
-        assert os.path.exists("related.json")
-
-        with open("related.json", "r") as file:
-            row = file.readline()
-            r = json.loads(row)
-
-            assert len(r["items"]) > 10
+def test_replies(yob: Youte):
+    thread_ids = ["UgzZ1346QJnRezL5qgt4AaABAg", "Ugxsacik4CLIVA83S-B4AaABAg"]
+    comments = [
+        cmt
+        for cmt in yob.get_thread_replies(
+            thread_ids=thread_ids, text_format="plainText"
+        )
+    ]
+    assert len(comments)
+    assert len(comments[0]["items"]) > 2
+    assert "collection_time" in comments[0]
 
 
-@pytest.mark.parametrize(
-    "country",
-    [None, "au", "vn"]
-)
-def test_cli_most_popular(runner, tmp_path, country):
-    with runner.isolated_filesystem(temp_dir=tmp_path) as td:
-        runner.invoke(youte, ["most-popular", "test.json", "-r", country])
-        assert os.path.exists("test.json")
+def test_most_popular(yob: Youte):
+    videos = [vid for vid in yob.get_most_popular()]
+    assert len(videos)
+    assert len(videos[0]["items"]) > 10
 
-        with open("test.json", "r") as file:
-            row = file.readline()
-            r = json.loads(row)
 
-            assert len(r["items"]) > 40
+def test_related_videos(yob: Youte):
+    vid_ids = ["4MQyV7Wluhs", "6m0qaN2sGDg"]
+    videos = [
+        vid for vid in yob.get_related_videos(video_ids=vid_ids, max_pages_retrieved=2)
+    ]
+    assert len(videos)
+    assert "related_to_video_id" in videos[0]
+    assert videos[0]["related_to_video_id"] == vid_ids[0]  # type: ignore
+    assert len(videos[0]["items"]) > 10

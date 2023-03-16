@@ -15,4 +15,4 @@ def test(session):
     session.run("pip", "install", "--upgrade", "pip", "setuptools", "wheel")
     session.install(".")
     session.install("pytest")
-    session.run("pytest", "tests")
+    session.run("pytest")

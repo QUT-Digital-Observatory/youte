@@ -2,6 +2,20 @@
 title: "youte documentation"
 ---
 
+## Changes from youte 1.3.0
+
+Several major changes are made in youte 2.0. To better correspond with YouTube API endpoints and avoid confusion:
+
+- `youte hydrate` is now broken down to `youte videos` and `youte channels`, 
+- `youte get-comments` is now `youte comments` and `youte replies`.
+- `youte most-popular` is now `youte chart`
+- `youte get-related` is now `youte related-to`
+
+Furthermore:
+
+- Resuming search is no longer available. Instead, you can set a limit on the number of search pages returned to avoid exhausting your API quota.
+- All youte commands that retrieve data from YouTube API now won't print results to the shell, but store them in a specified json or jsonl file. This is to avoid clogging up the shell.
+
 ## Installation
 
 ```shell
@@ -46,8 +60,6 @@ youte config set-default <name-of-existing-key>
 
 Note that what is passed to this command is the _name_ of the API key, not the API key itself. It follows that the API key has to be first added to the config file using `youte config add-key`. If you use a name that has not been added to the config file, an error will be raised.
 
-
-
 ### Remove a key
 
 To remove a stored key, run:
@@ -68,41 +80,49 @@ youte's config file is stored in a central place whose exact location depends on
 
 Searching can be as simple as:
 
-```shell
-youte search <search-terms> --key <API-key>
+```bash
+youte search <search-terms> --key <API-key> --outfile <name-of-file.json>
+# OR
+youte search <search-terms> --key <API-key> -o <name-of-file.json>
 ```
 
-If you have a default key set up using `youte config`, then there is no need to specify an API key.
+If you have a default key set up using `youte config`, then there is no need to specify an API key using `--key`.
 
-This will return the maximum number of results pages (around 12-13) matching the search terms and print them to the shell. Instead of having the JSON printed to the shell, you can specify a JSON file to save results to with the `-o` or `--output` option.
-
-```shell
-youte search <search-terms> -o <file-name.json>
-```
+This will return the maximum number of results pages (around 12-13) matching the search terms and store them in a JSON file. Unlike version 1.3, youte 2.0 does not print results to the terminal to avoid clogging it up. Instead, `--outfile` is now a required option. <search-terms> and `--outfile` must be specified. 
 
 In the search terms, you can also use the Boolean NOT (-) and OR (|) operators to exclude videos or to find videos that match one of several search terms. If the terms contain spaces, the entire search term value has to be wrapped in quotes.
 
-### Limit
+Prettify JSON results by using the flag `--pretty`:
 
-Searching is very expensive in terms of API usage - each results page uses up 100 points of your daily quota. Therefore, you can limit the number of result pages returned, so that a search doesn't go on and exhaust your API quota.
-
-```shell
-youte search <search-terms> --limit 5
+```bash
+youte search <search-terms> --key <API-key> --outfile <name-of-file> --pretty
 ```
 
-### Export to CSV
+### Limit pages returned
 
-If you want tidy data in a spreadsheet format, pass the `--to-csv` option and name of the CSV file.
+Searching is very expensive in terms of API usage - a single results page uses up 100 points - 1% of your standard daily quota. Therefore, you can limit the maximum number of result pages returned, so that a search doesn't go on and exhaust your API quota.
 
-```shell
-youte search <search-terms> --limit 5 --to-csv <file-name.csv>
+```bash
+youte search <search-terms> --max-pages 5
+# OR
+youte search <search-terms> -m 5
 ```
 
-You can save results in both JSON and CSV format by specifying both a JSON name and a `--to-csv` option.
+### Tidy data
 
-```shell
-youte search <search-terms> -o <file-name.json> --limit 5 --to-csv <file-name.csv>
+Raw JSONs from YouTube API contain query metadata and nested fields. You can tidy these data into a CSV or a flat JSON using `--tidy-to`. The default format that youte will tidy raw JSON into will be CSV.
+
+```bash
+youte search <search-terms> --tidy-to <file.csv>
 ```
+
+Specify `--format json` if you want to tidy raw data into an array of flat JSON objects.
+
+```bash
+youte search <search-terms> --tidy-to <file-name.json> --format json
+```
+
+`--tidy-to` option is available for all `youte` commands that retrieve data, and works the same way.
 
 ### Advanced search
 
@@ -110,8 +130,6 @@ There are multiple filters to refine your search. A full list of these are provi
 
 ``` {.bash .no-copy}
 Options:
-  --from TEXT                     Start date (YYYY-MM-DD)
-  --to TEXT                       End date (YYYY-MM-DD)
   --type TEXT                     Type of resource to search for  [default:
                                   video]
   --order [date|rating|relevance|title|videoCount|viewCount]
@@ -140,6 +158,10 @@ Options:
                                   Search only embeddable videos
   --license, --video-license [any|creativeCommon|youtube]
                                   Include videos with a certain license
+  --location FLOAT...             Lat and long coordinates to restrict search
+                                  to. --radius must be specified
+  --radius TEXT                   Define the geographic area to restrict
+                                  search. Must be a number with a unit
 ```
 
 #### Restrict by date range
@@ -151,7 +173,7 @@ The `--from` and `--to` options allow you to restrict your search to a specific 
 The `--type` option specifies the type of results returned, which by default is videos. The accepted values are `channel`, `playlist`, `video`, or a combination of these three. If more than one type is specified, separate each by a comma.
 
 ```shell
-youte search <search-terms> --limit 5 --type channel,video
+youte search <search-terms> --limit 5 --type playlist,video
 ```
 
 #### Restrict by language and region
@@ -159,6 +181,13 @@ youte search <search-terms> --limit 5 --type channel,video
 The `--lang` returns results most relevant to a language. Not all results will be in the specified language: results in other languages will still be returned if they are highly relevant to the search query term. To specify the language, use [ISO 639-1 two letter code](https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes), except that you should use the values `zh-Hans` for simplified Chinese and `zh-Hant` for traditional Chinese.
 
 The `--region` returns results viewable in a region. It does *not* filter videos uploaded in that region only. To specify the region, use [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2).
+
+The `--location` and `--radius` options define a circular geographic area to filter videos that specify, in their metadata, a location within this area. This is *not* a robust and reliable way to geolocate YouTube videos, hence should be used with care.
+
+-  `--location` takes in 2 values - the latitude/longitude coordinates that represent the centre of the area
+-  `--radius` specifies the maximum distance that the location associated with a video can be from that point for the video to still be included in the search results. It must be a number followed by a unit. Valid units are `m`, `km`, `ft`, and `mi`. For example, `1500m`, `5km`, `10000ft`, and `0.75mi`.
+
+Both `--location` and `--radius` have to be specified if they are to be used, otherwise an API error will be thrown.
 
 ### Sort results
 
@@ -171,169 +200,103 @@ The `--order` option specifies how results will be sorted. The following values 
 - `videoCount` – Channels are sorted in descending order of their number of uploaded videos.
 - `viewCount` – Resources are sorted from highest to lowest number of views. For live broadcasts, videos are sorted by number of concurrent viewers while the broadcasts are ongoing.
 
-### Save and resume searches
+## videos
 
-As explained above, searching costs a lot of API units and can quickly use up your API quota. Ideally we would want to run as few searches as possible and avoid running the same search multiple times.
-
-youte saves the progress of a search so that if you exit the program prematurely, you can choose to resume the search to avoid wasting valuable quota.
-
-When you exit the program in the middle of a search (by pressing Ctrl + C), a prompt will ask if you want to save progress. If yes, all search page tokens are stored to a database in a *.youte.history* folder inside your current directory.
-
-The ID of the search is saved and printed to the shell, as demonstrated below:
-
-``` {.shell .no-copy}
-Do you want to save your current progress? [y/N]: y
-Progress saved at /home/boyd/Documents/youte/.youte.history/search_1677202150.db
-To resume progress, run `search --resume search_1677202150`
-```
-
-To resume progress of this query, simply run `youte search --resume <search-id>`. Once a query is completed, the search ID and database are deleted and removed.
-
-#### Search history
-
-Run `youte history` to see the list of resumable search IDs inside the ***.youte.history*** folder. To know the details of each search, run `youte history -v` or `youte history --verbose`.
-
-To wipe progress of a particular search, run `youte history -c <search-id>` or `youte history --clear <search-id>`. To clear all searches, run `youte history -C`. When you run `-c` or `-C`, the search databases will be deleted and you'll lose all search details and progress of those searches.
-
-## hydrate
-
-`youte hydrate` takes a list of resource IDs, and get the full data associated with them. The resources can be videos, channels, or comments.
+`youte videos` takes in one or multiple video IDs and retrieve all public metadata for those videos. This complements results returned from `youte search`, as they contain only limited information.
 
 ```shell
-youte hydrate <resource-id>....
+youte hydrate <resource-id>.... --outfile <file.json>
 ```
 
-You can put as many IDs as you need, separating each with a space. By default, youte takes these resource IDs as videos. You can specify the kind of resources with the `---kind` option.
+You can put as many IDs as you need, separating each with a space.
+
+Like search, you can also tidy the data to a CSV using the `--tidy-to` option.
 
 ```shell
-youte hydrate <resource-id>... --kind channels
+youte hydrate <resource-id>... --outfile <file.json> --tidy-to <file-name.csv>
 ```
 
-`--kind` accepts these 3 values: `channels`, `videos`, `comments`. Only one kind can be set at a time. It follows that all IDs have to be the same kind.
+### Use IDs from text file
 
-To store results in a file, pass the `--output` or `-o` option.
-
-```shell
-youte hydrate <resource-id>... --output <file-name.json>
-```
-
-Like search, you can also export the data to CSV using the `--to-csv` option.
-
-```shell
-youte hydrate <resource-id>... --to-csv <file-name.csv>
-```
-
-### Get IDs from text file
-
-You can hydrate a list of resource IDs stored in a text file by using `--file-path` or `-f`. The text file should contain a line-separated list of IDs, with no header. One file should contain one type of IDs.
+You can hydrate a list of video ids stored in a text file by using `--file-path` or `-f`. The text file should contain a line-separated list of video ids, with no header.
 
 ```shell
 youte hydrate -f <id-file.csv>
 ```
 
-## get-comments
+This option is often used in combination with `youte dehydrate`, which retrieves the ids from raw JSON returned by `youte search` and stores them in a text file.
 
-get-comments takes in one or a list of video or thread IDs, and return all comments under that video or thread. If the item is a video, get-comments retrieves all the top level comments (threads) of that video. If the item is a thread, get-comments retrieves all replies to that thread, if there are any.
+## channels
 
-You specify whether the ID belongs to a video or thread by the `-v` and `-t` flag.
+`youte channels` works the same as `youte videos`, except it retrieves channel metadata given channel ids.
 
-```shell
-youte get-comments <video-id> -v
-youte get-comments <thread-id> -t
-```
+## comments
 
-Only one flag can be used in one command. If none of these flags are passed, `get-comments` will not return anything.
+`youte comments` retrieves top-level comments (comment threads) on one or multiple videos or channels. It takes in a list of ids and a flag indicating which type these ids are (i.e. videos or channels).
 
-Other things you can do with get-comments are similar to `hydrate`:
-
-``` {.shell .no-copy}
-Options:
-  -o, --output FILENAME
-  -f, --file-path TEXT   Get IDs from file
-  --to-csv PATH          Tidy data to CSV file
-```
-
-
-## get-related
-
-get-related retrieves a list of videos related to a video/multiple videos.
+To retrieve comments on videos, specify the video ids and pass the `--by-video-id` or `-v` flag.
 
 ```shell
-youte get-related <video-id>...
+youte comments <id>... --by-video-id --outfile <file.json>
+# OR
+youte comments <id>... -v --outfile <file.json>
 ```
 
-If multiple video IDs are inputted, youte will iterate through each video ID separately, retrieving all related videos to each video, one by one.
+To retrieve comments on channels, specify channel ids and pass the `--by-channel-id` or `-c` flag.
 
-``` {.shell .no-copy}
-Options:
-  -f, --file-path PATH            Get IDs from file
-  -o, --output FILENAME           Name of JSON file to store output
-  --safe-search [none|moderate|strict]
-                                  Include or exclude restricted content
-                                  [default: none]
-  --name TEXT                     Specify an API key name added to youte
-                                  config
-  --key TEXT                      Specify a YouTube API key
-  --max-results INTEGER RANGE     Maximum number of results returned per page
-                                  [default: 50; 0<=x<=50]
-  --to-csv PATH                   Tidy data to CSV file
-  --help                          Show this message and exit.
+```shell
+youte comments <id>... --by-channel-id --outfile <file.json>
+# OR
+youte comments <id>... -c --outfile <file.json>
 ```
 
-## most-popular
+If neither of the flags are specified, `youte comments` will assume the ids are thread ids and retrieve the full metadata for those threads.
 
-most-popular retrieves the most popular videos in a region, specified by [ISO 3166-1 alpha-2 country codes](https://www.iso.org/obp/ui/#search). If no argument or option is given, it retrieves the most popular videos in the United States.
+You can search within the threads and filter threads matching the search terms, by using the `--query` or `-q` option.
 
-You specify the region with the `-r` or `--region` option.
+```shell
+youte comments <ids>... -v --outfile <file.json> -q "search term"
+```
+
+## replies
+
+While `youte comments` only retrieve top-level comment threads, if those threads have replies, they can be retrieved using `youte replies`. `youte replies` takes a list of thread ids and return the replies to those threads.
+
+```shell
+youte replies <ids>... --outfile <file.json>
+```
+
+## chart
+
+`youte chart` retrieves the most popular videos in a region, specified by [ISO 3166-1 alpha-2 country codes](https://www.iso.org/obp/ui/#search). If no argument or option is given, it retrieves the most popular videos in the United States.
 
 For example:
 
 ```shell
-youte most-popular -r <region-code>
+youte chart <region-code> -o <file.json>
 ```
 
-``` {.shell .no-copy}
-Usage: youte most-popular [OPTIONS] [OUTPUT]
+## related-to
 
-  Return the most popular videos for a region and video category
-
-  By default, if nothing is else is provided, the command retrieves the most
-  popular videos in the US.
-
-  OUTPUT: name of JSON file to store results
-
-Options:
-  -r, --region-code TEXT  ISO 3166-1 alpha-2 country codes to retrieve videos
-  --to-csv PATH           Tidy data to CSV file
-  --help                  Show this message and exit.
-```
-
-## tidy
-
-tidy tidies the raw JSON into an SQlite database. You can select multiple JSON files at the same time and tidy them into the same database.
+`youte related-to` retrieves a list of videos related to a video.
 
 ```shell
-youte tidy <file-name.json>... <output-db.db>
+youte related-to <video-ids>... -o <file.json>
 ```
 
-The `tidy` command will detect the type of resources in the JSON file (i.e. video, channel, search results, or comments) and process the data accordingly. It's important that each JSON file contains just **one** type of resource. You can specify multiple JSON files, but the final argument has to be the output database.
+If multiple video IDs are inputted, youte will iterate through each video ID separately, retrieving all related videos to each video, one by one.
 
+Other options include:
 
-### Database schemas
-
-`youte tidy` processes JSON data into different schemas depending on the type of resource in the JSON file. Here are the schema names with their corresponding YouTube resources.
-
-| Resource                             | Schema         |
-|--------------------------------------|----------------|
-| Search results (from `youte search`) | search_results |
-| Videos (from `youte hydrate`, `youte most-popular`, `youte get-related`)  | videos         |
-| Channels (from `youte hydrate`)      | channels       |
-| Comment threads (from `youte get-comments -v`) | comments       |
-| Replies to comment threads (from `youte get-comments -t`)           | comments       |
-
-### Data dictionary
-
-Refer to [YouTube Data API](https://developers.google.com/youtube/v3/docs) for definitions of the properties or fields returned in the data. Some fields such as `likeCount`, `viewCount`, and `commentCount` will be empty if these statistics are disabled.
+```{.bash .no-copy}
+  --safe-search [none|moderate|strict]
+                                  Include or exclude restricted content
+                                  [default: none]
+  --region TEXT                   Specify region the videos can be viewed in
+                                  (ISO 3166-1 alpha-2 country code)
+  --lang TEXT                     Return results most relevant to a language
+                                  (ISO 639-1 two-letter code)
+```
 
 ## dehydrate
 

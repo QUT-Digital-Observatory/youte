@@ -220,13 +220,19 @@ def search(
     location: tuple[float],
     radius: str,
     tidy_to: Path,
-    format_: Literal["json", "jsonl", "csv"],
+    format_: Literal["json", "csv"],
     max_pages: int,
     max_results: int,
 ) -> None:
     """Do a YouTube search
 
-    QUERY: search query
+    Retrieve pages of results matching query and other search criteria.
+
+    QUERY: The term to search for. You can also use the Boolean NOT (-) and OR (|)
+    operators to exclude videos or to find videos matching one of several search terms.
+
+    --outfile must be specified as the place to store raw output. Default format is JSON,
+    but you can save it as JSONL by specifying --output-format.
     """
     api_key = key if key else _get_api_key(name=name)
     yob = Youte(api_key=api_key)
@@ -275,6 +281,7 @@ def search(
     "--outfile",
     type=click.Path(),
     help="Name of json file to store results to",
+    required=True,
 )
 @click.option(
     "--output-format",
@@ -349,15 +356,24 @@ def comments(
     format_: Literal["json", "csv"],
     max_results: int,
 ) -> None:
-    """
-    Get YouTube comments by video IDs, channel IDs, or thread IDs
+    """Get YouTube comment threads (top-level comments)
 
-    The IDs should all belong to one type, i.e. either video or comment thread.
-    You cannot mix both video AND comment thread IDs in one command.
+    Retrieve comments in three ways:
+    1) Get comment threads on a video or a list of videos, using video ids
+    2) Get comment threads associated with a channel or a list of channels,
+    including comments about the channels' videos, using channel ids
+    3) Get all metadata around a comment or a list of comments, using comment thread ids
 
-    OUTPUT: name of JSON file to store output
+    ITEMS: id(s) of item as provided by YouTube
 
-    ITEMS: ID(s) of item as provided by YouTube
+    You have to specify which kind these ids are, by using --by-video-id or -v if the
+    ids are video ids, and --by-channel-id or -c if the ids are channel ids. If neither
+    of these flags are specified, it is assumed that the ids are comment thread ids.
+
+    You can use ids stored in a text file by using --file-path <FILENAME>. The file
+    has to contain a line-separated list of ids, with no header.
+
+    All ids specified have to be the same kind.
     """
     api_key = key if key else _get_api_key(name=name)
     yob = Youte(api_key=api_key)
@@ -404,6 +420,7 @@ def comments(
     "--outfile",
     type=click.Path(),
     help="Name of json file to store results to",
+    required=True,
 )
 @click.option(
     "--output-format",
@@ -452,10 +469,12 @@ def replies(
     format_: Literal["json", "csv"],
     max_results: int,
 ) -> None:
-    """
-    Get replies to comment threads using thread IDs
+    """Get replies to comment threads
 
     ITEMS: ID(s) of comment thread
+
+    You can use ids stored in a text file by using --file-path <FILENAME>. The file
+    has to contain a line-separated list of ids, with no header.
     """
     api_key = key if key else _get_api_key(name=name)
     yob = Youte(api_key=api_key)
@@ -487,6 +506,7 @@ def replies(
     "--outfile",
     type=click.Path(),
     help="Name of json file to store results to",
+    required=True,
 )
 @click.option(
     "--output-format",
@@ -524,20 +544,17 @@ def videos(
     name: str,
     key: str,
     tidy_to: Path,
-    format_: Literal["json", "jsonl", "csv"],
+    format_: Literal["json", "csv"],
     max_results: int,
 ) -> None:
-    """Hydrate YouTube resource IDs
+    """Retrieve video metadata
 
-    Get all metadata for a list of resource IDs.
-    By default, the function hydrates video IDs.
+    Get all metadata for one or multiple videos given their ids.
 
-    The IDs should all belong to one type, i.e. either video, channel, or comment.
-    For example, you cannot mix both video AND channel IDs in one command.
+    ITEMS: ID(s) of videos
 
-    OUTPUT: name of JSON file to store output
-
-    ITEMS: ID(s) of items as provided by YouTube
+    You can use ids stored in a text file by using --file-path <FILENAME>. The file
+    has to contain a line-separated list of ids, with no header.
     """
     api_key = key if key else _get_api_key(name=name)
     yob = Youte(api_key=api_key)
@@ -566,6 +583,7 @@ def videos(
     "--outfile",
     type=click.Path(),
     help="Name of json file to store results to",
+    required=True,
 )
 @click.option(
     "--output-format",
@@ -606,17 +624,14 @@ def channels(
     format_: Literal["json", "csv"],
     max_results: int,
 ) -> None:
-    """Hydrate YouTube resource IDs
+    """Retrieve channel metadata
 
-    Get all metadata for a list of resource IDs.
-    By default, the function hydrates video IDs.
+    Get all metadata for one or multiple channels given their ids.
 
-    The IDs should all belong to one type, i.e. either video, channel, or comment.
-    For example, you cannot mix both video AND channel IDs in one command.
+    ITEMS: ID(s) of channels
 
-    OUTPUT: name of JSON file to store output
-
-    ITEMS: ID(s) of items as provided by YouTube
+    You can use ids stored in a text file by using --file-path <FILENAME>. The file
+    has to contain a line-separated list of ids, with no header.
     """
     api_key = key if key else _get_api_key(name=name)
     yob = Youte(api_key=api_key)
@@ -648,6 +663,7 @@ def channels(
     "--outfile",
     type=click.Path(),
     help="Name of JSON file to store output",
+    required=True,
 )
 @click.option(
     "--output-format",
@@ -715,6 +731,10 @@ def related_to(
 ):
     """Get videos related to a video
 
+    Retrieve a list of videos related to a video using video id. If multiple ids are
+    specified, this will iterate over them and retrieve related videos for each of the
+    videos separately.
+
     ITEMS: ID(s) of videos as provided by YouTube
     """
     api_key = key if key else _get_api_key(name=name)
@@ -746,11 +766,13 @@ def related_to(
 
 
 @youte.command()
+@click.argument("region_code", default="us")
 @click.option(
     "-o",
     "--outfile",
     type=click.Path(),
     help="Name of JSON file to store output",
+    required=True,
 )
 @click.option(
     "--output-format",
@@ -760,13 +782,6 @@ def related_to(
     show_default=True,
 )
 @click.option("--pretty", "-p", is_flag=True, help="Pretty print JSON")
-@click.option(
-    "-r",
-    "--region-code",
-    help="ISO 3166-1 alpha-2 country codes to retrieve videos",
-    default="us",
-    show_default=True,
-)
 @click.option(
     "--video-category",
     help="Video category ID for which the most popular videos should be retrieved",
@@ -806,7 +821,7 @@ def chart(
     By default, if nothing is else is provided, the command retrieves the most
     popular videos in the US.
 
-    OUTPUT: name of JSON file to store results
+    REGION_CODE: ISO 3166-1 alpha-2 country codes to retrieve videos, default "us"
     """
 
     api_key = key if key else _get_api_key(name=name)
@@ -840,7 +855,13 @@ def chart(
 def dehydrate(infile: Path, output: IO) -> None:
     """Extract an ID list from a file of YouTube resources
 
-    INFILE: JSON file of YouTube resources
+    This will take in a raw JSON or JSONL output file from YouTube Data API and extract
+    the item ids from it. The extracted ids are printed in the terminal or can be piped
+    into a text file.
+
+    INFILE: Raw JSON or JSONL containing output from YouTube Data API. Any raw output
+    from youte search, youte chart, youte videos, youte channels, youte comments,
+    youte replies, youte related-to is accepted. Parsed or tidied JSON is not accepted.
     """
     try:
         ids = retrieve_ids_from_file(infile)
@@ -848,7 +869,7 @@ def dehydrate(infile: Path, output: IO) -> None:
             click.echo(id_, file=output)
     except JSONDecodeError:
         logging.exception("Error occurred")
-        raise click.BadParameter("File is not JSON.")
+        raise click.BadParameter("File is not JSON or there is formatting error")
 
 
 @youte.group()

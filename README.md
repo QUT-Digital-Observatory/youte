@@ -295,12 +295,10 @@ Other options include:
 
 `youte chart` retrieves the most popular videos in a region, specified by [ISO 3166-1 alpha-2 country codes](https://www.iso.org/obp/ui/#search). If no argument or option is given, it retrieves the most popular videos in the United States.
 
-You specify the region with the `-r` or `--region` option.
-
 For example:
 
 ```shell
-youte chart -r <region-code> -o <file.json>
+youte chart <region-code> -o <file.json>
 ```
 
 ## dehydrate

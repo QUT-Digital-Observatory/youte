@@ -308,12 +308,16 @@ def test_cli_related(runner, related_params, command, outfile_json):
 # TEST chart COMMAND
 
 
-@pytest.mark.parametrize("country", [None, "au", "vn"])
-def test_cli_chart(runner, tmp_path, country, outfile_json):
-    with runner.isolated_filesystem(temp_dir=tmp_path) as td:
-        runner.invoke(youte, ["chart", "-r", country, "-o", outfile_json])  # type: ignore
-        assert os.path.exists(outfile_json)
+@pytest.mark.parametrize("country", ["au", "vn"])
+def test_cli_chart(runner, country, outfile_json):
+    results = runner.invoke(
+        youte,  # type: ignore
+        ["chart", country, "--outfile", outfile_json, "--key", API_KEY],
+    )
+    assert results.exit_code == 0
 
-        with open(outfile_json, "r") as file:
-            r: list[dict] = json.loads(file.read())
-            assert len(r[0]["items"]) >= 10
+    with open(outfile_json, "r") as file:
+        r: list[dict] = json.loads(file.read())
+        assert len(r[0]["items"]) >= 10
+
+    os.remove(outfile_json)

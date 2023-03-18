@@ -310,3 +310,4 @@ youte dehydrate <file-name.json>
 Options:
   -o, --output FILENAME  Output text file to store IDs in
 ```
+

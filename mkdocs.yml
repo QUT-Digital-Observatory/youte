@@ -8,6 +8,7 @@ nav:
     - Home: index.md
     - Documentation: documentation.md
     - Tutorial: tutorial.md
+    - API reference: reference.md
 
 theme:
   name: material
@@ -30,9 +31,18 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
 
-
 extra_css:
   - stylesheets/extra.css
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            show_source: false
+            show_root_heading: true
 
 markdown_extensions:
   - pymdownx.highlight:

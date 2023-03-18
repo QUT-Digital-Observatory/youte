@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class Youte:
     def __init__(self, api_key: str):
+        """Requires an API key to instantiate."""
         self.api_key: str = api_key
 
     def search(
@@ -45,77 +46,66 @@ class Youte:
     ) -> Iterator[APIResponse]:
         """Do a YouTube search.
 
-        Parameters
-        ----------
-        query : str
-            The term to search for. You can also use the Boolean NOT (-) and OR (|)
-            operators to exclude videos or to find videos matching one of several
-            search terms.
-        type_ : str, default: "video"
-            Type of resources to retrieve. Can be one or a list containing one or more
-            of {"channel", "video", "playlist"}
-        start_time : str, optional
-            Retrieve resources after this date. Has to be in YYYY-MM-DD format
-        end_time : str, optional
-            Retrieve resources after this date. Has to be in YYYY-MM-DD format
-        order : {"date", "rating", "relevance", "title", "videoCount", "viewCount"},
-            default: "relevance"
-            Sort results.
-            - "date" sorts results in reverse chronological order.
-            - "rating" sorts results from highest to lowest ratings.
-            - "relevance" sorts results based on their relevance to the search query.
-            - "title" sorts results alphabetically by title.
-            - "videoCount" sorts channels in descending order of their number of videos.
-            - "viewCount" sorts videos in descending order of views. For live broadcasts,
-            videos are sorted by number of concurrent viewers while broadcasts are live.
-        safe_search : {"moderate", "none", "strict"}, optional
-            Include restricted content or not.
-        language : str, optional
-            Return results most relevant to a language. Accepted values are ISO 639-1
-            two-letter language code.
-        region : str, optional
-            Returns results that can be viewed in the specified country.
-            Use ISO 3166-1 alpha-2 country code.
-        video_duration : {"any", "long", "medium", "short"}, default: "any"
-            Filter results by video duration. type_ has to be "video".
-        channel_type : {"any", "show"}, default: "any"
-            Filter results by channel type.
-        video_type : {"any", "episode", "movie"}, default: "any"
-            Filter results by video type.
-        caption : {"any", "closedCaption", "none"}, default: "any"
-            Filter results based on whether they have captions.
-        video_definition : {"any", "high", "standard"}, default: "any"
-            Filter results by HD or SD videos.
-        video_embeddable : {"any", "true"}, default: "any"
-            Restrict to only videos that can be embedded into a webpage.
-        video_license : {"any", "creativeCommon", "youtube"}, default: "any"
-            Only include videos with a particular license.
-        video_dimension : {"2d", "3d", "any"}, default: "any"
-            Only retrieve 2D or 3D videos.
-        location : tuple, optional
-            Along with location_radius, defines a circular geographic area and restricts
-            a search to videos that specify, in their metadata, a geographic location
-            within that area. Both location and location_radius have to be specified.
-            Input is a tuple of latitude/longitude coordinates, e.g.
-            (37.42307,-122.08427).
-        location_radius : str, optional
-            Along with location, defines a circular geographic area and restricts
-            a search to videos that specify, in their metadata, a geographic location
-            within that area.
-            The parameter value must be a floating point number followed by a
-            measurement unit. Valid measurement units are m, km, ft, and mi. Values
-            larger than 1000 km are not supported.
-        max_result : int, default: 50
-            Maximum number of items that should be returned in one page of the result.
-            Accepted values are between 0 and 50, inclusive.
-        max_pages_retrieved : Optional[int], optional
-            Limit the number of result pages returned. Equals the maximum number of
-            calls made to the API.
+        Args:
+            query (str): The term to search for.
+                You can also use the Boolean NOT (-) and OR (|)
+                operators to exclude videos or to find videos matching one of several
+                search terms.
+            type_ (str | list[str]): Type of resources to retrieve.
+                Can be one or a list containing one or more
+                of "channel", "video", "playlist"
+            start_time (str, optional): Retrieve resources after this date.
+                Has to be in YYYY-MM-DD format
+            end_time (str, optional): Retrieve resources before this date.
+                Has to be in YYYY-MM-DD format
+            order ("date", "rating", "relevance", "title", "videoCount", "viewCount"):
+                Sort results.
+                - "date" sorts results in reverse chronological order.
+                - "rating" sorts results from highest to lowest ratings.
+                - "relevance" sorts results based on their relevance to the search query.
+                - "title" sorts results alphabetically by title.
+                - "videoCount" sorts channels in descending order of their number of videos.
+                - "viewCount" sorts videos in descending order of views. For live broadcasts,
+                videos are sorted by number of concurrent viewers while broadcasts are live.
+            safe_search ("moderate", "none", "strict"): Include restricted content
+                or not.
+            language (str, optional): Return results most relevant to a language.
+                Accepted values are ISO 639-1 two-letter language code.
+            region (str, optional): Returns results that can be viewed in the specified
+                country. Use ISO 3166-1 alpha-2 country code.
+            video_duration ("any", "long", "medium", "short"): Filter results by video
+                duration. type_ has to be "video".
+            channel_type ("any", "show"): Filter results by channel type.
+            video_type ("any", "episode", "movie"): Filter results by video type.
+            caption ("any", "closedCaption", "none"): Filter results based on whether
+                they have captions.
+            video_definition ("any", "high", "standard"): Filter results by HD or SD
+                videos.
+            video_embeddable ("any", "true"): Restrict to only videos that can be
+                embedded into a webpage.
+            video_license ("any", "creativeCommon", "youtube"): Only include videos
+                with a particular license.
+            video_dimension ("2d", "3d", "any"): Only retrieve 2D or 3D videos.
+            location (tuple, optional): Along with location_radius, defines a circular
+                geographic area and restricts a search to videos that specify, in their
+                metadata, a geographic location within that area. Both location and
+                location_radius have to be specified.
+                Input is a tuple of latitude/longitude coordinates, e.g.
+                (37.42307,-122.08427).
+            location_radius (str, optional): Along with location, defines a circular
+                geographic area and restricts a search to videos that specify,
+                in their metadata, a geographic location within that area.
+                The parameter value must be a floating point number followed by a
+                measurement unit. Valid measurement units are m, km, ft, and mi. Values
+                larger than 1000 km are not supported.
+            max_result (int): Maximum number of items that should be returned in one
+                page of the result.
+                Accepted values are between 0 and 50, inclusive.
+            max_pages_retrieved (int, optional): Limit the number of result pages
+                returned. Equals the maximum number of calls made to the API.
 
-        Yields
-        ------
-        Iterator[APIResponse]
-            Returns an Iterator of search results. Search results are dictionaries.
+        Yields:
+            Dict mappings containing API response.
         """
 
         url: str = r"https://www.googleapis.com/youtube/v3/search"
@@ -155,28 +145,23 @@ class Youte:
     ) -> Iterator[APIResponse]:
         """Retrieve full metadata for videos using their IDs.
 
-        Parameters
-        ----------
-        ids : list[str]
-            A list of one or multiple video IDs. If a single ID is specified, it should
-            be wrapped in a list as well, e.g. ["video_id"].
-        part : list[str], optional
-            A list of video resource properties that the API response will include.
-            If not, these are the parts used: ["snippet", "statistics", "topicDetails",
-            "status", "contentDetails", "recordingDetails", "id"].
-        max_results : int, default: 50
-            Maximum number of results returned in one page of response.
-            Accepted value is between 0 and 50.
+        Args:
+            ids (list[str]): A list of one or multiple video IDs.
+                If a single ID is specified, it should
+                be wrapped in a list as well, e.g. ["video_id"].
+            part (list[str], optional): A list of video resource properties that
+                the API response will include. If not, these are the parts used:
+                ["snippet", "statistics", "topicDetails",
+                "status", "contentDetails", "recordingDetails", "id"].
+            max_results (int):
+                Maximum number of results returned in one page of response.
+                Accepted value is between 0 and 50.
 
-        Yields
-        ------
-        Iterator[APIResponse]
-            Returns an Iterator of dictionaries.
+        Yields:
+            Dict mappings containing API response.
 
-        Raises
-        ------
-        TypeError
-            If the value passed to ids is not a dict, a TypeError will be raised.
+        Raises:
+            TypeError: If the value passed to ids is not a list, a TypeError will be raised.
         """
         url: str = r"https://www.googleapis.com/youtube/v3/videos"
         if part is None:
@@ -226,29 +211,24 @@ class Youte:
         Currently, do not work with usernames. Channel IDs can be obtained in API
         responses to other methods such as search() or get_video_metadata().
 
-        Parameters
-        ----------
-        ids : list[str]
-            A list of one or multiple channel IDs. If a single ID is specified, it
-            should be wrapped in a list as well, e.g. ["video_id"].
-        part : list[str], optional
-            A list of video resource properties that the API response will include.
-            If nothing is passed, the parts used are [ "snippet", "statistics",
-            "topicDetails", "status", "contentDetails", "brandingSettings",
-            "contentOwnerDetails"]
-        max_results : int, default: 50
-            Maximum number of results returned in one page of response.
-            Accepted value is between 0 and 50.
+        Args:
+            ids (list[str]): A list of one or multiple channel IDs. If a single ID is
+                specified, it should be wrapped in a list as well, e.g. ["video_id"].
+            part (list[str], optional): A list of video resource properties that the
+                API response will include.
+                If nothing is passed, the parts used are [ "snippet", "statistics",
+                "topicDetails", "status", "contentDetails", "brandingSettings",
+                "contentOwnerDetails"]
+            max_results (int):
+                Maximum number of results returned in one page of response.
+                Accepted value is between 0 and 50.
 
-        Yields
-        ------
-        Iterator[APIResponse]
-            Returns an Iterator of dictionaries.
+        Yields:
+            Dict mappings containing API response.
 
-        Raises
-        ------
-        TypeError
-            If the value passed to ids is not a dict, a TypeError will be raised.
+        Raises:
+            TypeError: If the value passed to ids is not a list,
+                a TypeError will be raised.
         """
         url: str = r"https://www.googleapis.com/youtube/v3/channels"
         if part is None:
@@ -304,47 +284,43 @@ class Youte:
         If comment_ids are specified, retrieve metadata of those comments.
         Exactly ONE of these parameters should be specified in one method call.
 
-        Parameters
-        ----------
-        video_ids : Optional[list[str]], optional
-            list of video IDs. If a single ID, wrap in list, too, e.g. ["video_id"].
-            If this parameter is specified, the call will retrieve all comment threads
-            on the specified videos. Nothing should be passed for related_channel_ids or
-            comment_ids if this parameter is specified. A warning will be displayed if
-            a video has disabled comments.
-        related_channel_ids : Optional[list[str]], optional
-            list of channel IDs. If a single ID, wrap in list, too, e.g. ["channel_id"].
-            If this parameter is specified, retrieve all comment threads associated with
-            these channels, including comments about the channels or the channels'
-            videos. Nothing should be passed for video_ids or comment_ids if this
-            parameter is specified.
-        comment_ids : Optional[list[str]], optional
-            list of comment IDs. If a single ID, wrap in list, too, e.g. ["cmt_id"].
-            If this parameter is specified, retrieve metadata for all specified comment
-            IDs. Nothing should be passed for video_ids or comment_ids if this
-            parameter is specified.
-        order : {"time", "relevance"}, default: "time"
-            How comment threads are sorted.
-        search_terms : Optional[str], optional
-            Only retrieve comment threads matching search terms.
-        text_format : {"html", "plainText"}, default: "html"
-            Specify the format of returned data.
-        max_results : int, default: 100
-            Maximum number of results returned in one page of response.
-            Accepted value is between 0 and 100. Only applicable when retrieving
-            comment threads using video or channel IDs. When comment IDs are provided,
-            this argument is not used.
+        Args:
+            video_ids (list[str], optional):
+                list of video IDs. If a single ID, wrap in list, too, e.g. ["video_id"].
+                If this parameter is specified, the call will retrieve all comment threads
+                on the specified videos. Nothing should be passed for related_channel_ids or
+                comment_ids if this parameter is specified. A warning will be displayed if
+                a video has disabled comments.
+            related_channel_ids (list[str], optional):
+                list of channel IDs. If a single ID, wrap in list, too, e.g. ["channel_id"].
+                If this parameter is specified, retrieve all comment threads associated with
+                these channels, including comments about the channels or the channels'
+                videos. Nothing should be passed for video_ids or comment_ids if this
+                parameter is specified.
+            comment_ids (list[str], optional):
+                list of comment IDs. If a single ID, wrap in list, too, e.g. ["cmt_id"].
+                If this parameter is specified, retrieve metadata for all specified comment
+                IDs. Nothing should be passed for video_ids or comment_ids if this
+                parameter is specified.
+            order ("time", "relevance"):
+                How comment threads are sorted.
+            search_terms (str, optional):
+                Only retrieve comment threads matching search terms.
+            text_format ("html", "plainText"):
+                Specify the format of returned data.
+            max_results (int):
+                Maximum number of results returned in one page of response.
+                Accepted value is between 0 and 100. Only applicable when retrieving
+                comment threads using video or channel IDs. When comment IDs are provided,
+                this argument is not used.
 
-        Yields
-        ------
-        Iterator[APIResponse]
-            Returns an Iterator of dictionaries.
+        Yields:
+            Dict mappings containing API response.
 
-        Raises
-        ------
-        ValueError
-            If more than one of these parameters - video_ids, related_channel_ids,
-            comment_ids - are specified, a ValueError will be raised.
+        Raises:
+            ValueError: If more than one of these parameters - video_ids,
+                related_channel_ids, comment_ids - are specified, a ValueError
+                will be raised.
         """
 
         if sum([bool(video_ids), bool(related_channel_ids), bool(comment_ids)]) > 1:
@@ -407,27 +383,21 @@ class Youte:
         replies to top-level comments. Replies to replies are not supported as of this
         version.
 
-        Parameters
-        ----------
-        thread_ids : list[str]
-            list of comment thread IDs. If a single ID, wrap in list, too, e.g.
-            ["thread_id"].
-        text_format : {"html", "plainText"}, default: "html"
-            Specify the format of returned data.
-        max_results : int, default: 100
-            Maximum number of results returned in one page of response.
-            Accepted value is between 0 and 100.
+        Args:
+            thread_ids (list[str]):
+                list of comment thread IDs. If a single ID, wrap in list, too, e.g.
+                ["thread_id"].
+            text_format ("html", "plainText"):
+                Specify the format of returned data.
+            max_results (int):
+                Maximum number of results returned in one page of response.
+                Accepted value is between 0 and 100.
 
-        Yields
-        ------
-        Iterator[APIResponse]
-            Returns an Iterator of dictionaries.
+        Yields:
+            Dict mappings containing API response.
 
-        Raises
-        ------
-        ValueError
-            If more than one of these parameters - video_ids, related_channel_ids,
-            comment_ids - are specified, a ValueError will be raised.
+        Raises:
+            TypeError: If thread_ids is not a list, a TypeError will be raised.
         """
         url: str = r"https://www.googleapis.com/youtube/v3/comments"
         params: dict = {
@@ -454,23 +424,21 @@ class Youte:
     ) -> Iterator[APIResponse]:
         """Retrieve the most popular videos for a region and video category.
 
-        Parameters
-        ----------
-        region_code : str, default: "us"
-            ISO 3166-1 alpha-2 country code for specifying a region.
-        video_category_id : Optional[str], optional
-            The video category ID for which the most popular videos should be retrieved.
-        max_results : int, default: 100
-            Maximum number of results to be retrieved per page.
-        part : list[str], optional
-            A list of video resource properties that the API response will include.
-            If noting is passed, the parts used are [ "snippet", "statistics",
-            "topicDetails", "status", "contentDetails", "recordingDetails", "id"]
+        Args:
+            region_code (str):
+                ISO 3166-1 alpha-2 country code for specifying a region.
+            video_category_id (str, optional):
+                The video category ID for which the most popular videos should
+                be retrieved.
+            max_results (int):
+                Maximum number of results to be retrieved per page.
+            part (list[str], optional):
+                A list of video resource properties that the API response will include.
+                If noting is passed, the parts used are [ "snippet", "statistics",
+                "topicDetails", "status", "contentDetails", "recordingDetails", "id"]
 
-        Yields
-        ------
-        Iterator[APIResponse]
-            Returns an Iterator of dictionaries.
+        Yields:
+            Dict mappings containing API response.
         """
         url: str = r"https://www.googleapis.com/youtube/v3/videos"
         if part is None:
@@ -507,35 +475,32 @@ class Youte:
         Can iterate over a list of video IDs and retrieve related videos for each of the
         specified ID.
 
-        Parameters
-        ----------
-        video_ids : list[str]
-            A list of video IDs for each of which to retrieve related videos. The
-            function will iterate through each ID and get all related videos for that
-            ID before moving on to the next. If a single ID is passed, wrap that in a
-            list, too.
-        region : Optional[str], optional
-            An ISO 3166-1 alpha-2 country code to specify the region that videos can be
-            viewed in.
-        relevance_language : Optional[str], optional
-            An ISO 639-1 two-letter language code to filter results most relevant to a
-            language. Results in other languages will still be included if they are
-            highly relevant to the video.
-        safe_search : {"none", "moderate", "strict"}, default: "none"
-            Include restricted content or not.
-        max_results : int, default: 50
-            Maximum number of items that should be returned in one page of the result.
-            Accepted values are between 0 and 50, inclusive.
-        max_pages_retrieved : Optional[int], optional
-            Limit the number of result pages returned PER video ID.
-            Equals the maximum number of calls made to the API PER video ID. So, if this
-            parameter is set to 2 and a list of 3 IDs is specified for video_ids, that
-            will make 6 calls to the API in total.
+        Args:
+            video_ids (list[str]):
+                A list of video IDs for each of which to retrieve related videos. The
+                function will iterate through each ID and get all related videos for that
+                ID before moving on to the next. If a single ID is passed, wrap that in a
+                list, too.
+            region (str, optional):
+                An ISO 3166-1 alpha-2 country code to specify the region that videos can be
+                viewed in.
+            relevance_language (str, optional):
+                An ISO 639-1 two-letter language code to filter results most relevant to a
+                language. Results in other languages will still be included if they are
+                highly relevant to the video.
+            safe_search ("none", "moderate", "strict"):
+                Include restricted content or not.
+            max_results (int):
+                Maximum number of items that should be returned in one page of the result.
+                Accepted values are between 0 and 50, inclusive.
+            max_pages_retrieved (int, optional):
+                Limit the number of result pages returned PER video ID.
+                Equals the maximum number of calls made to the API PER video ID.
+                So, if this parameter is set to 2 and a list of 3 IDs is specified
+                for video_ids, that makes 6 calls to the API in total.
 
-        Yields
-        ------
-        Iterator[APIResponse]
-            Returns an Iterator of dictionaries.
+        Yields:
+            Dict mappings containing API response.
         """
         url: str = r"https://www.googleapis.com/youtube/v3/search"
         params: dict = {

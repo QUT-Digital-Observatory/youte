@@ -22,14 +22,10 @@ def parse_search(data: SearchResult) -> Searches:
     of Search objects. These Search objects are like dictionaries with keys
     representing attributes of the search results.
 
-    Parameters
-    ----------
-    data : dict
-        A single dictionary as returned by Youte.search()
+    Args:
+        data (dict): A single dictionary as returned by Youte.search()
 
-    Returns
-    -------
-    Searches
+    Returns:
         A list of Search objects.
     """
     searches = [search for search in _parse_search(data)]
@@ -41,14 +37,11 @@ def parse_searches(data: Iterable[SearchResult]) -> Searches:
     Search objects. Works very similarly to parse_search except over a list of search
     results.
 
-    Parameters
-    ----------
-    data : Iterable[dict]
-        A list or iterator of dictionaries returned by Youte.search()
+    Args:
+        data (Iterable[dict]):
+            A list or iterator of dictionaries returned by Youte.search()
 
-    Returns
-    -------
-    Searches
+    Returns:
         A list of Search objects.
     """
     searches: list[Search] = []
@@ -63,15 +56,12 @@ def parse_video(data: VideoChannelResult) -> Videos:
     Youte.get_most_popular() into a list of Video objects. These Video objects are
     like dictionaries with keys representing video attributes.
 
-    Parameters
-    ----------
-    data : dict
-        A single dictionary returned by Youte.get_video_metadata() or
-        Youte.get_most_popular()
+    Args:
+        data (dict):
+            A single dictionary returned by Youte.get_video_metadata() or
+            Youte.get_most_popular()
 
-    Returns
-    -------
-    Videos
+    Returns:
         A Videos object containing a list of Video objects.
     """
     videos = [video for video in _parse_video(data)]
@@ -83,15 +73,12 @@ def parse_videos(data: Iterable[VideoChannelResult]) -> Videos:
     Youte.get_most_popular() into a list of Video objects. These Video objects are
     like dictionaries with keys representing video attributes.
 
-    Parameters
-    ----------
-    data : Iterable[dict]
-        A list or iterator of dictionaries returned by Youte.get_video_metadata() or
-        Youte.get_most_popular()
+    Args:
+        data (Iterable[dict]):
+            A list or iterator of dictionaries returned by Youte.get_video_metadata() or
+            Youte.get_most_popular()
 
-    Returns
-    -------
-    Videos
+    Returns:
         A Videos object containing a list of Video objects.
     """
     videos: list[Video] = []
@@ -106,14 +93,11 @@ def parse_channel(data: VideoChannelResult) -> Channels:
     Channel objects. These Channel objects are like dictionaries with keys representing
     channel attributes.
 
-    Parameters
-    ----------
-    data : dict
-        A single dictionary returned by Youte.get_channel_metadata()
+    Args:
+        data (dict):
+            A single dictionary returned by Youte.get_channel_metadata()
 
-    Returns
-    -------
-    Channels
+    Returns:
         A Channels object containing a list of Channel objects.
     """
     channels = [channel for channel in _parse_channel(data)]
@@ -125,14 +109,11 @@ def parse_channels(data: Iterable[VideoChannelResult]) -> Channels:
     list of Channel objects. These Channel objects are like dictionaries with keys
     representing channel attributes.
 
-    Parameters
-    ----------
-    data : Iterable[dict]
-        A list or iterator of dictionaries returned by Youte.get_channel_metadata()
+    Args:
+        data (Iterable[dict]):
+            A list or iterator of dictionaries returned by Youte.get_channel_metadata()
 
-    Returns
-    -------
-    Channels
+    Returns:
         A Channels object containing a list of Channel objects.
     """
     channels: list[Channel] = []
@@ -147,15 +128,12 @@ def parse_comment(data: StandardResult) -> Comments:
      Youte.get_thread_replies() into a list of Comments objects. These Comment objects
      are like dictionaries with keys representing comment attributes.
 
-    Parameters
-    ----------
-    data : dict
-        A single dictionary returned by Youte.get_comment_thread() or
-        Youte.get_thread_replies()
+    Args:
+        data (dict):
+            A single dictionary returned by Youte.get_comment_thread() or
+            Youte.get_thread_replies()
 
-    Returns
-    -------
-    Comments
+    Returns:
         A Comments object containing a list of Comment objects.
     """
     cmt = [cmt for cmt in _parse_comment(data)]
@@ -167,15 +145,12 @@ def parse_comments(data: Iterable[StandardResult]) -> Comments:
      Youte.get_thread_replies() into a list of Comments objects. These Comment objects
      are like dictionaries with keys representing comment attributes.
 
-    Parameters
-    ----------
-    data : dict
-        A list or iterator of dictionaries returned by Youte.get_comment_thread() or
-        Youte.get_thread_replies()
+    Args:
+        data (dict):
+            A list or iterator of dictionaries returned by Youte.get_comment_thread() or
+            Youte.get_thread_replies()
 
-    Returns
-    -------
-    Comments
+    Returns:
         A Comments object containing a list of Comment objects.
     """
     cmts: list[Comment] = []

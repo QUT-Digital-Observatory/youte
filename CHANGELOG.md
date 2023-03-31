@@ -1,5 +1,13 @@
 # Changelog
 
+<!--next-version-placeholder-->
+
+## v2.0.2 (31/03/2023)
+
+### Fix
+
+- Fixed video parsing function, which previously raised a KeyError when videos didn't have 'tags' or 'defaultAudioLanguage' attributes.
+
 ## v2.0.1 (20/03/2023)
 
 ### Documentation

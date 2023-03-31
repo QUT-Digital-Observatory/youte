@@ -1,5 +1,7 @@
 # Changelog
 
+<!--next-version-placeholder-->
+
 ## v2.0.1 (20/03/2023)
 
 ### Documentation

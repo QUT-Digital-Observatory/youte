@@ -8,7 +8,7 @@ import logging
 import sys
 from json.decoder import JSONDecodeError
 from pathlib import Path
-from typing import IO, Literal
+from typing import IO, Literal, Optional
 
 import click
 
@@ -17,6 +17,7 @@ from youte.collector import Youte
 from youte.config import YouteConfig
 from youte.exceptions import ValueAlreadyExists
 from youte.utilities import export_file, retrieve_ids_from_file, validate_date_string
+import youte.database as database
 
 # Logging
 logger = logging.getLogger()
@@ -37,7 +38,6 @@ logger.addHandler(console_handler)
 # file_handler.setFormatter(file_formatter)
 #
 # logger.addHandler(file_handler)
-
 
 def _validate_date(ctx, param, value):
     if value:
@@ -383,11 +383,11 @@ def comments(
     comment_ids: list[str] | None = None
 
     if by_video_id:
-        vid_ids = _get_ids(items, file_path)
+        vid_ids = _read_ids(items, file_path)
     elif by_channel_id:
-        channel_ids = _get_ids(items, file_path)
+        channel_ids = _read_ids(items, file_path)
     else:
-        comment_ids = _get_ids(items, file_path)
+        comment_ids = _read_ids(items, file_path)
 
     results = [
         result
@@ -479,7 +479,7 @@ def replies(
     api_key = key if key else _get_api_key(name=name)
     yob = Youte(api_key=api_key)
 
-    ids = _get_ids(items, file_path)
+    ids = _read_ids(items, file_path)
 
     results = [
         result
@@ -559,7 +559,7 @@ def videos(
     api_key = key if key else _get_api_key(name=name)
     yob = Youte(api_key=api_key)
 
-    ids = _get_ids(string=items, file=file_path)
+    ids = _read_ids(string=items, file=file_path)
 
     results = [
         result for result in yob.get_video_metadata(ids, max_results=max_results)
@@ -636,7 +636,7 @@ def channels(
     api_key = key if key else _get_api_key(name=name)
     yob = Youte(api_key=api_key)
 
-    ids = _get_ids(string=items, file=file_path)
+    ids = _read_ids(string=items, file=file_path)
 
     results = [
         result for result in yob.get_channel_metadata(ids=ids, max_results=max_results)
@@ -740,7 +740,7 @@ def related_to(
     api_key = key if key else _get_api_key(name=name)
     yob = Youte(api_key=api_key)
 
-    ids = _get_ids(string=items, file=file_path)
+    ids = _read_ids(string=items, file=file_path)
 
     results = [
         result
@@ -872,6 +872,41 @@ def dehydrate(infile: Path, output: IO) -> None:
         raise click.BadParameter("File is not JSON or there is formatting error")
 
 
+def full_search(
+    query: str,
+    key: str,
+    max_pages: int,
+    outdb: str | Path
+) -> None:
+    """Run a search, retrieve all related data and store in a database
+    """
+
+    api_key = key if key else _get_api_key(name=name)
+    yob = Youte(api_key=api_key)
+
+    results = [
+        result
+        for result in yob.search(
+            query=query,
+            max_pages_retrieved=max_pages,
+        )
+    ]
+
+    export_file(results, "test.json", "json", True)
+
+    click.echo("Searching...")
+    searches = parser.parse_searches(results)
+    # searches.to_csv("test.csv")
+
+    engine = database.set_up_database(outdb)
+    database.populate_searches(engine, [searches])
+
+    video_ids = [s.id for s in searches.items]
+    results = [result for result in yob.get_video_metadata(video_ids)]
+    videos = parser.parse_videos(results)
+    database.populate_videos(engine, [videos])
+
+
 @youte.group()
 def config():
     """
@@ -980,6 +1015,41 @@ def list_keys():
         click.echo()
 
 
+@config.command()
+def set_log(
+    verbose: int,
+    file_path: Optional[str |  Path],
+    formatter: "%(levelname)s: %(message)s",
+    file_formatter: "%(asctime)s - %(module)s: %(message)s (%(levelname)s)",
+) -> logging.Logger:
+
+    verbosities = {
+        0: logging.CRITICAL,
+        1: logging.WARNING,
+        2: logging.INFO,
+        3: logging.DEBUG,
+    }
+
+    logger = logging.getLogger()
+    logger.setLevel(verbosities[verbose])
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_formatter = logging.Formatter(formatter)
+    console_handler.setFormatter(console_formatter)
+    logger.addHandler(console_handler)
+
+    if file_path:
+        file_handler = logging.FileHandler(file_path)
+        file_handler.setLevel(logging.INFO)
+        file_formatter = logging.Formatter(file_formatter)
+        file_handler.setFormatter(file_formatter)
+
+        logger.addHandler(file_handler)
+
+    return logger
+
+
 def _get_config_path(filename="config"):
     config_file_path = Path(click.get_app_dir("youte")).joinpath(filename)
     return str(config_file_path)
@@ -990,7 +1060,7 @@ def _set_up_config(filename=_get_config_path()) -> YouteConfig:
     return config_file
 
 
-def _get_ids(string: list[str] = None, file: str | Path = None) -> list[str]:
+def _read_ids(string: list[str] = None, file: str | Path = None) -> list[str]:
     if not (string or file):
         raise click.BadParameter("No ids are specified.")
     if string:

@@ -38,12 +38,12 @@ class Video:
     thumbnail_width: int
     thumbnail_height: int
     channel_title: str
-    tags: List[str]
+    tags: Optional[List[str]]
     category_id: str
     localized_title: str
     localized_description: str
     default_language: str
-    default_audio_language: str
+    default_audio_language: Optional[str]
     duration: str
     dimension: str
     definition: Literal["hd", "sd"]

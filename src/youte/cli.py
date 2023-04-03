@@ -39,6 +39,45 @@ logger.addHandler(console_handler)
 #
 # logger.addHandler(file_handler)
 
+
+COMMON_QUERY_OPTIONS = [
+    click.option(
+        "-o",
+        "--outfile",
+        type=click.Path(),
+        help="Name of json file to store results to",
+        required=True,
+    ),
+    click.option(
+        "--output-format",
+        default="json",
+        type=click.Choice(["json", "jsonl"]),
+        help="Format of the output file",
+        show_default=True,
+    ),
+    click.option("--pretty", "-p", is_flag=True, help="Pretty print JSON"),
+    click.option("--name", help="Specify an API key name added to youte config"),
+    click.option("--key", help="Specify a YouTube API key"),
+    click.option("--tidy-to", type=click.Path(), help="Parse data and export to file"),
+    click.option(
+        "--format",
+        "format_",
+        type=click.Choice(["json", "csv"]),
+        default="csv",
+        help="Format data is parsed into. Can be 'json', 'jsonl', or 'csv'",
+        show_default=True,
+    ),
+]
+
+
+def common_query_options(func) -> Callable:
+    """Decorator to include common options for querying commands"""
+    for option in reversed(COMMON_QUERY_OPTIONS):
+        func = option(func)
+
+    return func
+
+
 def _validate_date(ctx, param, value):
     if value:
         if validate_date_string(value):
@@ -60,21 +99,7 @@ def youte():
 
 @youte.command()
 @click.argument("query")
-@click.option(
-    "-o",
-    "--outfile",
-    type=click.Path(),
-    help="Name of json file to store results to",
-    required=True,
-)
-@click.option(
-    "--output-format",
-    default="json",
-    type=click.Choice(["json", "jsonl"]),
-    help="Format of the output file",
-    show_default=True,
-)
-@click.option("--pretty", "-p", is_flag=True, help="Pretty print JSON")
+@common_query_options
 @click.option(
     "--from", "from_", help="Start date (YYYY-MM-DD)", callback=_validate_date
 )
@@ -86,8 +111,6 @@ def youte():
     help="Type of resource to search for",
     show_default=True,
 )
-@click.option("--name", help="Specify an API key name added to youte config")
-@click.option("--key", help="Specify a YouTube API key")
 @click.option(
     "--order",
     type=click.Choice(
@@ -186,15 +209,6 @@ def youte():
     type=click.INT,
     help="Maximum number of result pages to retrieve",
 )
-@click.option("--tidy-to", type=click.Path(), help="Parse data and export to file")
-@click.option(
-    "--format",
-    "format_",
-    type=click.Choice(["json", "csv"]),
-    default="csv",
-    help="Format data is parsed into. Can be 'json', 'jsonl', or 'csv'",
-    show_default=True,
-)
 def search(
     query: str,
     outfile: Path,
@@ -276,21 +290,7 @@ def search(
 
 @youte.command()
 @click.argument("items", nargs=-1, required=False)
-@click.option(
-    "-o",
-    "--outfile",
-    type=click.Path(),
-    help="Name of json file to store results to",
-    required=True,
-)
-@click.option(
-    "--output-format",
-    default="json",
-    type=click.Choice(["json", "jsonl"]),
-    help="Format of the output file",
-    show_default=True,
-)
-@click.option("--pretty", "-p", is_flag=True, help="Pretty print JSON")
+@common_query_options
 @click.option("-f", "--file-path", help="Use IDs from file", default=None)
 @click.option(
     "--order",
@@ -327,17 +327,6 @@ def search(
     "--by-video-id",
     help="Get all comments for one or a list of videos",
     is_flag=True,
-)
-@click.option("--name", help="Specify an API key name added to youte config")
-@click.option("--key", help="Specify a YouTube API key")
-@click.option("--tidy-to", type=click.Path(), help="Parse data and export to file")
-@click.option(
-    "--format",
-    "format_",
-    type=click.Choice(["json", "csv"]),
-    default="csv",
-    help="Format data is parsed into. Can be 'json', 'jsonl', or 'csv'",
-    show_default=True,
 )
 def comments(
     items: list[str],
@@ -415,21 +404,7 @@ def comments(
 
 @youte.command()
 @click.argument("items", nargs=-1, required=False)
-@click.option(
-    "-o",
-    "--outfile",
-    type=click.Path(),
-    help="Name of json file to store results to",
-    required=True,
-)
-@click.option(
-    "--output-format",
-    default="json",
-    type=click.Choice(["json", "jsonl"]),
-    help="Format of the output file",
-    show_default=True,
-)
-@click.option("--pretty", "-p", is_flag=True, help="Pretty print JSON")
+@common_query_options
 @click.option("-f", "--file-path", help="Use IDs from file", default=None)
 @click.option(
     "--text-format",
@@ -443,17 +418,6 @@ def comments(
     type=click.IntRange(0, 100),
     help="Maximum number of results returned per page",
     default=100,
-    show_default=True,
-)
-@click.option("--name", help="Specify an API key name added to youte config")
-@click.option("--key", help="Specify a YouTube API key")
-@click.option("--tidy-to", type=click.Path(), help="Parse data and export to file")
-@click.option(
-    "--format",
-    "format_",
-    type=click.Choice(["json", "csv"]),
-    default="csv",
-    help="Format data is parsed into. Can be 'json', 'jsonl', or 'csv'",
     show_default=True,
 )
 def replies(
@@ -501,38 +465,13 @@ def replies(
 
 @youte.command()
 @click.argument("items", nargs=-1, required=False)
-@click.option(
-    "-o",
-    "--outfile",
-    type=click.Path(),
-    help="Name of json file to store results to",
-    required=True,
-)
-@click.option(
-    "--output-format",
-    default="json",
-    type=click.Choice(["json", "jsonl"]),
-    help="Format of the output file",
-    show_default=True,
-)
-@click.option("--pretty", "-p", is_flag=True, help="Pretty print JSON")
+@common_query_options
 @click.option("-f", "--file-path", help="Get IDs from file", default=None)
-@click.option("--name", help="Specify an API key name added to youte config")
-@click.option("--key", help="Specify a YouTube API key")
 @click.option(
     "--max-results",
     type=click.IntRange(0, 50),
     help="Maximum number of results returned per page",
     default=50,
-    show_default=True,
-)
-@click.option("--tidy-to", type=click.Path(), help="Parse data and export to file")
-@click.option(
-    "--format",
-    "format_",
-    type=click.Choice(["json", "csv"]),
-    default="csv",
-    help="Format data is parsed into. Can be 'json', 'jsonl', or 'csv'",
     show_default=True,
 )
 def videos(
@@ -578,38 +517,13 @@ def videos(
 
 @youte.command()
 @click.argument("items", nargs=-1, required=False)
-@click.option(
-    "-o",
-    "--outfile",
-    type=click.Path(),
-    help="Name of json file to store results to",
-    required=True,
-)
-@click.option(
-    "--output-format",
-    default="json",
-    type=click.Choice(["json", "jsonl"]),
-    help="Format of the output file",
-    show_default=True,
-)
-@click.option("--pretty", "-p", is_flag=True, help="Pretty print JSON")
+@common_query_options
 @click.option("-f", "--file-path", help="Get IDs from file", default=None)
-@click.option("--name", help="Specify an API key name added to youte config")
-@click.option("--key", help="Specify a YouTube API key")
 @click.option(
     "--max-results",
     type=click.IntRange(0, 50),
     help="Maximum number of results returned per page",
     default=50,
-    show_default=True,
-)
-@click.option("--tidy-to", type=click.Path(), help="Parse data and export to file")
-@click.option(
-    "--format",
-    "format_",
-    type=click.Choice(["json", "csv"]),
-    default="csv",
-    help="Format data is parsed into. Can be 'json', 'jsonl', or 'csv'",
     show_default=True,
 )
 def channels(
@@ -655,24 +569,10 @@ def channels(
 
 @youte.command()
 @click.argument("items", nargs=-1, required=False)
+@common_query_options
 @click.option(
     "-f", "--file-path", type=click.Path(), help="Get IDs from file", default=None
 )
-@click.option(
-    "-o",
-    "--outfile",
-    type=click.Path(),
-    help="Name of JSON file to store output",
-    required=True,
-)
-@click.option(
-    "--output-format",
-    default="json",
-    type=click.Choice(["json", "jsonl"]),
-    help="Format of the output file",
-    show_default=True,
-)
-@click.option("--pretty", "-p", is_flag=True, help="Pretty print JSON")
 @click.option(
     "--safe-search",
     type=click.Choice(["none", "moderate", "strict"], case_sensitive=False),
@@ -689,22 +589,11 @@ def channels(
     "--lang",
     help="Return results most relevant to a language (ISO 639-1 two-letter code)",
 )
-@click.option("--name", help="Specify an API key name added to youte config")
-@click.option("--key", help="Specify a YouTube API key")
 @click.option(
     "--max-results",
     type=click.IntRange(0, 50),
     help="Maximum number of results returned per page",
     default=50,
-    show_default=True,
-)
-@click.option("--tidy-to", type=click.Path(), help="Parse data and export to file")
-@click.option(
-    "--format",
-    "format_",
-    type=click.Choice(["json", "csv"]),
-    default="csv",
-    help="Format data is parsed into. Can be 'json', 'jsonl', or 'csv'",
     show_default=True,
 )
 @click.option(
@@ -767,41 +656,16 @@ def related_to(
 
 @youte.command()
 @click.argument("region_code", default="us")
-@click.option(
-    "-o",
-    "--outfile",
-    type=click.Path(),
-    help="Name of JSON file to store output",
-    required=True,
-)
-@click.option(
-    "--output-format",
-    default="json",
-    type=click.Choice(["json", "jsonl"]),
-    help="Format of the output file",
-    show_default=True,
-)
-@click.option("--pretty", "-p", is_flag=True, help="Pretty print JSON")
+@common_query_options
 @click.option(
     "--video-category",
     help="Video category ID for which the most popular videos should be retrieved",
 )
-@click.option("--name", help="Specify an API key name added to youte config")
-@click.option("--key", help="Specify a YouTube API key")
 @click.option(
     "--max-results",
     type=click.IntRange(0, 50),
     help="Maximum number of results returned per page",
     default=50,
-    show_default=True,
-)
-@click.option("--tidy-to", type=click.Path(), help="Parse data and export to file")
-@click.option(
-    "--format",
-    "format_",
-    type=click.Choice(["json", "csv"]),
-    default="csv",
-    help="Format data is parsed into. Can be 'json' or 'csv'",
     show_default=True,
 )
 def chart(
@@ -872,14 +736,8 @@ def dehydrate(infile: Path, output: IO) -> None:
         raise click.BadParameter("File is not JSON or there is formatting error")
 
 
-def full_search(
-    query: str,
-    key: str,
-    max_pages: int,
-    outdb: str | Path
-) -> None:
-    """Run a search, retrieve all related data and store in a database
-    """
+def full_search(query: str, key: str, max_pages: int, outdb: str | Path) -> None:
+    """Run a search, retrieve all related data and store in a database"""
 
     api_key = key if key else _get_api_key(name=name)
     yob = Youte(api_key=api_key)
@@ -1018,7 +876,7 @@ def list_keys():
 @config.command()
 def set_log(
     verbose: int,
-    file_path: Optional[str |  Path],
+    file_path: Optional[str | Path],
     formatter: "%(levelname)s: %(message)s",
     file_formatter: "%(asctime)s - %(module)s: %(message)s (%(levelname)s)",
 ) -> logging.Logger:

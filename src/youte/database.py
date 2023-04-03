@@ -46,8 +46,8 @@ class Video(Base):
     category_id: Mapped[str]
     localized_title: Mapped[str]
     localized_description: Mapped[str]
-    default_language: Mapped[str]
-    default_audio_language: Mapped[str]
+    default_language: Mapped[Optional[str]]
+    default_audio_language: Mapped[Optional[str]]
     duration: Mapped[str]
     dimension: Mapped[str]
     definition: Mapped[str]
@@ -61,8 +61,8 @@ class Video(Base):
     public_stats_viewable: Mapped[bool]
     made_for_kids: Mapped[bool]
     view_count: Mapped[int]
-    like_count: Mapped[int]
-    comment_count: Mapped[int]
+    like_count: Mapped[Optional[int]]
+    comment_count: Mapped[Optional[int]]
     topic_categories: Mapped[Optional[str]]
     live_streaming_start_actual: Mapped[Optional[str]]
     live_streaming_end_actual: Mapped[Optional[str]]
@@ -155,9 +155,11 @@ def populate_videos(engine: Engine, data: list[Videos]) -> None:
                         title=video.title,
                         kind=video.kind,
                         published_at=video.published_at,
+                        channel_id=video.channel_id,
                         description=video.description,
                         thumbnail_width=video.thumbnail_width,
                         thumbnail_height=video.thumbnail_height,
+                        thumbnail_url=video.thumbnail_url,
                         channel_title=video.channel_title,
                         tags=str(video.tags),
                         category_id=video.category_id,
@@ -192,4 +194,3 @@ def populate_videos(engine: Engine, data: list[Videos]) -> None:
                     s.commit()
                 except sqlalchemy.exc.IntegrityError as e:
                     logger.warning(f"{video_data.id} - {video_data.title}: {e}")
-                    s.rollback()

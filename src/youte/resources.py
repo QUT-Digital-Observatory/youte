@@ -14,6 +14,7 @@ class Search:
     published_at: datetime
     title: str
     description: str
+    channel_id: str
     thumbnail_url: str
     thumbnail_width: int
     thumbnail_height: int
@@ -42,7 +43,7 @@ class Video:
     category_id: str
     localized_title: str
     localized_description: str
-    default_language: str
+    default_language: Optional[str]
     default_audio_language: Optional[str]
     duration: str
     dimension: str
@@ -57,8 +58,8 @@ class Video:
     public_stats_viewable: bool
     made_for_kids: bool
     view_count: int
-    like_count: int
-    comment_count: int
+    like_count: Optional[int]
+    comment_count: Optional[int]
     topic_categories: Optional[List[str]]
     live_streaming_start_actual: Optional[datetime]
     live_streaming_end_actual: Optional[datetime]
@@ -78,25 +79,25 @@ class Channel:
     id: str
     title: str
     description: str
-    custom_url: str
+    custom_url: Optional[str]
     published_at: datetime
     thumbnail_url: str
     thumbnail_height: int
     thumbnail_width: int
-    default_language: str
+    default_language: Optional[str]
     localized_title: str
     localized_description: str
-    country: str
-    view_count: int
-    subscriber_count: int
+    country: Optional[str]
+    view_count: Optional[str]
+    subscriber_count: Optional[str]
     hidden_subscriber_count: bool
     video_count: int
-    topic_categories: List[str]
+    topic_categories: Optional[List[str]]
     privacy_status: Literal["private", "public", "unlisted"]
     is_linked: bool
-    made_for_kids: bool
-    branding_keywords: List[str]
-    moderated_comments: bool
+    made_for_kids: Optional[bool]
+    branding_keywords: Optional[List[str]]
+    moderated_comments: Optional[bool]
 
 
 @dataclass
@@ -107,12 +108,11 @@ class Channels(Resources):
 @dataclass
 class Comment:
     id: str
-    channel_id: str
-    video_id: str
-    parent_id: str
-    can_reply: bool
-    total_reply_count: int
-    is_public: bool
+    video_id: Optional[str]
+    parent_id: Optional[str]
+    can_reply: Optional[bool]
+    total_reply_count: Optional[int]
+    is_public: Optional[bool]
     author_display_name: str
     author_profile_image_url: str
     author_channel_url: str
@@ -121,7 +121,7 @@ class Comment:
     text_original: str
     can_rate: bool
     viewer_rating: Literal["like", "none"]
-    like_count: str
+    like_count: int
     published_at: datetime
     updated_at: datetime
 

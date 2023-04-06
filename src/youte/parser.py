@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 from datetime import datetime
 from typing import Iterable, Iterator, Optional
+import logging
 
 from youte._typing import SearchResult, StandardResult, VideoChannelResult
 from youte.resources import (
@@ -15,6 +16,8 @@ from youte.resources import (
     Video,
     Videos,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def parse_search(data: SearchResult) -> Searches:
@@ -47,6 +50,7 @@ def parse_searches(data: Iterable[SearchResult]) -> Searches:
     searches: list[Search] = []
     for each in data:
         for search in _parse_search(each):
+            logger.debug(f"Parsing search item {search.id}: {search.title}")
             searches.append(search)
     return Searches(items=searches)
 
@@ -84,6 +88,7 @@ def parse_videos(data: Iterable[VideoChannelResult]) -> Videos:
     videos: list[Video] = []
     for each in data:
         for video in _parse_video(each):
+            logger.debug(f"Parsing video {video.id}: {video.title}")
             videos.append(video)
     return Videos(items=videos)
 
@@ -119,6 +124,7 @@ def parse_channels(data: Iterable[VideoChannelResult]) -> Channels:
     channels: list[Channel] = []
     for each in data:
         for channel in _parse_channel(each):
+            logger.debug(f"Parsing channel {channel.id}: {channel.title}")
             channels.append(channel)
     return Channels(items=channels)
 
@@ -156,6 +162,7 @@ def parse_comments(data: Iterable[StandardResult]) -> Comments:
     cmts: list[Comment] = []
     for each in data:
         for cmt in _parse_comment(each):
+            logger.debug(f"Parsing comment {cmt.id}")
             cmts.append(cmt)
     return Comments(items=cmts)
 
@@ -184,8 +191,9 @@ def _parse_search(input_: SearchResult) -> Iterator[Search]:
             thumbnail_url=snippet["thumbnails"]["high"]["url"],
             thumbnail_height=snippet["thumbnails"]["high"]["height"],
             thumbnail_width=snippet["thumbnails"]["high"]["width"],
-            channel_title=snippet["channelTitle"],
+            channel_title=snippet.get("channelTitle"),
             live_broadcast_content=snippet["liveBroadcastContent"],
+            channel_id=snippet["channelId"],
         )
 
         yield search
@@ -315,14 +323,14 @@ def _parse_comment(input_: StandardResult) -> Iterable[Comment]:
             is_public = item["snippet"]["isPublic"]
         else:
             snippet = item["snippet"]
-
         comment = Comment(
             id=item["id"],
-            channel_id=snippet.get("channelId"),
-            video_id=snippet["videoId"],
+            video_id=snippet.get("videoId"),
             author_display_name=snippet["authorDisplayName"],
             author_profile_image_url=snippet["authorProfileImageUrl"],
-            author_channel_id=snippet["authorChannelId"]["value"],
+            author_channel_id=snippet["authorChannelId"]["value"]
+            if "authorChannelId" in snippet
+            else None,
             author_channel_url=snippet["authorChannelUrl"],
             text_display=snippet["textDisplay"],
             text_original=snippet["textOriginal"],

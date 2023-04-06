@@ -10,7 +10,7 @@ import requests
 from dateutil import tz
 
 from youte._typing import APIResponse, SearchOrder
-from youte.exceptions import APIError, InvalidRequest
+from youte.exceptions import APIError, InvalidRequest, CommentsDisabled
 from youte.utilities import create_utc_datetime_string
 
 logger = logging.getLogger(__name__)
@@ -342,6 +342,7 @@ class Youte:
             if search_terms:
                 params["searchTerms"] = search_terms
             for video_id in video_ids:
+                logger.info(f"Getting comments for {video_id}")
                 params["videoId"] = video_id
                 yield from _paginate_search_results(url=url, **params)
 
@@ -527,23 +528,27 @@ def _paginate_search_results(
 ) -> Iterator[APIResponse]:
     page: int = 0
     logger.info(f"Getting page {page + 1}")
-    r = _request(url=url, params=kwargs)
-    page += 1
-    response = _add_meta(r.json(), collection_time=datetime.now())
-    yield response
 
-    while "nextPageToken" in r.json():
-        if max_pages_retrieved and page >= max_pages_retrieved:
-            logger.info("Max pages reached")
-            break
-        else:
-            logger.info(f"Getting page {page + 1}")
-            next_page_token = r.json()["nextPageToken"]
-            kwargs["pageToken"] = next_page_token
-            r = _request(url=url, params=kwargs)
-            page += 1
-            response = _add_meta(r.json(), collection_time=datetime.now())
-            yield response
+    try:
+        r = _request(url=url, params=kwargs)
+        page += 1
+        response = _add_meta(r.json(), collection_time=datetime.now())
+        yield response
+
+        while "nextPageToken" in r.json():
+            if max_pages_retrieved and page >= max_pages_retrieved:
+                logger.info("Max pages reached")
+                break
+            else:
+                logger.info(f"Getting page {page + 1}")
+                next_page_token = r.json()["nextPageToken"]
+                kwargs["pageToken"] = next_page_token
+                r = _request(url=url, params=kwargs)
+                page += 1
+                response = _add_meta(r.json(), collection_time=datetime.now())
+                yield response
+    except CommentsDisabled:
+        logger.warning("Comments are disabled.")
 
 
 def _add_meta(response: APIResponse, **kwargs) -> APIResponse:
@@ -564,19 +569,16 @@ def _request(url: str, params: dict[str, str | int]) -> requests.Response:
         except requests.exceptions.JSONDecodeError:
             raise InvalidRequest("Check url and endpoint.")
 
-        logger.error(f"Error {response.status_code}: {response.url}")
-        logger.error(json.dumps(errors))
-
         for error in errors["error"]["errors"]:
-            # ignore if comment is disabled
             if error["reason"] == "commentsDisabled":
-                logger.warning(error["reason"])
+                raise CommentsDisabled(error["reason"])
             elif "quotaExceeded" in error["reason"]:
                 until_reset = _get_reset_remaining(datetime.now(tz=tz.UTC))
                 raise APIError(
                     f"{error['reason']}\n{until_reset} seconds til quota reset time"
                 )
             else:
+                logger.error(f"Error {response.status_code}: {response.url}")
                 raise APIError(error["message"])
 
     return response

@@ -8,7 +8,7 @@ import logging
 import sys
 from json.decoder import JSONDecodeError
 from pathlib import Path
-from typing import IO, Literal, Optional
+from typing import IO, Literal, Optional, Callable
 
 import click
 
@@ -20,14 +20,22 @@ from youte.utilities import export_file, retrieve_ids_from_file, validate_date_s
 import youte.database as database
 
 # Logging
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-console_formatter = logging.Formatter("%(levelname)s: %(message)s")
-console_handler.setFormatter(console_formatter)
-logger.addHandler(console_handler)
+logging.basicConfig(
+    level=logging.INFO,
+    format=click.style("%(levelname)s: ", fg="yellow")
+    + click.style("%(message)s", fg="cyan"),
+)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+
+# logger = logging.getLogger()
+# logger.setLevel(logging.INFO)
+#
+# console_handler = logging.StreamHandler()
+# console_handler.setLevel(logging.INFO)
+# console_formatter = logging.Formatter("%(levelname)s: %(message)s")
+# console_handler.setFormatter(console_formatter)
+# logger.addHandler(console_handler)
 
 
 # file_handler = logging.FileHandler("youte.log")
@@ -39,8 +47,12 @@ logger.addHandler(console_handler)
 #
 # logger.addHandler(file_handler)
 
+API_KEY_OPTIONS = [
+    click.option("--name", help="Specify an API key name added to youte config"),
+    click.option("--key", help="Specify a YouTube API key"),
+]
 
-COMMON_QUERY_OPTIONS = [
+OUTPUT_OPTIONS = [
     click.option(
         "-o",
         "--outfile",
@@ -56,8 +68,9 @@ COMMON_QUERY_OPTIONS = [
         show_default=True,
     ),
     click.option("--pretty", "-p", is_flag=True, help="Pretty print JSON"),
-    click.option("--name", help="Specify an API key name added to youte config"),
-    click.option("--key", help="Specify a YouTube API key"),
+]
+
+TIDY_OPTIONS = [
     click.option("--tidy-to", type=click.Path(), help="Parse data and export to file"),
     click.option(
         "--format",
@@ -70,11 +83,24 @@ COMMON_QUERY_OPTIONS = [
 ]
 
 
-def common_query_options(func) -> Callable:
-    """Decorator to include common options for querying commands"""
-    for option in reversed(COMMON_QUERY_OPTIONS):
+def api_key_options(func) -> Callable:
+    """Decorator to include api key options for querying commands"""
+    for option in reversed(API_KEY_OPTIONS):
         func = option(func)
+    return func
 
+
+def output_options(func) -> Callable:
+    """Decorator to include output options"""
+    for option in reversed(OUTPUT_OPTIONS):
+        func = option(func)
+    return func
+
+
+def tidy_options(func) -> Callable:
+    """Decorator to include tidy option"""
+    for option in reversed(TIDY_OPTIONS):
+        func = option(func)
     return func
 
 
@@ -84,6 +110,32 @@ def _validate_date(ctx, param, value):
             return value
         else:
             raise click.BadParameter("Date not in correct format (YYYY-MM-DD)")
+
+
+def _validate_select_values(ctx, param, value: str) -> str:
+    accept_types: tuple = ("video", "channel", "thread", "reply")
+    value_as_list: list = value.split(",")
+    for v in value_as_list:
+        if v not in accept_types:
+            raise click.BadParameter(
+                f"Contains '{v}'. Accepted values are {accept_types}"
+            )
+    return value
+
+
+def _check_file_overwrite(ctx, param, value: str) -> Path:
+    value = Path(value)
+    if value.exists():
+        try:
+            if click.confirm(
+                f"'{value}' already exists. Keep writing to this file?", abort=True
+            ):
+                return value
+        except click.Abort:
+            click.secho(
+                "Rerun this command and choose a different filename.", fg="green"
+            )
+            raise click.Abort
 
 
 # CLI argument set up:
@@ -99,7 +151,9 @@ def youte():
 
 @youte.command()
 @click.argument("query")
-@common_query_options
+@output_options
+@tidy_options
+@api_key_options
 @click.option(
     "--from", "from_", help="Start date (YYYY-MM-DD)", callback=_validate_date
 )
@@ -110,6 +164,7 @@ def youte():
     default="video",
     help="Type of resource to search for",
     show_default=True,
+    callback=_validate_select_values,
 )
 @click.option(
     "--order",
@@ -290,7 +345,9 @@ def search(
 
 @youte.command()
 @click.argument("items", nargs=-1, required=False)
-@common_query_options
+@output_options
+@tidy_options
+@api_key_options
 @click.option("-f", "--file-path", help="Use IDs from file", default=None)
 @click.option(
     "--order",
@@ -404,7 +461,9 @@ def comments(
 
 @youte.command()
 @click.argument("items", nargs=-1, required=False)
-@common_query_options
+@output_options
+@tidy_options
+@api_key_options
 @click.option("-f", "--file-path", help="Use IDs from file", default=None)
 @click.option(
     "--text-format",
@@ -465,7 +524,9 @@ def replies(
 
 @youte.command()
 @click.argument("items", nargs=-1, required=False)
-@common_query_options
+@output_options
+@tidy_options
+@api_key_options
 @click.option("-f", "--file-path", help="Get IDs from file", default=None)
 @click.option(
     "--max-results",
@@ -517,7 +578,9 @@ def videos(
 
 @youte.command()
 @click.argument("items", nargs=-1, required=False)
-@common_query_options
+@output_options
+@tidy_options
+@api_key_options
 @click.option("-f", "--file-path", help="Get IDs from file", default=None)
 @click.option(
     "--max-results",
@@ -569,7 +632,9 @@ def channels(
 
 @youte.command()
 @click.argument("items", nargs=-1, required=False)
-@common_query_options
+@output_options
+@tidy_options
+@api_key_options
 @click.option(
     "-f", "--file-path", type=click.Path(), help="Get IDs from file", default=None
 )
@@ -656,7 +721,9 @@ def related_to(
 
 @youte.command()
 @click.argument("region_code", default="us")
-@common_query_options
+@output_options
+@tidy_options
+@api_key_options
 @click.option(
     "--video-category",
     help="Video category ID for which the most popular videos should be retrieved",
@@ -736,8 +803,164 @@ def dehydrate(infile: Path, output: IO) -> None:
         raise click.BadParameter("File is not JSON or there is formatting error")
 
 
-def full_search(query: str, key: str, max_pages: int, outdb: str | Path) -> None:
-    """Run a search, retrieve all related data and store in a database"""
+@youte.command()
+@click.argument("query")
+@click.option(
+    "--select",
+    help="Comma separated string specifying which resources to get",
+    default="video,channel,thread,reply",
+    callback=_validate_select_values,
+    show_default=True,
+)
+@click.option(
+    "--out-db",
+    "-o",
+    help="Name of SQLite database to store output (must have .db ending)",
+    type=click.Path(),
+    callback=_check_file_overwrite,
+)
+@api_key_options
+@click.option(
+    "--from", "from_", help="Start date (YYYY-MM-DD)", callback=_validate_date
+)
+@click.option("--to", help="End date (YYYY-MM-DD)", callback=_validate_date)
+@click.option(
+    "--type",
+    "type_",
+    default="video",
+    help="Type of resource to search for",
+    show_default=True,
+    callback=_validate_select_values,
+)
+@click.option(
+    "--order",
+    type=click.Choice(
+        ["date", "rating", "relevance", "title", "videoCount", "viewCount"],
+        case_sensitive=False,
+    ),
+    help="Sort results",
+    show_default=True,
+    default="date",
+)
+@click.option(
+    "--safe-search",
+    type=click.Choice(["none", "moderate", "strict"], case_sensitive=False),
+    help="Include or exclude restricted content",
+    default="none",
+    show_default=True,
+)
+@click.option(
+    "--lang",
+    help="Return results most relevant to a language (ISO 639-1 two-letter code)",
+)
+@click.option(
+    "--region",
+    default="US",
+    help="Return videos viewable in the specified country (ISO 3166-1 alpha-2 code)",
+    show_default=True,
+)
+@click.option(
+    "--video-duration",
+    type=click.Choice(["any", "long", "medium", "short"]),
+    help="Include videos of a certain duration",
+)
+@click.option(
+    "--channel-type",
+    type=click.Choice(["any", "show"]),
+    help="Restrict search to a particular type of channel",
+)
+@click.option(
+    "--video-type",
+    type=click.Choice(["any", "episode", "movie"]),
+    help="Search a particular type of videos",
+)
+@click.option(
+    "--caption",
+    type=click.Choice(["any", "closedCaption", "none"]),
+    help="Filter videos based on if they have captions",
+)
+@click.option(
+    "--definition",
+    "--video-definition",
+    "video_definition",
+    type=click.Choice(["any", "high", "standard"]),
+    help="Include videos by definition",
+)
+@click.option(
+    "--dimension",
+    "--video-dimension",
+    "video_dimension",
+    type=click.Choice(["any", "2d", "3d"]),
+    help="Search 2D or 3D videos",
+)
+@click.option(
+    "--embeddable",
+    "--video-embeddable",
+    "video_embeddable",
+    type=click.Choice(["any", "true"]),
+    help="Search only embeddable videos",
+)
+@click.option(
+    "--license",
+    "--video-license",
+    "video_license",
+    type=click.Choice(["any", "creativeCommon", "youtube"]),
+    help="Include videos with a certain license",
+)
+@click.option(
+    "--location",
+    nargs=2,
+    type=click.FLOAT,
+    help="Lat and long coordinates to restrict search to. --radius must be specified",
+)
+@click.option(
+    "--radius",
+    help="Define the geographic area to restrict search. Must be a number with a unit",
+)
+@click.option(
+    "--max-results",
+    type=click.IntRange(0, 50),
+    help="Maximum number of results returned per page",
+    default=50,
+    show_default=True,
+)
+@click.option(
+    "--max-pages",
+    "-m",
+    type=click.INT,
+    help="Maximum number of result pages to retrieve",
+)
+def full_archive(
+    query: str,
+    select: str,
+    key: str,
+    name: str,
+    out_db: str | Path,
+    from_: str,
+    to: str,
+    order: Literal["date", "rating", "relevance", "title", "videoCount", "viewCount"],
+    video_duration: Literal["any", "long", "medium", "short"],
+    lang: str,
+    region: str,
+    type_: str,
+    channel_type: Literal["any", "show"],
+    video_type: Literal["any", "episode", "movie"],
+    caption: Literal["any", "closedCaption", "none"],
+    video_definition: Literal["any", "high", "standard"],
+    video_dimension: Literal["any", "2d", "3d"],
+    video_embeddable: Literal["any", "true"],
+    video_license: Literal["any", "creativeCommon", "youtube"],
+    safe_search: Literal["none", "moderate", "strict"],
+    location: tuple[float],
+    radius: str,
+    max_pages: int,
+    max_results: int,
+) -> None:
+    """Run a search, retrieve all related data and store in a database
+
+    """
+
+    _check_compatibility(select)
 
     api_key = key if key else _get_api_key(name=name)
     yob = Youte(api_key=api_key)
@@ -746,23 +969,64 @@ def full_search(query: str, key: str, max_pages: int, outdb: str | Path) -> None
         result
         for result in yob.search(
             query=query,
+            type_=type_,
+            start_time=from_,
+            end_time=to,
+            order=order,
+            safe_search=safe_search,
+            language=lang,
+            region=region,
+            video_duration=video_duration,
+            video_type=video_type,
+            caption=caption,
+            video_definition=video_definition,
+            video_embeddable=video_embeddable,
+            location=location,
+            location_radius=radius,
+            video_dimension=video_dimension,
             max_pages_retrieved=max_pages,
+            max_result=max_results,
+            video_license=video_license,
+            channel_type=channel_type,
         )
     ]
 
-    export_file(results, "test.json", "json", True)
+    # export_file(results, "search.json", "json", pretty=True)  # debug
 
-    click.echo("Searching...")
     searches = parser.parse_searches(results)
-    # searches.to_csv("test.csv")
 
-    engine = database.set_up_database(outdb)
+    engine = database.set_up_database(out_db)
     database.populate_searches(engine, [searches])
 
     video_ids = [s.id for s in searches.items]
-    results = [result for result in yob.get_video_metadata(video_ids)]
-    videos = parser.parse_videos(results)
-    database.populate_videos(engine, [videos])
+    channel_ids = [s.channel_id for s in searches.items]
+
+    if "video" in select:
+        click.echo("Retrieving video metadata")
+        click.echo(f"{len(video_ids)} videos being retrieved")
+        results = [result for result in yob.get_video_metadata(video_ids)]
+        _videos = parser.parse_videos(results)
+        database.populate_videos(engine, [_videos])
+
+    if "channel" in select:
+        click.echo("Retrieving channel metadata")
+        click.echo(f"{len(channel_ids)} channels being retrieved")
+        results = [result for result in yob.get_channel_metadata(channel_ids)]
+        _channels = parser.parse_channels(results)
+        database.populate_channels(engine, [_channels])
+
+    if "thread" in select:
+        click.echo("Retrieving comment threads")
+        results = [r for r in yob.get_comment_threads(video_ids)]
+        _comments = parser.parse_comments(results)
+
+        database.populate_comments(engine, [_comments])
+
+        if "reply" in select:
+            thread_ids = [c.id for c in _comments.items if c.total_reply_count > 0]
+            results = [r for r in yob.get_thread_replies(thread_ids)]
+            _replies = parser.parse_comments(results)
+            database.populate_comments(engine, [_replies])
 
 
 @youte.group()
@@ -933,7 +1197,7 @@ def _get_api_key(name=None, filename="config"):
     """Get API key from config file.
     If no name is given, use default API key
     """
-    logger.info("Getting API key from config file.")
+    logging.info("Getting API key from config file.")
     config_file_path = Path(click.get_app_dir("youte")).joinpath(filename)
     config_obj = YouteConfig(filename=str(config_file_path))
 
@@ -968,3 +1232,15 @@ def _get_api_key(name=None, filename="config"):
             api_key = config_obj[default_check[0]]["key"]
 
     return api_key
+
+
+def _check_compatibility(value: str) -> str:
+    """Helper function to check that 'thread' and 'reply' must be used together
+    in `youte full-archive`
+    """
+    if "reply" in value and "thread" not in value:
+        raise click.BadOptionUsage(
+            option_name="--select",
+            message=f"Is '{value}'. 'thread' has to be specified with 'reply'",
+        )
+    return value

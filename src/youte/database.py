@@ -3,13 +3,13 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Callable
+from typing import Callable, Optional
 
 import sqlalchemy.exc
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
-from youte.resources import Searches, Videos, Channels, Comments
+from youte.resources import Channels, Comments, Searches, Videos
 
 logger = logging.getLogger(__name__)
 

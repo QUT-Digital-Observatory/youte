@@ -8,44 +8,28 @@ import logging
 import sys
 from json.decoder import JSONDecodeError
 from pathlib import Path
-from typing import IO, Literal, Optional, Callable
+from typing import IO, Callable, Literal
 
 import click
+import click_log
 
+import youte.database as database
 import youte.parser as parser
+from youte._logging import MultiFormatter
 from youte.collector import Youte
 from youte.config import YouteConfig
 from youte.exceptions import ValueAlreadyExists
 from youte.utilities import export_file, retrieve_ids_from_file, validate_date_string
-import youte.database as database
 
 # Logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format=click.style("%(levelname)s: ", fg="yellow")
-    + click.style("%(message)s", fg="cyan"),
-)
+logger = logging.getLogger()
 logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
-# logger = logging.getLogger()
-# logger.setLevel(logging.INFO)
-#
-# console_handler = logging.StreamHandler()
-# console_handler.setLevel(logging.INFO)
-# console_formatter = logging.Formatter("%(levelname)s: %(message)s")
-# console_handler.setFormatter(console_formatter)
-# logger.addHandler(console_handler)
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(MultiFormatter())
 
-
-# file_handler = logging.FileHandler("youte.log")
-# file_handler.setLevel(logging.INFO)
-# file_formatter = logging.Formatter(
-#     "%(asctime)s - %(module)s: %(message)s (%(levelname)s)"
-# )
-# file_handler.setFormatter(file_formatter)
-#
-# logger.addHandler(file_handler)
+logger.addHandler(console_handler)
 
 API_KEY_OPTIONS = [
     click.option("--name", help="Specify an API key name added to youte config"),
@@ -264,6 +248,7 @@ def youte():
     type=click.INT,
     help="Maximum number of result pages to retrieve",
 )
+@click_log.simple_verbosity_option(logger)
 def search(
     query: str,
     outfile: Path,
@@ -385,6 +370,7 @@ def search(
     help="Get all comments for one or a list of videos",
     is_flag=True,
 )
+@click_log.simple_verbosity_option(logger)
 def comments(
     items: list[str],
     outfile: Path,
@@ -479,6 +465,7 @@ def comments(
     default=100,
     show_default=True,
 )
+@click_log.simple_verbosity_option(logger)
 def replies(
     items: list[str],
     outfile: Path,
@@ -535,6 +522,7 @@ def replies(
     default=50,
     show_default=True,
 )
+@click_log.simple_verbosity_option(logger)
 def videos(
     items: list[str],
     outfile: Path,
@@ -589,6 +577,7 @@ def videos(
     default=50,
     show_default=True,
 )
+@click_log.simple_verbosity_option(logger)
 def channels(
     items: list[str],
     outfile: Path,
@@ -667,6 +656,7 @@ def channels(
     type=click.INT,
     help="Maximum number of result pages to retrieve",
 )
+@click_log.simple_verbosity_option(logger)
 def related_to(
     items: list[str],
     outfile: Path,
@@ -735,6 +725,7 @@ def related_to(
     default=50,
     show_default=True,
 )
+@click_log.simple_verbosity_option(logger)
 def chart(
     region_code: str,
     outfile: Path,
@@ -783,6 +774,7 @@ def chart(
 @click.option(
     "-o", "--output", type=click.File(mode="w"), help="Output text file to store IDs in"
 )
+@click_log.simple_verbosity_option(logger)
 def dehydrate(infile: Path, output: IO) -> None:
     """Extract an ID list from a file of YouTube resources
 
@@ -930,6 +922,7 @@ def dehydrate(infile: Path, output: IO) -> None:
     type=click.INT,
     help="Maximum number of result pages to retrieve",
 )
+@click_log.simple_verbosity_option(logger)
 def full_archive(
     query: str,
     select: str,
@@ -956,8 +949,15 @@ def full_archive(
     max_pages: int,
     max_results: int,
 ) -> None:
-    """Run a search, retrieve all related data and store in a database
+    """Run full archive workflow
 
+    Extract all related metadata of videos found from a search. This command combines
+    `youte search`, `youte videos`, `youte channels`, `youte comments` and
+    `youte replies` in one clean workflow. Data are cleaned and stored in an SQlite
+    database.
+
+    As this command attempts to archive all YouTube resources, it might take some time
+    to finish. Make sure you have enough quota before running.
     """
 
     _check_compatibility(select)
@@ -990,8 +990,6 @@ def full_archive(
             channel_type=channel_type,
         )
     ]
-
-    # export_file(results, "search.json", "json", pretty=True)  # debug
 
     searches = parser.parse_searches(results)
 
@@ -1027,6 +1025,8 @@ def full_archive(
             results = [r for r in yob.get_thread_replies(thread_ids)]
             _replies = parser.parse_comments(results)
             database.populate_comments(engine, [_replies])
+
+    click.secho(f"ARCHIVING COMPLETED! Data is stored in {out_db}", fg="green")
 
 
 @youte.group()
@@ -1135,41 +1135,6 @@ def list_keys():
             "All API keys are stored in %s" % _get_config_path(), fg="green", bold=True
         )
         click.echo()
-
-
-@config.command()
-def set_log(
-    verbose: int,
-    file_path: Optional[str | Path],
-    formatter: "%(levelname)s: %(message)s",
-    file_formatter: "%(asctime)s - %(module)s: %(message)s (%(levelname)s)",
-) -> logging.Logger:
-
-    verbosities = {
-        0: logging.CRITICAL,
-        1: logging.WARNING,
-        2: logging.INFO,
-        3: logging.DEBUG,
-    }
-
-    logger = logging.getLogger()
-    logger.setLevel(verbosities[verbose])
-
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_formatter = logging.Formatter(formatter)
-    console_handler.setFormatter(console_formatter)
-    logger.addHandler(console_handler)
-
-    if file_path:
-        file_handler = logging.FileHandler(file_path)
-        file_handler.setLevel(logging.INFO)
-        file_formatter = logging.Formatter(file_formatter)
-        file_handler.setFormatter(file_formatter)
-
-        logger.addHandler(file_handler)
-
-    return logger
 
 
 def _get_config_path(filename="config"):

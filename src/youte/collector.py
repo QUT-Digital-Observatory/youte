@@ -10,7 +10,7 @@ import requests
 from dateutil import tz
 
 from youte._typing import APIResponse, SearchOrder
-from youte.exceptions import APIError, InvalidRequest, CommentsDisabled
+from youte.exceptions import APIError, CommentsDisabled, InvalidRequest
 from youte.utilities import create_utc_datetime_string
 
 logger = logging.getLogger(__name__)
@@ -132,8 +132,8 @@ class Youte:
             "relevanceLanguage": language,
             "regionCode": region,
         }
-
-        yield from _paginate_search_results(
+        logger.debug(f"Search query: {params}")
+        yield from _paginate_results(
             url=url, max_pages_retrieved=max_pages_retrieved, **params
         )
 
@@ -184,22 +184,24 @@ class Youte:
         if not isinstance(ids, list):
             raise TypeError("ids must be a list")
 
-        ids = list(set(ids))
+        ids: list[str] = list(set(ids))
+
+        total_batches: int = int(len(ids) / 50)
 
         while ids:
             if len(ids) <= 50:
                 ids_string = ",".join(ids)
                 ids = []
             else:
-                total_batches = int(len(ids) / 50)
-                logger.info(f"{total_batches} pages remaining")
                 batch = random.sample(ids, k=50)
                 ids_string = ",".join(batch)
                 for elm in batch:
                     ids.remove(elm)
-
             params["id"] = ids_string
-            yield from _paginate_search_results(url=url, **params)
+            logger.info(f"Retrieving video metadata: {total_batches} batches left")
+            logger.debug(f"Retrieving metadata for videos: {params['id']}")
+            total_batches -= 1
+            yield from _paginate_results(url=url, **params)
 
     def get_channel_metadata(
         self,
@@ -250,21 +252,24 @@ class Youte:
         if ids and not isinstance(ids, list):
             raise TypeError("ids and username must be a list")
 
+        total_batches: int = int(len(ids) / 50)  # logging purpose only
+
         while ids:
             ids = list(set(ids))
             if len(ids) <= 50:
                 ids_string = ",".join(ids)
                 ids = []
             else:
-                total_batches = int(len(ids) / 50)
-                logger.info(f"{total_batches} pages remaining")
                 batch = random.sample(ids, k=50)
                 ids_string = ",".join(batch)
                 for elm in batch:
                     ids.remove(elm)
 
             params["id"] = ids_string
-            yield from _paginate_search_results(url=url, **params)
+            logger.info(f"Retrieving channel metadata: {total_batches} pages remaining")
+            logger.debug(f"Retrieving metadata for channels: {params['id']}")
+            total_batches -= 1
+            yield from _paginate_results(url=url, **params)
 
     def get_comment_threads(
         self,
@@ -336,15 +341,21 @@ class Youte:
             "key": self.api_key,
         }
 
+        i: int = 1  # logging purpose only
+
         if video_ids:
             params["order"] = order
             params["maxResults"] = max_results
             if search_terms:
                 params["searchTerms"] = search_terms
             for video_id in video_ids:
-                logger.info(f"Getting comments for {video_id}")
                 params["videoId"] = video_id
-                yield from _paginate_search_results(url=url, **params)
+                logger.info(
+                    f"{i}/{len(video_ids)}: Retrieving comments for video {video_id}"
+                )
+                logger.debug(f"Query {url}: {params}")
+                i += 1
+                yield from _paginate_results(url=url, **params)
 
         if related_channel_ids:
             params["order"] = order
@@ -353,26 +364,33 @@ class Youte:
                 params["searchTerms"] = search_terms
             for channel_id in related_channel_ids:
                 params["allThreadsRelatedToChannelId"] = channel_id
-                yield from _paginate_search_results(url=url, **params)
+                logger.info(
+                    f"{i}/{len(related_channel_ids)}: "
+                    f"Retrieving comments for channel {channel_id}"
+                )
+                logger.debug(f"Query {url}: {params}")
+                i += 1
+                yield from _paginate_results(url=url, **params)
 
         if comment_ids:
-            url: str = r"https://www.googleapis.com/youtube/v3/commentThreads"
-
             comment_ids = list(set(comment_ids))
+            total_batches = int(len(comment_ids) / 50)  # logging purpose only
+
             while comment_ids:
                 if len(comment_ids) <= 50:
                     ids_string = ",".join(comment_ids)
                     comment_ids = []
                 else:
-                    total_batches = int(len(comment_ids) / 50)
-                    logger.info(f"{total_batches} pages remaining")
                     batch = random.sample(comment_ids, k=50)
                     ids_string = ",".join(batch)
                     for elm in batch:
                         comment_ids.remove(elm)
 
                 params["id"] = ids_string
-                yield from _paginate_search_results(url=url, **params)
+                logger.info(f"Retrieving comments: {total_batches} pages remaining")
+                logger.debug(f"Retrieving comments: {params['id']}")
+                total_batches -= 1
+                yield from _paginate_results(url=url, **params)
 
     def get_thread_replies(
         self,
@@ -412,9 +430,15 @@ class Youte:
             raise TypeError("thread_ids must be a list")
 
         thread_ids = list(set(thread_ids))
+        i: int = 1  # logging purpose only
         for thread_id in thread_ids:
             params["parentId"] = thread_id
-            yield from _paginate_search_results(url=url, **params)
+            logger.info(
+                f"{i}/{len(thread_ids)}: Retrieving replies for thread {thread_id}"
+            )
+            logger.debug(f"Query {url}: {params}")
+            i += 1
+            yield from _paginate_results(url=url, **params)
 
     def get_most_popular(
         self,
@@ -460,8 +484,9 @@ class Youte:
             "regionCode": region_code,
             "videoCategoryId": video_category_id,
         }
+        logger.debug(f"Query {url}: {params}")
 
-        yield from _paginate_search_results(url=url, **params)
+        yield from _paginate_results(url=url, **params)
 
     def get_related_videos(
         self,
@@ -514,16 +539,20 @@ class Youte:
             "type": "video",
         }
 
+        i: int = 1  # logging purpose only
+
         for video_id in video_ids:
             params["relatedToVideoId"] = video_id
-            for result in _paginate_search_results(
+            logger.info(f"{i}/{len(video_ids)} Getting videos related to {video_id}")
+            logger.debug(f"Query {url}: {params}")
+            for result in _paginate_results(
                 url=url, max_pages_retrieved=max_pages_retrieved, **params
             ):
-                result["related_to_video_id"] = video_id  # type: ignore
+                result["related_to_video_id"] = video_id
                 yield result
 
 
-def _paginate_search_results(
+def _paginate_results(
     url: str, max_pages_retrieved: Optional[int] = None, **kwargs
 ) -> Iterator[APIResponse]:
     page: int = 0
@@ -560,8 +589,7 @@ def _add_meta(response: APIResponse, **kwargs) -> APIResponse:
 
 def _request(url: str, params: dict[str, str | int]) -> requests.Response:
     response = requests.get(url, params=params)
-    logger.debug(f"Getting {response.url}")
-    logger.info(f"Status code: {response.status_code}")
+    logger.debug(f"Getting {response.url}: {response.status_code}")
 
     if response.status_code in [403, 400, 404]:
         try:

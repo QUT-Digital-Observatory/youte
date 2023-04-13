@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import html
+import logging
 from datetime import datetime
 from typing import Iterable, Iterator, Optional
-import logging
 
 from youte._typing import SearchResult, StandardResult, VideoChannelResult
 from youte.resources import (

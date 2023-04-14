@@ -5,6 +5,8 @@ import logging
 from datetime import datetime
 from typing import Iterable, Iterator, Optional
 
+from pydantic import ValidationError
+
 from youte._typing import SearchResult, StandardResult, VideoChannelResult
 from youte.resources import (
     Channel,
@@ -182,6 +184,7 @@ def _parse_search(input_: SearchResult) -> Iterator[Search]:
             if "id" in elem or "Id" in elem:
                 id_: str = item["id"][elem]
 
+        # noinspection PyArgumentList
         search = Search(
             kind=item["id"]["kind"],
             id=id_,
@@ -195,7 +198,6 @@ def _parse_search(input_: SearchResult) -> Iterator[Search]:
             live_broadcast_content=snippet["liveBroadcastContent"],
             channel_id=snippet["channelId"],
         )
-
         yield search
 
 
@@ -217,6 +219,7 @@ def _parse_video(input_: VideoChannelResult) -> Iterator[Video]:
             item["liveStreamingDetails"] if "liveStreamingDetails" in item else {}
         )
 
+        # noinspection PyArgumentList
         search = Video(
             kind=item["kind"],
             id=item["id"],
@@ -252,13 +255,24 @@ def _parse_video(input_: VideoChannelResult) -> Iterator[Video]:
             topic_categories=topic_details["topicCategories"]
             if topic_details
             else None,
-            live_streaming_start_actual=live_stream.get("actualStartTime"),
-            live_streaming_end_actual=live_stream.get("actualEndTime"),
-            live_streaming_start_scheduled=live_stream.get("scheduledStartTime"),
-            live_streaming_end_scheduled=live_stream.get("scheduledEndTime"),
-            live_streaming_concurrent_viewers=live_stream.get("concurrentViewers"),
+            live_streaming_start_actual=_parse_rfc3339(live_stream["actualStartTime"])
+            if "actualStartTime" in live_stream
+            else None,
+            live_streaming_end_actual=_parse_rfc3339(live_stream["actualEndTime"])
+            if "actualEndTime" in live_stream
+            else None,
+            live_streaming_start_scheduled=_parse_rfc3339(
+                live_stream["scheduledStartTime"]
+            )
+            if "scheduledStartTime" in live_stream
+            else None,
+            live_streaming_end_scheduled=_parse_rfc3339(live_stream["scheduledEndTime"])
+            if "scheduledEndTime" in live_stream
+            else None,
+            live_streaming_concurrent_viewers=int(live_stream["concurrentViewers"])
+            if "concurrentViewers" in live_stream
+            else None,
         )
-
         yield search
 
 
@@ -275,33 +289,38 @@ def _parse_channel(input_: VideoChannelResult) -> Iterator[Channel]:
         topic_details = item.get("topicDetails")
         branding = item["brandingSettings"]
 
-        channel = Channel(
-            kind=item["kind"],
-            id=item["id"],
-            title=snippet["title"],
-            description=snippet["description"],
-            custom_url=snippet["customUrl"],
-            published_at=_parse_rfc3339(snippet["publishedAt"]),
-            thumbnail_url=snippet["thumbnails"]["high"]["url"],
-            thumbnail_height=snippet["thumbnails"]["high"]["height"],
-            thumbnail_width=snippet["thumbnails"]["high"]["width"],
-            default_language=snippet.get("defaultLanguage"),
-            localized_title=snippet["localized"]["title"],
-            localized_description=snippet["localized"]["description"],
-            country=branding["channel"].get("country"),
-            view_count=statistics["viewCount"],
-            subscriber_count=statistics["subscriberCount"],
-            video_count=statistics["videoCount"],
-            hidden_subscriber_count=statistics["hiddenSubscriberCount"],
-            topic_categories=topic_details["topicCategories"]
-            if topic_details
-            else None,
-            privacy_status=status["privacyStatus"],
-            is_linked=status["isLinked"],
-            made_for_kids=status.get("madeForKids"),
-            branding_keywords=branding["channel"].get("keywords"),
-            moderated_comments=branding["channel"].get("moderatedComments"),
-        )
+        try:
+            # noinspection PyArgumentList
+            channel = Channel(
+                kind=item["kind"],
+                id=item["id"],
+                title=snippet["title"],
+                description=snippet["description"],
+                custom_url=snippet["customUrl"],
+                published_at=_parse_rfc3339(snippet["publishedAt"]),
+                thumbnail_url=snippet["thumbnails"]["high"]["url"],
+                thumbnail_height=snippet["thumbnails"]["high"]["height"],
+                thumbnail_width=snippet["thumbnails"]["high"]["width"],
+                default_language=snippet.get("defaultLanguage"),
+                localized_title=snippet["localized"]["title"],
+                localized_description=snippet["localized"]["description"],
+                country=branding["channel"].get("country"),
+                view_count=statistics["viewCount"],
+                subscriber_count=statistics["subscriberCount"],
+                video_count=statistics["videoCount"],
+                hidden_subscriber_count=statistics["hiddenSubscriberCount"],
+                topic_categories=topic_details["topicCategories"]
+                if topic_details
+                else None,
+                privacy_status=status["privacyStatus"],
+                is_linked=status["isLinked"],
+                made_for_kids=status.get("madeForKids"),
+                branding_keywords=_list(branding["channel"].get("keywords")),
+                moderated_comments=branding["channel"].get("moderatedComments"),
+            )
+        except ValidationError:
+            print(branding["channel"].get("keywords"))
+            raise ValidationError
 
         yield channel
 
@@ -323,6 +342,8 @@ def _parse_comment(input_: StandardResult) -> Iterable[Comment]:
             is_public = item["snippet"]["isPublic"]
         else:
             snippet = item["snippet"]
+
+        # noinspection PyArgumentList
         comment = Comment(
             id=item["id"],
             video_id=snippet.get("videoId"),
@@ -355,3 +376,10 @@ def _parse_rfc3339(string: str) -> datetime:
         return datetime.strptime(string, "%Y-%m-%dT%H:%M:%S.%f%z")
     except ValueError:
         return datetime.strptime(string, "%Y-%m-%dT%H:%M:%S%z")
+
+
+def _list(string: str | None) -> list | None:
+    if string:
+        return string.split(" ")
+    else:
+        return string

@@ -294,7 +294,7 @@ def populate_channels(engine: Engine, data: list[Channels]) -> None:
                     privacy_status=channel.privacy_status,
                     is_linked=channel.is_linked,
                     made_for_kids=channel.made_for_kids,
-                    branding_keywords=channel.branding_keywords,
+                    branding_keywords=str(channel.branding_keywords),
                     moderated_comments=channel.moderated_comments,
                 )
                 try:

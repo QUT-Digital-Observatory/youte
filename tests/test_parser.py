@@ -50,8 +50,7 @@ def test_tidy_video_multiple(yob):
         video for video in yob.get_video_metadata(ids=["qFagsLxu2Xs", "4MQyV7Wluhs"])
     ]
     tidied = parse_videos(videos)  # type: ignore
-    tidied.to_json("test_tidy.json", pretty=True)
-    tidied.to_csv("test_tidy.csv")
+    print(tidied)
     assert isinstance(tidied, Videos)
 
 

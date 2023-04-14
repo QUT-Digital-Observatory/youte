@@ -248,7 +248,7 @@ def youte():
     type=click.INT,
     help="Maximum number of result pages to retrieve",
 )
-@click_log.simple_verbosity_option(logger)
+@click_log.simple_verbosity_option(logger, "--verbosity")
 def search(
     query: str,
     outfile: Path,
@@ -370,7 +370,7 @@ def search(
     help="Get all comments for one or a list of videos",
     is_flag=True,
 )
-@click_log.simple_verbosity_option(logger)
+@click_log.simple_verbosity_option(logger, "--verbosity")
 def comments(
     items: list[str],
     outfile: Path,
@@ -465,7 +465,7 @@ def comments(
     default=100,
     show_default=True,
 )
-@click_log.simple_verbosity_option(logger)
+@click_log.simple_verbosity_option(logger, "--verbosity")
 def replies(
     items: list[str],
     outfile: Path,
@@ -522,7 +522,7 @@ def replies(
     default=50,
     show_default=True,
 )
-@click_log.simple_verbosity_option(logger)
+@click_log.simple_verbosity_option(logger, "--verbosity")
 def videos(
     items: list[str],
     outfile: Path,
@@ -577,7 +577,7 @@ def videos(
     default=50,
     show_default=True,
 )
-@click_log.simple_verbosity_option(logger)
+@click_log.simple_verbosity_option(logger, "--verbosity")
 def channels(
     items: list[str],
     outfile: Path,
@@ -656,7 +656,7 @@ def channels(
     type=click.INT,
     help="Maximum number of result pages to retrieve",
 )
-@click_log.simple_verbosity_option(logger)
+@click_log.simple_verbosity_option(logger, "--verbosity")
 def related_to(
     items: list[str],
     outfile: Path,
@@ -725,7 +725,7 @@ def related_to(
     default=50,
     show_default=True,
 )
-@click_log.simple_verbosity_option(logger)
+@click_log.simple_verbosity_option(logger, "--verbosity")
 def chart(
     region_code: str,
     outfile: Path,
@@ -774,7 +774,7 @@ def chart(
 @click.option(
     "-o", "--output", type=click.File(mode="w"), help="Output text file to store IDs in"
 )
-@click_log.simple_verbosity_option(logger)
+@click_log.simple_verbosity_option(logger, "--verbosity")
 def dehydrate(infile: Path, output: IO) -> None:
     """Extract an ID list from a file of YouTube resources
 
@@ -922,7 +922,7 @@ def dehydrate(infile: Path, output: IO) -> None:
     type=click.INT,
     help="Maximum number of result pages to retrieve",
 )
-@click_log.simple_verbosity_option(logger)
+@click_log.simple_verbosity_option(logger, "--verbosity")
 def full_archive(
     query: str,
     select: str,
@@ -958,6 +958,13 @@ def full_archive(
 
     As this command attempts to archive all YouTube resources, it might take some time
     to finish. Make sure you have enough quota before running.
+
+    A useful option is `--select`, where you specify which resource types to
+    archive. It can be one or a comma-separated list containing 'video', 'channel',
+    'thread', and 'reply'. Comment thread replies are retrieved using thread IDs,
+    thus collecting comment threads is a must before getting replies. Because of that,
+    if you want to archive the replies, both 'thread' and 'reply' will have to be
+    specified.
     """
 
     _check_compatibility(select)

@@ -228,7 +228,15 @@ def test_cli_videos(runner, tmp_path, videos_args, extra_args, outfile_json):
 def test_cli_channels(runner, outfile_json):
     results = runner.invoke(
         youte,
-        ["channels", "-f", Path("tests") / "channel_ids.csv", "-o", outfile_json],
+        [
+            "channels",
+            "-f",
+            Path("tests") / "channel_ids.csv",
+            "-o",
+            outfile_json,
+            "--key",
+            API_KEY,
+        ],
     )
     assert results.exit_code == 0
 

@@ -4,7 +4,7 @@ title: "youte documentation"
 
 ## Changes from youte 1.3.0
 
-Several major changes are made in youte 2.0. To better correspond with YouTube API endpoints and avoid confusion:
+Several major changes are made in youte 2.x. To better correspond with YouTube API endpoints and avoid confusion:
 
 - `youte hydrate` is now broken down to `youte videos` and `youte channels`, 
 - `youte get-comments` is now `youte comments` and `youte replies`.
@@ -298,6 +298,25 @@ Other options include:
                                   (ISO 639-1 two-letter code)
 ```
 
+## full-archive
+
+A new feature added in `youte` 2.1.0 is the ability to run a full archive workflow in one command. `youte full-archive` runs `youte search`, then retrieving video and channel metadata for the search results, as well as getting comments and replies for those videos as well. All data are then tidied and stored in multiple tables in an SQLite database. 
+
+```shell
+youte full-archive <query> [options] -o <name-of-database-file>
+```
+
+The search options are identical to `youte search`. Name of the file given to `-o` has to have SQLite extension (i.e. `.db` or `.sqlite`).
+
+Below are the list of tables and the corresponding YouTube resource that they contain:
+
+- `search_result`: search results from `youte search`
+- `video`: videos
+- `channel`: channels
+- `commment`: comment threads and replies
+
+Warning: since `full-archive` will potentially run a large number of queries, it's important to ensure you have enough API quota. You can select which resources to retrieve by using the `--select` option. `--select` takes one or a comma-separated list of YouTube resource types, namely `video`, `channel`, `thread`, and `reply`. Note that if you select `reply`, `thread` also has to be selected. This is because comment thread replies are retrieved using thread IDs, thus collecting comment threads is a must before getting replies. Because of that, if you want to archive the replies, both 'thread' and 'reply' will have to be specified.
+
 ## dehydrate
 
 `dehydrate` extracts the IDs from a JSON file returned from YouTube API.
@@ -311,3 +330,6 @@ Options:
   -o, --output FILENAME  Output text file to store IDs in
 ```
 
+## Debugging
+
+The `--verbosity` option, available for most `youte` commands, allows you to turn on debugging messages of the program. Simply specify `--verbosity DEBUG` to turn this mode on.

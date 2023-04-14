@@ -24,3 +24,7 @@ class ValueAlreadyExists(Exception):
 
 class APIError(Exception):
     pass
+
+
+class CommentsDisabled(Exception):
+    pass

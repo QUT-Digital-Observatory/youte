@@ -40,7 +40,7 @@ Free accounts get an API quota cap of 10,000 units per project per day, which re
 
 At present, you can only check your quota usage on the Quotas page in the API Console. It is not possible to monitor quota usage via metadata returned in the API response.
 
-`youte` does not monitor quota usage. However, it handles errors when quota is exceeded by sleeping until quota reset time.
+`youte` does not monitor quota usage, so it's important to check your daily API quota before running potentially expensive commands such as `youte search` or `youte full-archive`.
 
 ## Data governance considerations
 
@@ -54,4 +54,4 @@ Google provides client libraries to interact with their APIs, including YouTube 
 
 ## Feedback is welcome!
 
-`youte` is still in its infancy, and we are working to improve and expand its capabilities. Let us know your feedback or suggestions by creating GitHub issues or emailing us at [digitalobservatory@qut.edu.au](mailto:digitalobservatory@qut.edu.au).
+`youte` is still in its infancy, and we are working to improve and expand its capabilities. Let us know your feedback or suggestions by creating [GitHub issues](https://github.com/QUT-Digital-Observatory/youte/issues) or emailing us at [digitalobservatory@qut.edu.au](mailto:digitalobservatory@qut.edu.au).

@@ -1,6 +1,13 @@
-# youte 2.0
+# youte: A command-line tool to retrieve and tidy YouTube metadata and comments from YouTube Data API
 
-A command line utility to get YouTube video metadata and comments from YouTube Data API.
+[![PyPI Latest Release](https://img.shields.io/pypi/v/youte)](https://pypi.org/project/youte/)
+[![DOI](https://img.shields.io/badge/DOI-researchdatafinder.qut.edu.au%2Findividual%2Fn28177-blue)](http://researchdatafinder.qut.edu.au/individual/n28177)
+[![Downloads](https://static.pepy.tech/personalized-badge/youte?period=month&units=international_system&left_color=black&right_color=orange&left_text=Monthly%20PyPI%20downloads)](https://pepy.tech/project/youte)
+[![Licence](https://img.shields.io/github/license/QUT-Digital-Observatory/youte)](LICENCE)
+![Supported Versions](https://img.shields.io/pypi/pyversions/youte)
+![Development Status](https://img.shields.io/pypi/status/youte)
+
+![](docs/images/youte_thumbnail.png)
 
 ## Changes from youte 1.3.0
 

@@ -13,6 +13,8 @@ title: "youte"
 
 It does so while handling pagination and YouTube API's rate limits. `youte` also provides the functionality to tidy raw JSON data into tabular format, either in a CSV file or an SQLite database.
 
+![](images/youte_thumbnail.png)
+
 ## Installing `youte`
 
 If you have Python 3.8 and above installed, you can install `youte` with `pip`.

@@ -2,6 +2,8 @@
 
 A command line utility to get YouTube video metadata and comments from YouTube Data API.
 
+![](docs/images/youte_thumbnail.png)
+
 ## Changes from youte 1.3.0
 
 Several major changes are made in youte 2.0. To better correspond with YouTube API endpoints and avoid confusion, some commands have been changed.

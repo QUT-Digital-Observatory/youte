@@ -9,7 +9,7 @@ import requests
 from dateutil import tz
 
 from youte._typing import APIResponse, SearchOrder
-from youte.exceptions import APIError, CommentsDisabled, InvalidRequest
+from youte.exceptions import APIError, CommentsDisabled, InvalidRequest, MaxQuotaReached
 from youte.utilities import create_utc_datetime_string
 
 logger = logging.getLogger(__name__)
@@ -601,7 +601,7 @@ def _request(url: str, params: dict[str, str | int]) -> requests.Response:
                 raise CommentsDisabled(error["reason"])
             elif "quotaExceeded" in error["reason"]:
                 until_reset = _get_reset_remaining(datetime.now(tz=tz.UTC))
-                raise APIError(
+                raise MaxQuotaReached(
                     f"{error['reason']}\n{until_reset} seconds til quota reset time"
                 )
             else:

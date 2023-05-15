@@ -28,3 +28,6 @@ class APIError(Exception):
 
 class CommentsDisabled(Exception):
     pass
+
+class MaxQuotaReached(APIError):
+    pass

@@ -9,6 +9,7 @@ import sys
 from json.decoder import JSONDecodeError
 from pathlib import Path
 from typing import IO, Callable, Literal
+from warnings import simplefilter, warn
 
 import click
 import click_log
@@ -30,6 +31,8 @@ console_handler = logging.StreamHandler()
 console_handler.setFormatter(MultiFormatter())
 
 logger.addHandler(console_handler)
+
+simplefilter("always", DeprecationWarning)
 
 API_KEY_OPTIONS = [
     click.option("--name", help="Specify an API key name added to youte config"),
@@ -619,7 +622,7 @@ def channels(
             parser.parse_channels(results).to_json(tidy_to, pretty=pretty)
 
 
-@youte.command()
+@youte.command(deprecated=True)
 @click.argument("items", nargs=-1, required=False)
 @output_options
 @tidy_options
@@ -681,6 +684,13 @@ def related_to(
 
     ITEMS: ID(s) of videos as provided by YouTube
     """
+
+    warn(
+        "'related-to' is being deprecated by YouTube API on August 7, 2023",
+        DeprecationWarning,
+        stacklevel=1,
+    )
+
     api_key = key if key else _get_api_key(name=name)
     yob = Youte(api_key=api_key)
 

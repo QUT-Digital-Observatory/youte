@@ -131,6 +131,8 @@ def _check_file_overwrite(ctx, param, value: str) -> Path:
                 "Rerun this command and choose a different filename.", fg="green"
             )
             raise click.Abort
+    else:
+        return value
 
 
 # CLI argument set up:
@@ -1030,8 +1032,6 @@ def full_archive(
             include_meta=metadata,
         )
     ]
-
-    click.echo(out_db)
 
     searches = parser.parse_searches(results)
 

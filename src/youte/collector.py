@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import random
+import warnings
 from datetime import datetime, timedelta
 from typing import Iterator, Literal, Optional
 
@@ -11,6 +12,7 @@ from dateutil import tz
 from youte._typing import APIResponse, SearchOrder
 from youte.exceptions import APIError, CommentsDisabled, InvalidRequest, MaxQuotaReached
 from youte.utilities import create_utc_datetime_string
+from youte.version import version, user_agent
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +44,8 @@ class Youte:
         location_radius: Optional[str] = None,
         max_result: int = 50,
         max_pages_retrieved: Optional[int] = None,
+        include_meta: bool = True,
+        **kwargs,
     ) -> Iterator[APIResponse]:
         """Do a YouTube search.
 
@@ -102,6 +106,8 @@ class Youte:
                 Accepted values are between 0 and 50, inclusive.
             max_pages_retrieved (int, optional): Limit the number of result pages
                 returned. Equals the maximum number of calls made to the API.
+            include_meta (bool): Include `_youte` metadata in output.
+            **kwargs: Any metadata to be included in `_youte` metadata field.
 
         Yields:
             Dict mappings containing API response.
@@ -133,7 +139,11 @@ class Youte:
         }
         logger.debug(f"Search query: {params}")
         yield from _paginate_results(
-            url=url, max_pages_retrieved=max_pages_retrieved, **params
+            url=url,
+            max_pages_retrieved=max_pages_retrieved,
+            include_meta=include_meta,
+            meta=kwargs,
+            **params,
         )
 
     def get_video_metadata(
@@ -141,6 +151,8 @@ class Youte:
         ids: list[str],
         part: Optional[list[str]] = None,
         max_results: int = 50,
+        include_meta: bool = True,
+        **kwargs,
     ) -> Iterator[APIResponse]:
         """Retrieve full metadata for videos using their IDs.
 
@@ -155,6 +167,8 @@ class Youte:
             max_results (int):
                 Maximum number of results returned in one page of response.
                 Accepted value is between 0 and 50.
+            include_meta (bool): Include `_youte` metadata in output.
+            **kwargs: Any metadata to be included in `_youte` metadata field.
 
         Yields:
             Dict mappings containing API response.
@@ -200,13 +214,17 @@ class Youte:
             logger.info(f"Retrieving video metadata: {total_batches} batches left")
             logger.debug(f"Retrieving metadata for videos: {params['id']}")
             total_batches -= 1
-            yield from _paginate_results(url=url, **params)
+            yield from _paginate_results(
+                url=url, include_meta=include_meta, meta=kwargs, **params
+            )
 
     def get_channel_metadata(
         self,
         ids: list[str],
         part: Optional[list[str]] = None,
         max_results: int = 50,
+        include_meta: bool = True,
+        **kwargs,
     ) -> Iterator[APIResponse]:
         """Retrieve full metadata for channels using their IDs.
         Currently, do not work with usernames. Channel IDs can be obtained in API
@@ -223,6 +241,8 @@ class Youte:
             max_results (int):
                 Maximum number of results returned in one page of response.
                 Accepted value is between 0 and 50.
+            include_meta (bool): Include `_youte` metadata in output.
+            **kwargs: Any metadata to be included in `_youte` metadata field.
 
         Yields:
             Dict mappings containing API response.
@@ -268,7 +288,9 @@ class Youte:
             logger.info(f"Retrieving channel metadata: {total_batches} pages remaining")
             logger.debug(f"Retrieving metadata for channels: {params['id']}")
             total_batches -= 1
-            yield from _paginate_results(url=url, **params)
+            yield from _paginate_results(
+                url=url, include_meta=include_meta, meta=kwargs, **params
+            )
 
     def get_comment_threads(
         self,
@@ -279,6 +301,8 @@ class Youte:
         search_terms: Optional[str] = None,
         text_format: Literal["html", "plainText"] = "html",
         max_results: int = 100,
+        include_meta: bool = True,
+        **kwargs,
     ) -> Iterator[APIResponse]:
         """Retrieve comment threads (top-level comments) by their IDs, by video IDs, or
         by channel IDs.
@@ -317,6 +341,8 @@ class Youte:
                 Accepted value is between 0 and 100. Only applicable when retrieving
                 comment threads using video or channel IDs. When comment IDs are provided,
                 this argument is not used.
+            include_meta (bool): Include `_youte` metadata in output.
+            **kwargs: Any metadata to be included in `_youte` metadata field.
 
         Yields:
             Dict mappings containing API response.
@@ -354,7 +380,9 @@ class Youte:
                 )
                 logger.debug(f"Query {url}: {params}")
                 i += 1
-                yield from _paginate_results(url=url, **params)
+                yield from _paginate_results(
+                    url=url, include_meta=include_meta, meta=kwargs, **params
+                )
 
         if related_channel_ids:
             params["order"] = order
@@ -369,7 +397,9 @@ class Youte:
                 )
                 logger.debug(f"Query {url}: {params}")
                 i += 1
-                yield from _paginate_results(url=url, **params)
+                yield from _paginate_results(
+                    url=url, include_meta=include_meta, meta=kwargs, **params
+                )
 
         if comment_ids:
             comment_ids = list(set(comment_ids))
@@ -389,13 +419,17 @@ class Youte:
                 logger.info(f"Retrieving comments: {total_batches} pages remaining")
                 logger.debug(f"Retrieving comments: {params['id']}")
                 total_batches -= 1
-                yield from _paginate_results(url=url, **params)
+                yield from _paginate_results(
+                    url=url, include_meta=include_meta, meta=kwargs, **params
+                )
 
     def get_thread_replies(
         self,
         thread_ids: list[str],
         text_format: Literal["html", "plainText"] = "html",
         max_results: int = 100,
+        include_meta: bool = True,
+        **kwargs,
     ) -> Iterator[APIResponse]:
         """Retrieve replies to comment threads. Currently, the API only supports getting
         replies to top-level comments. Replies to replies are not supported as of this
@@ -410,6 +444,8 @@ class Youte:
             max_results (int):
                 Maximum number of results returned in one page of response.
                 Accepted value is between 0 and 100.
+            include_meta (bool): Include `_youte` metadata in output.
+            **kwargs: Any metadata to be included in `_youte` metadata field.
 
         Yields:
             Dict mappings containing API response.
@@ -437,7 +473,9 @@ class Youte:
             )
             logger.debug(f"Query {url}: {params}")
             i += 1
-            yield from _paginate_results(url=url, **params)
+            yield from _paginate_results(
+                url=url, include_meta=include_meta, meta=kwargs, **params
+            )
 
     def get_most_popular(
         self,
@@ -445,6 +483,8 @@ class Youte:
         video_category_id: Optional[str] = None,
         max_results: int = 100,
         part: list[str] = None,
+        include_meta: bool = True,
+        **kwargs,
     ) -> Iterator[APIResponse]:
         """Retrieve the most popular videos for a region and video category.
 
@@ -460,6 +500,9 @@ class Youte:
                 A list of video resource properties that the API response will include.
                 If noting is passed, the parts used are [ "snippet", "statistics",
                 "topicDetails", "status", "contentDetails", "recordingDetails", "id"]
+            include_meta (bool): Include `_youte` metadata in output.
+            **kwargs: Any metadata to be included in `_youte` metadata field.
+
 
         Yields:
             Dict mappings containing API response.
@@ -485,7 +528,7 @@ class Youte:
         }
         logger.debug(f"Query {url}: {params}")
 
-        yield from _paginate_results(url=url, **params)
+        yield from _paginate_results(url=url, meta=kwargs, **params)
 
     def get_related_videos(
         self,
@@ -495,6 +538,8 @@ class Youte:
         safe_search: Literal["none", "moderate", "strict"] = "none",
         max_results: int = 50,
         max_pages_retrieved: Optional[int] = None,
+        include_meta: bool = True,
+        **kwargs,
     ) -> Iterator[APIResponse]:
         """Retrieve videos related to a specified video.
         Can iterate over a list of video IDs and retrieve related videos for each of the
@@ -523,10 +568,17 @@ class Youte:
                 Equals the maximum number of calls made to the API PER video ID.
                 So, if this parameter is set to 2 and a list of 3 IDs is specified
                 for video_ids, that makes 6 calls to the API in total.
+            include_meta (bool): Include `_youte` metadata in output.
+            **kwargs: Any metadata to be included in `_youte` metadata field.
 
         Yields:
             Dict mappings containing API response.
         """
+
+        warnings.warn(
+            "Retrieving related videos is deprecated by YouTube on August 7, 2023",
+            DeprecationWarning,
+        )
         url: str = r"https://www.googleapis.com/youtube/v3/search"
         params: dict = {
             "part": "snippet",
@@ -545,14 +597,22 @@ class Youte:
             logger.info(f"{i}/{len(video_ids)} Getting videos related to {video_id}")
             logger.debug(f"Query {url}: {params}")
             for result in _paginate_results(
-                url=url, max_pages_retrieved=max_pages_retrieved, **params
+                url=url,
+                max_pages_retrieved=max_pages_retrieved,
+                include_meta=include_meta,
+                meta=kwargs,
+                **params,
             ):
                 result["related_to_video_id"] = video_id
                 yield result
 
 
 def _paginate_results(
-    url: str, max_pages_retrieved: Optional[int] = None, **kwargs
+    url: str,
+    max_pages_retrieved: Optional[int] = None,
+    include_meta: bool = True,
+    meta: dict = None,
+    **kwargs,
 ) -> Iterator[APIResponse]:
     page: int = 0
     logger.info(f"Getting page {page + 1}")
@@ -560,7 +620,8 @@ def _paginate_results(
     try:
         r = _request(url=url, params=kwargs)
         page += 1
-        response = _add_meta(r.json(), collection_time=datetime.now())
+        r = _request(url=url, params=kwargs)
+        response = _add_meta(r.json()) if include_meta else r.json()
         yield response
 
         while "nextPageToken" in r.json():
@@ -573,15 +634,24 @@ def _paginate_results(
                 kwargs["pageToken"] = next_page_token
                 r = _request(url=url, params=kwargs)
                 page += 1
-                response = _add_meta(r.json(), collection_time=datetime.now())
+                response = _add_meta(r.json()) if include_meta else r.json()
                 yield response
     except CommentsDisabled:
         logger.warning("Comments are disabled.")
 
 
 def _add_meta(response: APIResponse, **kwargs) -> APIResponse:
-    for key in kwargs:
-        response[key] = kwargs[key]
+    default_meta = {
+        "version": version,
+        "collected_at": datetime.now(tz=tz.UTC),
+        "user_agent": user_agent,
+    }
+
+    response["_youte"] = default_meta
+
+    if kwargs:
+        for key in kwargs:
+            response["_youte"][key] = kwargs[key]
 
     return response
 

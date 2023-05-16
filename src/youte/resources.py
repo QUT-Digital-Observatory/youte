@@ -21,7 +21,7 @@ class Search:
     thumbnail_height: int
     channel_title: str
     live_broadcast_content: str
-    meta: dict[str, Any]
+    meta: dict
 
 
 @dataclass
@@ -68,7 +68,7 @@ class Video:
     live_streaming_start_scheduled: Optional[datetime]
     live_streaming_end_scheduled: Optional[datetime]
     live_streaming_concurrent_viewers: Optional[int]
-    meta: dict[str, Any]
+    meta: dict
 
 
 @dataclass
@@ -101,7 +101,7 @@ class Channel:
     made_for_kids: Optional[bool]
     branding_keywords: Optional[List[str]]
     moderated_comments: Optional[bool]
-    meta: dict[str, Any]
+    meta: dict
 
 
 @dataclass
@@ -128,7 +128,7 @@ class Comment:
     like_count: int
     published_at: datetime
     updated_at: datetime
-    meta: dict[str, Any]
+    meta: dict
 
 
 @dataclass

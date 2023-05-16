@@ -1,6 +1,19 @@
 # Changelog
 
 <!-- insertion marker -->
+## Unreleased
+
+<small>[Compare with latest](https://github.com/QUT-Digital-Observatory/youte/compare/v2.2.1...HEAD)</small>
+
+<!-- insertion marker -->
+## [v2.2.1](https://github.com/QUT-Digital-Observatory/youte/releases/tag/v2.2.1) - 2023-05-16
+
+<small>[Compare with v2.2.0](https://github.com/QUT-Digital-Observatory/youte/compare/v2.2.0...v2.2.1)</small>
+
+### Bug Fixes
+
+- pre-existing types' subscriptability don't work in 3.8 ([0242454](https://github.com/QUT-Digital-Observatory/youte/commit/024245498538eee0fdbd6c4de7246c6a1c524757) by Boyd Nguyen).
+
 ## [v2.2.0](https://github.com/QUT-Digital-Observatory/youte/releases/tag/v2.2.0) - 2023-05-16
 
 <small>[Compare with v2.1.0](https://github.com/QUT-Digital-Observatory/youte/compare/v2.1.0...v2.2.0)</small>

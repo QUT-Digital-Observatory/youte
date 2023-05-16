@@ -21,7 +21,7 @@ class SearchResult(TypedDict):
     pageInfo: dict
     items: List[dict]
     related_to_video_id: NotRequired[str]
-    collection_time: datetime.datetime
+    _youte: NotRequired[dict]
 
 
 class StandardResult(TypedDict):
@@ -30,7 +30,7 @@ class StandardResult(TypedDict):
     nextPageToken: str
     pageInfo: dict
     items: List[dict]
-    collection_time: datetime.datetime
+    _youte: NotRequired[dict]
 
 
 class VideoChannelResult(TypedDict):
@@ -41,7 +41,7 @@ class VideoChannelResult(TypedDict):
     prevPageToken: str
     pageInfo: dict
     items: List[dict]
-    collection_time: datetime.datetime
+    _youte: NotRequired[dict]
 
 
 APIResponse = Union[SearchResult, StandardResult, VideoChannelResult]

@@ -346,6 +346,16 @@ Options:
 
 The `--verbosity` option, available for most `youte` commands, allows you to turn on debugging messages of the program. Simply specify `--verbosity DEBUG` to turn this mode on.
 
+## Metadata
+
+By default, youte includes, for data provenance, some metadata in the returned output of all query commands. All metadata is accessible via the `_youte` field in the JSON object. Default metadata includes the youte version, data collection timestamp, the operating system, and python version.
+
+You can turn this feature off and choose not to include metadata by specifying `--no-metadata`. For example:
+
+```shell
+youte search "aukus" -o aukus.json --no-metadata
+```
+
 ## Using youte as a Python module
 
 ### `Youte` class
@@ -599,5 +609,24 @@ comment_df = pd.DataFrame.from_dict(comments.items)
 replies_df = pd.DataFrame.from_dict(replies.items)
 ```
 
+## Troubleshooting
 
+### IDs starting with a dash/hyphen
 
+With IDs starting with a dash (e.g. -Q7G5zfSal8), using the ID in the shell might raise an error, as it might be taken as a command option. For example:
+
+```bash
+youte related-to -o related_videos.json -Q7G5zfSal8
+```
+
+This command might raise an `Error: No such option: -Q`.
+
+One solution is to escape the dash. In Bash, adding a `--` before will do the trick.
+
+```shell
+youte related-to -o related_videos.json -- -Q7G5zfSal8
+```
+
+Note that everything after the `--` will be interpreted as raw strings. Thus, you should put all of your options before the `--`. Also note the space between the `--` and the ID.
+
+Alternatively, especially when you have multiple IDs that start with a dash/hyphen, put the IDs in a text file. Refer to [this section](#use-ids-from-text-file) for more details.

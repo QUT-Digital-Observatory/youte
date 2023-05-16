@@ -9,6 +9,7 @@ import sys
 from json.decoder import JSONDecodeError
 from pathlib import Path
 from typing import IO, Callable, Literal
+from warnings import simplefilter
 
 import click
 import click_log
@@ -31,9 +32,18 @@ console_handler.setFormatter(MultiFormatter())
 
 logger.addHandler(console_handler)
 
-API_KEY_OPTIONS = [
+simplefilter("always", DeprecationWarning)
+
+
+DEFAULT_OPTIONS = [
     click.option("--name", help="Specify an API key name added to youte config"),
     click.option("--key", help="Specify a YouTube API key"),
+    click.option(
+        "--metadata/--no-metadata",
+        default=True,
+        show_default=True,
+        help="Include/don't include metadata about when and how data was collected.",
+    ),
 ]
 
 OUTPUT_OPTIONS = [
@@ -67,9 +77,9 @@ TIDY_OPTIONS = [
 ]
 
 
-def api_key_options(func) -> Callable:
+def default_options(func) -> Callable:
     """Decorator to include api key options for querying commands"""
-    for option in reversed(API_KEY_OPTIONS):
+    for option in reversed(DEFAULT_OPTIONS):
         func = option(func)
     return func
 
@@ -109,6 +119,7 @@ def _validate_select_values(ctx, param, value: str) -> str:
 
 def _check_file_overwrite(ctx, param, value: str) -> Path:
     value = Path(value)
+
     if value.exists():
         try:
             if click.confirm(
@@ -120,6 +131,8 @@ def _check_file_overwrite(ctx, param, value: str) -> Path:
                 "Rerun this command and choose a different filename.", fg="green"
             )
             raise click.Abort
+    else:
+        return value
 
 
 # CLI argument set up:
@@ -137,7 +150,7 @@ def youte():
 @click.argument("query")
 @output_options
 @tidy_options
-@api_key_options
+@default_options
 @click.option(
     "--from", "from_", help="Start date (YYYY-MM-DD)", callback=_validate_date
 )
@@ -277,6 +290,7 @@ def search(
     format_: Literal["json", "csv"],
     max_pages: int,
     max_results: int,
+    metadata: bool,
 ) -> None:
     """Do a YouTube search
 
@@ -314,6 +328,7 @@ def search(
             max_result=max_results,
             video_license=video_license,
             channel_type=channel_type,
+            include_meta=metadata,
         )
     ]
 
@@ -332,7 +347,7 @@ def search(
 @click.argument("items", nargs=-1, required=False)
 @output_options
 @tidy_options
-@api_key_options
+@default_options
 @click.option("-f", "--file-path", help="Use IDs from file", default=None)
 @click.option(
     "--order",
@@ -387,6 +402,7 @@ def comments(
     tidy_to: Path,
     format_: Literal["json", "csv"],
     max_results: int,
+    metadata: bool,
 ) -> None:
     """Get YouTube comment threads (top-level comments)
 
@@ -431,6 +447,7 @@ def comments(
             search_terms=query,
             text_format=text_format,
             max_results=max_results,
+            include_meta=metadata,
         )
     ]
 
@@ -449,7 +466,7 @@ def comments(
 @click.argument("items", nargs=-1, required=False)
 @output_options
 @tidy_options
-@api_key_options
+@default_options
 @click.option("-f", "--file-path", help="Use IDs from file", default=None)
 @click.option(
     "--text-format",
@@ -478,6 +495,7 @@ def replies(
     tidy_to: Path,
     format_: Literal["json", "csv"],
     max_results: int,
+    metadata: bool,
 ) -> None:
     """Get replies to comment threads
 
@@ -494,7 +512,10 @@ def replies(
     results = [
         result
         for result in yob.get_thread_replies(
-            thread_ids=ids, text_format=text_format, max_results=max_results
+            thread_ids=ids,
+            text_format=text_format,
+            max_results=max_results,
+            include_meta=metadata,
         )
     ]
 
@@ -513,7 +534,7 @@ def replies(
 @click.argument("items", nargs=-1, required=False)
 @output_options
 @tidy_options
-@api_key_options
+@default_options
 @click.option("-f", "--file-path", help="Get IDs from file", default=None)
 @click.option(
     "--max-results",
@@ -534,6 +555,7 @@ def videos(
     tidy_to: Path,
     format_: Literal["json", "csv"],
     max_results: int,
+    metadata: bool,
 ) -> None:
     """Retrieve video metadata
 
@@ -550,7 +572,10 @@ def videos(
     ids = _read_ids(string=items, file=file_path)
 
     results = [
-        result for result in yob.get_video_metadata(ids, max_results=max_results)
+        result
+        for result in yob.get_video_metadata(
+            ids, max_results=max_results, include_meta=metadata
+        )
     ]
 
     export_file(
@@ -568,7 +593,7 @@ def videos(
 @click.argument("items", nargs=-1, required=False)
 @output_options
 @tidy_options
-@api_key_options
+@default_options
 @click.option("-f", "--file-path", help="Get IDs from file", default=None)
 @click.option(
     "--max-results",
@@ -589,6 +614,7 @@ def channels(
     tidy_to: Path,
     format_: Literal["json", "csv"],
     max_results: int,
+    metadata: bool,
 ) -> None:
     """Retrieve channel metadata
 
@@ -605,7 +631,10 @@ def channels(
     ids = _read_ids(string=items, file=file_path)
 
     results = [
-        result for result in yob.get_channel_metadata(ids=ids, max_results=max_results)
+        result
+        for result in yob.get_channel_metadata(
+            ids=ids, max_results=max_results, include_meta=metadata
+        )
     ]
 
     export_file(
@@ -619,11 +648,11 @@ def channels(
             parser.parse_channels(results).to_json(tidy_to, pretty=pretty)
 
 
-@youte.command()
+@youte.command(deprecated=True)
 @click.argument("items", nargs=-1, required=False)
 @output_options
 @tidy_options
-@api_key_options
+@default_options
 @click.option(
     "-f", "--file-path", type=click.Path(), help="Get IDs from file", default=None
 )
@@ -672,6 +701,7 @@ def related_to(
     max_pages: int,
     tidy_to: Path,
     format_: Literal["json", "csv"],
+    metadata: bool,
 ):
     """Get videos related to a video
 
@@ -695,6 +725,7 @@ def related_to(
             safe_search=safe_search,
             max_results=max_results,
             max_pages_retrieved=max_pages,
+            include_meta=metadata,
         )
     ]
 
@@ -713,7 +744,7 @@ def related_to(
 @click.argument("region_code", default="us")
 @output_options
 @tidy_options
-@api_key_options
+@default_options
 @click.option(
     "--video-category",
     help="Video category ID for which the most popular videos should be retrieved",
@@ -737,6 +768,7 @@ def chart(
     tidy_to: Path,
     format_: Literal["json", "jsonl", "csv"],
     max_results: int,
+    metadata: bool,
 ):
     """Return the most popular videos for a region and video category
 
@@ -755,6 +787,7 @@ def chart(
             region_code=region_code,
             video_category_id=video_category,
             max_results=max_results,
+            include_meta=metadata,
         )
     ]
 
@@ -810,8 +843,9 @@ def dehydrate(infile: Path, output: IO) -> None:
     help="Name of SQLite database to store output (must have .db ending)",
     type=click.Path(),
     callback=_check_file_overwrite,
+    required=True,
 )
-@api_key_options
+@default_options
 @click.option(
     "--from", "from_", help="Start date (YYYY-MM-DD)", callback=_validate_date
 )
@@ -948,6 +982,7 @@ def full_archive(
     radius: str,
     max_pages: int,
     max_results: int,
+    metadata: bool,
 ) -> None:
     """Run full archive workflow
 
@@ -966,7 +1001,6 @@ def full_archive(
     if you want to archive the replies, both 'thread' and 'reply' will have to be
     specified.
     """
-
     _check_compatibility(select)
 
     api_key = key if key else _get_api_key(name=name)
@@ -995,6 +1029,7 @@ def full_archive(
             max_result=max_results,
             video_license=video_license,
             channel_type=channel_type,
+            include_meta=metadata,
         )
     ]
 
@@ -1009,27 +1044,35 @@ def full_archive(
     if "video" in select:
         click.echo("Retrieving video metadata")
         click.echo(f"{len(video_ids)} videos being retrieved")
-        results = [result for result in yob.get_video_metadata(video_ids)]
+        results = [
+            result
+            for result in yob.get_video_metadata(video_ids, include_meta=metadata)
+        ]
         _videos = parser.parse_videos(results)
         database.populate_videos(engine, [_videos])
 
     if "channel" in select:
         click.echo("Retrieving channel metadata")
         click.echo(f"{len(channel_ids)} channels being retrieved")
-        results = [result for result in yob.get_channel_metadata(channel_ids)]
+        results = [
+            result
+            for result in yob.get_channel_metadata(channel_ids, include_meta=metadata)
+        ]
         _channels = parser.parse_channels(results)
         database.populate_channels(engine, [_channels])
 
     if "thread" in select:
         click.echo("Retrieving comment threads")
-        results = [r for r in yob.get_comment_threads(video_ids)]
+        results = [r for r in yob.get_comment_threads(video_ids, include_meta=metadata)]
         _comments = parser.parse_comments(results)
 
         database.populate_comments(engine, [_comments])
 
         if "reply" in select:
             thread_ids = [c.id for c in _comments.items if c.total_reply_count > 0]
-            results = [r for r in yob.get_thread_replies(thread_ids)]
+            results = [
+                r for r in yob.get_thread_replies(thread_ids, include_meta=metadata)
+            ]
             _replies = parser.parse_comments(results)
             database.populate_comments(engine, [_replies])
 

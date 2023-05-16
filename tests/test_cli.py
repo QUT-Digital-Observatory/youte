@@ -170,6 +170,7 @@ def test_cli_search_standard(runner, tmp_path, search_params, outfile_json):
             r: list[dict] = json.loads(file.read())
             assert len(r) > 1
             assert len(r[0]["items"]) > 10
+            assert r[0]["_youte"]
 
 
 @pytest.mark.parametrize("command", ["filter-by-language", "filter-by-location"])
@@ -181,6 +182,7 @@ def test_cli_search_filter(runner, tmp_path, search_params, command, outfile_jso
             r: list[dict] = json.loads(file.read())
             assert len(r) > 1
             assert len(r[0]["items"]) > 10
+            assert r[0]["_youte"]
 
 
 def test_cli_search_tidy_csv(runner, tmp_path, search_params, outfile_csv):
@@ -218,6 +220,7 @@ def test_cli_videos(runner, tmp_path, videos_args, extra_args, outfile_json):
     with open(outfile_json, "r") as file:
         r: list[dict] = json.loads(file.read())
         assert len(r[0]["items"]) >= 1
+        assert r[0]["_youte"]
 
     os.remove(outfile_json)
 
@@ -243,6 +246,7 @@ def test_cli_channels(runner, outfile_json):
     with open(outfile_json, "r") as file:
         r: list[dict] = json.loads(file.read())
         assert len(r[0]["items"]) >= 10
+        assert r[0]["_youte"]
 
     os.remove(outfile_json)
 
@@ -271,6 +275,7 @@ def test_cli_comments(runner, comment_args, extra_args, outfile_json):
     with open(outfile_json, "r") as file:
         r: list[dict] = json.loads(file.read())
         assert len(r[0]["items"]) >= 10
+        assert r[0]["_youte"]
 
     os.remove(outfile_json)
 
@@ -309,6 +314,7 @@ def test_cli_related(runner, related_params, command, outfile_json):
     with open(outfile_json, "r") as file:
         r: list[dict] = json.loads(file.read())
         assert len(r[0]["items"]) >= 10
+        assert r[0]["_youte"]
 
     os.remove(outfile_json)
 
@@ -327,5 +333,6 @@ def test_cli_chart(runner, country, outfile_json):
     with open(outfile_json, "r") as file:
         r: list[dict] = json.loads(file.read())
         assert len(r[0]["items"]) >= 10
+        assert r[0]["_youte"]
 
     os.remove(outfile_json)

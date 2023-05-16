@@ -1,7 +1,5 @@
 class InvalidFileName(Exception):
     pass
-    # def __str__(self):
-    #     return "Incorrect file extension or file does not exist."
 
 
 class InvalidRequest(Exception):
@@ -10,8 +8,6 @@ class InvalidRequest(Exception):
 
 class InvalidRequestParameter(Exception):
     pass
-    # def __str__(self):
-    #     return "Paramater fields are invalid for this request."
 
 
 class StopCollector(Exception):
@@ -27,4 +23,8 @@ class APIError(Exception):
 
 
 class CommentsDisabled(Exception):
+    pass
+
+
+class MaxQuotaReached(APIError):
     pass

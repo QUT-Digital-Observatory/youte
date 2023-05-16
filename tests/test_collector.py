@@ -90,7 +90,6 @@ def test_replies(yob: Youte):
     ]
     assert len(comments)
     assert len(comments[0]["items"]) > 2
-    assert "collection_time" in comments[0]
 
 
 def test_most_popular(yob: Youte):

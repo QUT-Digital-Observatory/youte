@@ -23,7 +23,7 @@ if __name__ == "__main__":
             "Development Status :: 5 - Production/Stable",
             "Programming Language :: Python :: 3.8",
             "Programming Language :: Python :: 3.9",
-            "Programming Language :: Python :: 3.10"
+            "Programming Language :: Python :: 3.10",
         ],
         packages=find_packages(where="src"),
         install_requires=[
@@ -34,7 +34,7 @@ if __name__ == "__main__":
             "typing_extensions >= 4.5.0",
             "SQLAlchemy >= 2.0.7",
             "pydantic >= 1.10.7",
-            "click_log >= 0.4.0"
+            "click_log >= 0.4.0",
         ],
         python_requires=">=3.8",
         entry_points={"console_scripts": ["youte=youte.cli:youte"]},

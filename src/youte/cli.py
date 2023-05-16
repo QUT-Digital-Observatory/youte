@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import logging
 import sys
-from datetime import datetime
 from json.decoder import JSONDecodeError
 from pathlib import Path
 from typing import IO, Callable, Literal
@@ -120,6 +119,7 @@ def _validate_select_values(ctx, param, value: str) -> str:
 
 def _check_file_overwrite(ctx, param, value: str) -> Path:
     value = Path(value)
+
     if value.exists():
         try:
             if click.confirm(
@@ -841,6 +841,7 @@ def dehydrate(infile: Path, output: IO) -> None:
     help="Name of SQLite database to store output (must have .db ending)",
     type=click.Path(),
     callback=_check_file_overwrite,
+    required=True,
 )
 @default_options
 @click.option(
@@ -998,7 +999,6 @@ def full_archive(
     if you want to archive the replies, both 'thread' and 'reply' will have to be
     specified.
     """
-
     _check_compatibility(select)
 
     api_key = key if key else _get_api_key(name=name)
@@ -1030,6 +1030,8 @@ def full_archive(
             include_meta=metadata,
         )
     ]
+
+    click.echo(out_db)
 
     searches = parser.parse_searches(results)
 

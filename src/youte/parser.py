@@ -3,7 +3,7 @@ from __future__ import annotations
 import html
 import logging
 from datetime import datetime
-from typing import Iterable, Iterator, Optional
+from typing import Callable, Iterable, Iterator, Optional
 
 from pydantic import ValidationError
 
@@ -176,6 +176,10 @@ def _parse_search(input_: SearchResult) -> Iterator[Search]:
         )
 
     items: list[dict] = input_["items"]
+    if "_youte" in input_:
+        meta: dict = input_["_youte"]
+    else:
+        meta: dict = {}
 
     for item in items:
         snippet = item["snippet"]
@@ -197,6 +201,7 @@ def _parse_search(input_: SearchResult) -> Iterator[Search]:
             channel_title=snippet.get("channelTitle"),
             live_broadcast_content=snippet["liveBroadcastContent"],
             channel_id=snippet["channelId"],
+            meta=meta,
         )
         yield search
 
@@ -208,6 +213,10 @@ def _parse_video(input_: VideoChannelResult) -> Iterator[Video]:
         )
 
     items: list[dict] = input_["items"]
+    if "_youte" in input_:
+        meta: dict = input_["_youte"]
+    else:
+        meta: dict = {}
 
     for item in items:
         snippet = item["snippet"]
@@ -272,6 +281,7 @@ def _parse_video(input_: VideoChannelResult) -> Iterator[Video]:
             live_streaming_concurrent_viewers=int(live_stream["concurrentViewers"])
             if "concurrentViewers" in live_stream
             else None,
+            meta=meta,
         )
         yield search
 
@@ -281,6 +291,10 @@ def _parse_channel(input_: VideoChannelResult) -> Iterator[Channel]:
         raise ValueError("Object passed to input is not a channelListResponse")
 
     items: list[dict] = input_["items"]
+    if "_youte" in input_:
+        meta: dict = input_["_youte"]
+    else:
+        meta: dict = {}
 
     for item in items:
         snippet = item["snippet"]
@@ -317,6 +331,7 @@ def _parse_channel(input_: VideoChannelResult) -> Iterator[Channel]:
                 made_for_kids=status.get("madeForKids"),
                 branding_keywords=_list(branding["channel"].get("keywords")),
                 moderated_comments=branding["channel"].get("moderatedComments"),
+                meta=meta,
             )
         except ValidationError:
             print(branding["channel"].get("keywords"))
@@ -330,6 +345,10 @@ def _parse_comment(input_: StandardResult) -> Iterable[Comment]:
         raise ValueError("Object passed to input is not a comment")
 
     items: list[dict] = input_["items"]
+    if "_youte" in input_:
+        meta: dict = input_["_youte"]
+    else:
+        meta: dict = {}
 
     for item in items:
         can_reply: Optional[bool] = None
@@ -364,6 +383,7 @@ def _parse_comment(input_: StandardResult) -> Iterable[Comment]:
             can_reply=can_reply,
             is_public=is_public,
             total_reply_count=total_reply_count,
+            meta=meta,
         )
         yield comment
 

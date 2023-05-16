@@ -12,7 +12,7 @@ from dateutil import tz
 from youte._typing import APIResponse, SearchOrder
 from youte.exceptions import APIError, CommentsDisabled, InvalidRequest, MaxQuotaReached
 from youte.utilities import create_utc_datetime_string
-from youte.version import version, user_agent
+from youte.version import user_agent, version
 
 logger = logging.getLogger(__name__)
 

@@ -4,7 +4,7 @@ import csv
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 
 
 @dataclass
@@ -39,11 +39,6 @@ def _flatten_json(obj: dict[str, Any]) -> dict[str, Any]:
         if type(x) is dict:
             for a in x:
                 flatten(x[a], name + a + "_")
-        elif type(x) is list:
-            i = 0
-            for a in x:
-                flatten(a, name + str(i) + "_")
-                i += 1
         else:
             out[name[:-1]] = x
 

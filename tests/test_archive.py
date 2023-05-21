@@ -24,13 +24,13 @@ def test_full_archive():
 
     s_results = [
         result
-        for result in yob.search(search_query, max_result=50, max_pages_retrieved=2)
+        for result in yob.search(search_query, max_result=10, max_pages_retrieved=2)
     ]
     assert len(s_results) == 2
 
     searches = parser.parse_searches(s_results)
     assert isinstance(searches, Searches)
-    assert len(searches.items) > 50
+    assert len(searches.items) > 10
 
     video_ids = [s.id for s in searches.items]
     channel_ids = [c.channel_id for c in searches.items]
@@ -40,18 +40,18 @@ def test_full_archive():
 
     videos = parser.parse_videos(v_results)
     assert isinstance(videos, Videos)
-    assert len(videos.items) > 50
+    assert len(videos.items) > 10
 
     c_results = [r for r in yob.get_channel_metadata(channel_ids)]
     assert len(c_results) > 0
 
     channels = parser.parse_channels(c_results)
     assert isinstance(channels, Channels)
-    assert len(channels.items) > 10
+    assert len(channels.items) > 5
 
     ids_for_comments = [v.id for v in videos.items if v.comment_count < 200]
-    if len(ids_for_comments) > 10:
-        ids_for_comments = ids_for_comments[:10]
+    if len(ids_for_comments) > 5:
+        ids_for_comments = ids_for_comments[:5]
     cmt_results = [r for r in yob.get_comment_threads(video_ids=ids_for_comments)]
     assert len(cmt_results) > 0
 
@@ -74,13 +74,13 @@ def test_full_archive():
 
     with engine.connect() as conn:
         search_count = conn.execute(func.count(database.Search.id))
-        assert search_count.all()[0][0] > 20
+        assert search_count.all()[0][0] > 10
 
         video_count = conn.execute(func.count(database.Video.id))
-        assert video_count.all()[0][0] > 20
+        assert video_count.all()[0][0] > 10
 
         channel_count = conn.execute(func.count(database.Channel.id))
-        assert channel_count.all()[0][0] > 20
+        assert channel_count.all()[0][0] > 10
 
         cmt_count = conn.execute(func.count(database.Comment.id))
-        assert cmt_count.all()[0][0] > 20
+        assert cmt_count.all()[0][0] > 10

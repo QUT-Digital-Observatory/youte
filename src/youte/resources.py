@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, List, Literal, Optional
+from typing import List, Literal, Optional
 
-from pydantic.dataclasses import dataclass
+from pydantic import BaseModel
 
-from youte.common import Resources
+from youte.common import Resources, YouteClass
 
 
-@dataclass
-class Search:
+class Search(YouteClass):
     kind: str
     id: str
     published_at: datetime
@@ -23,14 +22,18 @@ class Search:
     live_broadcast_content: str
     meta: dict
 
+    class Config:
+        orm_mode = True
 
-@dataclass
+
 class Searches(Resources):
     items: List[Search]
 
+    class Config:
+        orm_mode = True
 
-@dataclass
-class Video:
+
+class Video(YouteClass):
     kind: str
     id: str
     published_at: datetime
@@ -71,13 +74,11 @@ class Video:
     meta: dict
 
 
-@dataclass
 class Videos(Resources):
     items: List[Video]
 
 
-@dataclass
-class Channel:
+class Channel(YouteClass):
     kind: str
     id: str
     title: str
@@ -104,13 +105,14 @@ class Channel:
     meta: dict
 
 
-@dataclass
 class Channels(Resources):
     items: List[Channel]
 
+    class Config:
+        orm_mode = True
 
-@dataclass
-class Comment:
+
+class Comment(YouteClass):
     id: str
     video_id: Optional[str]
     parent_id: Optional[str]
@@ -131,6 +133,8 @@ class Comment:
     meta: dict
 
 
-@dataclass
 class Comments(Resources):
     items: List[Comment]
+
+    class Config:
+        orm_mode = True

@@ -2,20 +2,27 @@ from __future__ import annotations
 
 import csv
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Any
+from typing import Any, Optional
+
+from pydantic import BaseModel
+
+
+class YouteClass(BaseModel):
+    class Config:
+        orm_mode = True
 
 
 @dataclass
 class Resources:
-    items: list
+    items: list[YouteClass]
 
     def to_json(self, filepath: Path | str, pretty: bool = False) -> None:
         json_array: list = []
         indent: Optional[int] = 4 if pretty else None
         for item in self.items:
-            json_array.append(_flatten_json(asdict(item)))
+            json_array.append(_flatten_json(dict(item)))
             with open(filepath, mode="w", encoding="utf-8") as f:
                 f.write(
                     json.dumps(
@@ -25,11 +32,11 @@ class Resources:
 
     def to_csv(self, filepath: Path | str, encoding: str = "utf-8") -> None:
         with open(filepath, "w", newline="", encoding=encoding) as csvfile:
-            fieldnames = _flatten_json(asdict(self.items[0])).keys()
+            fieldnames = _flatten_json(dict(self.items[0])).keys()
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
             for item in self.items:
-                writer.writerow(_flatten_json(asdict(item)))
+                writer.writerow(_flatten_json(dict(item)))
 
 
 def _flatten_json(obj: dict[str, Any]) -> dict[str, Any]:

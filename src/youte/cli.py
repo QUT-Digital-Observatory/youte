@@ -118,21 +118,21 @@ def _validate_select_values(ctx, param, value: str) -> str:
 
 
 def _check_file_overwrite(ctx, param, value: str) -> Path:
-    value = Path(value)
+    path_value = Path(value)
 
-    if value.exists():
+    if path_value.exists():
         try:
             if click.confirm(
-                f"'{value}' already exists. Keep writing to this file?", abort=True
+                f"'{path_value}' already exists. Keep writing to this file?", abort=True
             ):
-                return value
+                return path_value
         except click.Abort:
             click.secho(
                 "Rerun this command and choose a different filename.", fg="green"
             )
             raise click.Abort
     else:
-        return value
+        return path_value
 
 
 # CLI argument set up:

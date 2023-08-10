@@ -188,10 +188,9 @@ def _parse_search(input_: SearchResult) -> Iterator[Search]:
             if "id" in elem or "Id" in elem:
                 id_: str = item["id"][elem]
 
-        # noinspection PyArgumentList
         search = Search(
             kind=item["id"]["kind"],
-            id=id_,
+            id=id_,  # type: ignore
             description=snippet["description"],
             published_at=_parse_rfc3339(snippet["publishedAt"]),
             title=html.unescape(snippet["title"]),
@@ -333,9 +332,10 @@ def _parse_channel(input_: VideoChannelResult) -> Iterator[Channel]:
                 moderated_comments=branding["channel"].get("moderatedComments"),
                 meta=meta,
             )
-        except ValidationError:
-            print(branding["channel"].get("keywords"))
-            raise ValidationError
+        except Exception as e:
+            # print(branding["channel"].get("keywords"))
+            logger.error(e.__traceback__)
+            raise e
 
         yield channel
 

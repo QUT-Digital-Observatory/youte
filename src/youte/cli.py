@@ -385,6 +385,13 @@ def search(
     help="Get all comments for one or a list of videos",
     is_flag=True,
 )
+@click.option(
+    "-r",
+    "--include-replies",
+    help="Also retrieve replies for threads with replies",
+    is_flag=True,
+    default=False,
+)
 @click_log.simple_verbosity_option(logger, "--verbosity")
 def comments(
     items: list[str],
@@ -403,6 +410,7 @@ def comments(
     format_: Literal["json", "csv"],
     max_results: int,
     metadata: bool,
+    include_replies: bool,
 ) -> None:
     """Get YouTube comment threads (top-level comments)
 
@@ -450,6 +458,14 @@ def comments(
             include_meta=metadata,
         )
     ]
+
+    if include_replies:
+        comments = parser.parse_comments(results)  # type: ignore
+        thread_ids = [c.id for c in comments.items if c.total_reply_count > 0]
+        results_replies = [
+            r for r in yob.get_thread_replies(thread_ids, include_meta=metadata)
+        ]
+        results.extend(results_replies)
 
     export_file(
         results, outfile, file_format=output_format, pretty=pretty, ensure_ascii=True
@@ -701,7 +717,7 @@ def chart(
 
     export_file(
         results, outfile, file_format=output_format, pretty=pretty, ensure_ascii=True
-    )
+    )  # type: ignore
 
     if tidy_to:
         if format_ == "csv":

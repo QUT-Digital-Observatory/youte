@@ -77,8 +77,23 @@ def test_tidy_comment_one(yob):
     assert isinstance(tidied, Comments)
 
 
-def test_tidy_comment_multiple(yob):
+def test_tidy_comment_multiple(yob: Youte):
     cmt_ids = ["Ugxk_z1g6ZmYZ9-ldXF4AaABAg", "UgyXx-EYT7oYvqwp_bJ4AaABAg"]
     comments = [cmt for cmt in yob.get_comment_threads(comment_ids=cmt_ids)]
     tidied = parse_comments(comments)  # type: ignore
+
+    replies = [rep for rep in yob.get_thread_replies(cmt_ids)]
+    replies_tidied = parse_comments(replies)  # type: ignore
     assert isinstance(tidied, Comments)
+    assert isinstance(replies_tidied, Comments)
+
+    tidied.add(replies_tidied)
+    assert len(tidied.items) > 2
+
+    videos = [
+        video for video in yob.get_video_metadata(ids=["qFagsLxu2Xs", "4MQyV7Wluhs"])
+    ]
+    videos_tidied = parse_videos(videos)  # type: ignore
+
+    with pytest.raises(TypeError, match=r"class"):
+        tidied.add(videos_tidied)

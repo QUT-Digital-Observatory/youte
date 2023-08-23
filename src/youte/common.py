@@ -4,7 +4,7 @@ import csv
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Generic, Optional, TypeVar
 
 from pydantic import BaseModel
 
@@ -17,6 +17,13 @@ class YouteClass(BaseModel):
 @dataclass
 class Resources:
     items: list[YouteClass]
+
+    def add(self, *args):
+        for other in args:
+            if isinstance(other, self.__class__):
+                self.items.extend(other.items)
+            else:
+                raise TypeError(f"Objected added must be class {self.__class__}")
 
     def to_json(self, filepath: Path | str, pretty: bool = False) -> None:
         json_array: list = []

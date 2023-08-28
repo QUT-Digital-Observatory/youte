@@ -268,6 +268,12 @@ You can search within the threads and filter threads matching the search terms, 
 youte comments <ids>... -v --outfile <file.json> -q "search term"
 ```
 
+You can also opt to retrieve replies to comments if there are any, by adding the `--include-replies` or `-r` flag.
+
+```shell
+youte comments <ids>... -v --include-replies --outfile <file.json>
+```
+
 ## replies
 
 While `youte comments` only retrieve top-level comment threads, if those threads have replies, they can be retrieved using `youte replies`. `youte replies` takes a list of thread ids and return the replies to those threads.
@@ -286,27 +292,17 @@ For example:
 youte chart <region-code> -o <file.json>
 ```
 
-## related-to
+## parse
 
-`youte related-to` retrieves a list of videos related to a video.
+`youte parse` takes a raw JSON file from any of the youte collecting commands and tidies it into a CSV file. At the moment, only JSON files are accepted, not JSONL.
 
-```shell
-youte related-to <video-ids>... -o <file.json>
+By default, the command automatically detects the type of YouTube resources in the raw JSON and parses it correspondingly. It is important to check that the JSON file contains only **one** type of resources. 
+Essentially, it means using the raw JSON output exactly as it is returned by youte collecting commands (e.g. `youte search`, `youte channels`, `youte videos`, `youte comments`, `youte replies`, `youte chart`). You can manually tell youte the type of resource in the JSON using `--type`, although often it's not necessary.
+
+```
+youte parse <input.json> --output <file.csv>
 ```
 
-You can pass one or many video IDs. If multiple video IDs are inputted, youte will iterate through those video IDs, retrieving all related videos to each video separately. The end result contains both the related videos and the id of the video that they are related to.
-
-Other options include:
-
-```{.bash .no-copy}
-  --safe-search [none|moderate|strict]
-                                  Include or exclude restricted content
-                                  [default: none]
-  --region TEXT                   Specify region the videos can be viewed in
-                                  (ISO 3166-1 alpha-2 country code)
-  --lang TEXT                     Return results most relevant to a language
-                                  (ISO 639-1 two-letter code)
-```
 
 ## full-archive
 
@@ -340,6 +336,30 @@ youte dehydrate <file-name.json>
 ```{.shell .no-copy}
 Options:
   -o, --output FILENAME  Output text file to store IDs in
+```
+
+## related-to (deprecated)
+
+*Note.* **From August 7, 2023, this endpoint was deprecated by YouTube. This command is no longer usable.**
+
+`youte related-to` retrieves a list of videos related to a video.
+
+```shell
+youte related-to <video-ids>... -o <file.json>
+```
+
+You can pass one or many video IDs. If multiple video IDs are inputted, youte will iterate through those video IDs, retrieving all related videos to each video separately. The end result contains both the related videos and the id of the video that they are related to.
+
+Other options include:
+
+```{.bash .no-copy}
+  --safe-search [none|moderate|strict]
+                                  Include or exclude restricted content
+                                  [default: none]
+  --region TEXT                   Specify region the videos can be viewed in
+                                  (ISO 3166-1 alpha-2 country code)
+  --lang TEXT                     Return results most relevant to a language
+                                  (ISO 639-1 two-letter code)
 ```
 
 ## Debugging

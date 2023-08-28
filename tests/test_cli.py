@@ -4,6 +4,7 @@ import csv
 import json
 import os
 from pathlib import Path
+from typing import Callable
 
 import pytest
 from click.testing import CliRunner
@@ -38,8 +39,6 @@ def test_config_add(config_path):
 def youte_obj(config_path) -> Youte:
     youte_obj = Youte(api_key=API_KEY)
     yield youte_obj
-    if os.path.exists(".youte.history"):
-        os.rmdir(".youte.history")
 
 
 @pytest.fixture()
@@ -69,6 +68,21 @@ def outfile_jsonl() -> str:
 @pytest.fixture()
 def outfile_csv() -> str:
     return "test.csv"
+
+
+def _check_csv(csvfile: str | Path) -> bool:
+    with open(csvfile, "r") as file:
+        f = csv.reader(file)
+
+        headers = next(f)
+        rows = list(f)
+        print(headers)
+        print(rows)
+
+        assert "id" in headers
+        assert len(rows) >= 1
+
+        return True
 
 
 @pytest.fixture()
@@ -162,7 +176,13 @@ def test_cli_search_fail(runner, search_params, command):
     assert results.exception
 
 
-def test_cli_search_standard(runner, tmp_path, search_params, outfile_json):
+def test_cli_search_standard(
+    runner,
+    tmp_path,
+    search_params,
+    outfile_json,
+    outfile_csv,
+):
     with runner.isolated_filesystem(temp_dir=tmp_path) as td:
         runner.invoke(youte, search_params["standard"])  # type: ignore
 
@@ -171,6 +191,13 @@ def test_cli_search_standard(runner, tmp_path, search_params, outfile_json):
             assert len(r) > 1
             assert len(r[0]["items"]) > 10
             assert r[0]["_youte"]
+
+        runner.invoke(
+            youte,
+            ["parse", outfile_json, "--output", outfile_csv],
+        )
+        assert os.path.exists(outfile_csv)
+        assert _check_csv(outfile_csv)
 
 
 @pytest.mark.parametrize("command", ["filter-by-language", "filter-by-location"])
@@ -213,7 +240,9 @@ def videos_args(outfile_json) -> list:
     ],
     ids=["one_id", "multi_ids", "from_file"],
 )
-def test_cli_videos(runner, tmp_path, videos_args, extra_args, outfile_json):
+def test_cli_videos(
+    runner, tmp_path, videos_args, extra_args, outfile_json, outfile_csv
+):
     results = runner.invoke(youte, videos_args + extra_args)  # type: ignore
     assert results.exit_code == 0
 
@@ -222,13 +251,22 @@ def test_cli_videos(runner, tmp_path, videos_args, extra_args, outfile_json):
         assert len(r[0]["items"]) >= 1
         assert r[0]["_youte"]
 
+    runner.invoke(
+        youte,
+        ["parse", outfile_json, "--output", outfile_csv],
+    )
+
+    assert os.path.exists(outfile_csv)
+    assert _check_csv(outfile_csv)
+
     os.remove(outfile_json)
+    os.remove(outfile_csv)
 
 
 # TEST channels COMMAND
 
 
-def test_cli_channels(runner, outfile_json):
+def test_cli_channels(runner, outfile_json, outfile_csv):
     results = runner.invoke(
         youte,
         [
@@ -247,6 +285,13 @@ def test_cli_channels(runner, outfile_json):
         r: list[dict] = json.loads(file.read())
         assert len(r[0]["items"]) >= 10
         assert r[0]["_youte"]
+
+    runner.invoke(
+        youte,
+        ["parse", outfile_json, "--output", outfile_csv],
+    )
+    assert os.path.exists(outfile_csv)
+    assert _check_csv(outfile_csv)
 
     os.remove(outfile_json)
 
@@ -268,7 +313,7 @@ def comment_args(outfile_json) -> list:
     ],
     ids=["one_id", "multi_ids", "from_file"],
 )
-def test_cli_comments(runner, comment_args, extra_args, outfile_json):
+def test_cli_comments(runner, comment_args, extra_args, outfile_json, outfile_csv):
     results = runner.invoke(youte, comment_args + extra_args)
     assert results.exit_code == 0
 
@@ -276,6 +321,14 @@ def test_cli_comments(runner, comment_args, extra_args, outfile_json):
         r: list[dict] = json.loads(file.read())
         assert len(r[0]["items"]) >= 10
         assert r[0]["_youte"]
+
+    runner.invoke(
+        youte,
+        ["parse", outfile_json, "--output", outfile_csv],
+    )
+
+    assert os.path.exists(outfile_csv)
+    assert _check_csv(outfile_csv)
 
     os.remove(outfile_json)
 
@@ -292,38 +345,38 @@ def test_cli_dehydrate(runner):
 # TEST related-to COMMAND
 
 
-@pytest.fixture()
-def related_args(outfile_json) -> list:
-    return ["related-to", "-o", outfile_json, "--key", API_KEY]
+# @pytest.fixture()
+# def related_args(outfile_json) -> list:
+#     return ["related-to", "-o", outfile_json, "--key", API_KEY]
 
 
-@pytest.fixture()
-def related_params(related_args) -> dict:
-    return {
-        "one-id": related_args + ["f3m_WqxhL4o"],
-        "multi-ids": related_args + ["f3m_WqxhL4o", "17yO5AssjAI"],
-        "from-file": related_args + ["-f", Path("tests") / "related_ids.csv"],
-    }
+# @pytest.fixture()
+# def related_params(related_args) -> dict:
+#     return {
+#         "one-id": related_args + ["f3m_WqxhL4o"],
+#         "multi-ids": related_args + ["f3m_WqxhL4o", "17yO5AssjAI"],
+#         "from-file": related_args + ["-f", Path("tests") / "related_ids.csv"],
+#     }
 
 
-@pytest.mark.parametrize("command", ["one-id", "multi-ids", "from-file"])
-def test_cli_related(runner, related_params, command, outfile_json):
-    results = runner.invoke(youte, related_params[command])  # type: ignore
-    assert results.exit_code == 0
+# @pytest.mark.parametrize("command", ["one-id", "multi-ids", "from-file"])
+# def test_cli_related(runner, related_params, command, outfile_json):
+#     results = runner.invoke(youte, related_params[command])  # type: ignore
+#     assert results.exit_code == 0
 
-    with open(outfile_json, "r") as file:
-        r: list[dict] = json.loads(file.read())
-        assert len(r[0]["items"]) >= 10
-        assert r[0]["_youte"]
+#     with open(outfile_json, "r") as file:
+#         r: list[dict] = json.loads(file.read())
+#         assert len(r[0]["items"]) >= 10
+#         assert r[0]["_youte"]
 
-    os.remove(outfile_json)
+#     os.remove(outfile_json)
 
 
 # TEST chart COMMAND
 
 
 @pytest.mark.parametrize("country", ["au", "vn"])
-def test_cli_chart(runner, country, outfile_json):
+def test_cli_chart(runner, country, outfile_json, outfile_csv):
     results = runner.invoke(
         youte,  # type: ignore
         ["chart", country, "--outfile", outfile_json, "--key", API_KEY],
@@ -334,5 +387,13 @@ def test_cli_chart(runner, country, outfile_json):
         r: list[dict] = json.loads(file.read())
         assert len(r[0]["items"]) >= 10
         assert r[0]["_youte"]
+
+    runner.invoke(
+        youte,
+        ["parse", outfile_json, "--output", outfile_csv],
+    )
+
+    assert os.path.exists(outfile_csv)
+    assert _check_csv(outfile_csv)
 
     os.remove(outfile_json)

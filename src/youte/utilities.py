@@ -48,7 +48,7 @@ def validate_date_string(string: str) -> bool:
 
 
 def export_file(
-    obj: Iterable[APIResponse],
+    obj: dict | list[dict],
     fp: str | Path,
     file_format: Literal["json", "jsonl"],
     pretty: bool = False,
@@ -60,19 +60,24 @@ def export_file(
     indent: Optional[int] = 4 if pretty else None
 
     if file_format == "json":
-        json_arrays: list[dict] = [json_obj for json_obj in obj]
         with open(fp, "w") as file:
             file.write(
-                json.dumps(
-                    json_arrays, default=str, indent=indent, ensure_ascii=ensure_ascii
-                )
+                json.dumps(obj, default=str, indent=indent, ensure_ascii=ensure_ascii)
             )
 
     if file_format == "jsonl":
         with open(fp, "w") as file:
-            for json_obj in obj:
+            if isinstance(obj, list):
+                for json_obj in obj:
+                    file.write(
+                        json.dumps(json_obj, default=str, ensure_ascii=ensure_ascii)
+                        + "\n"
+                    )
+            else:
                 file.write(
-                    json.dumps(json_obj, default=str, ensure_ascii=ensure_ascii) + "\n"
+                    json.dumps(
+                        obj, default=str, indent=indent, ensure_ascii=ensure_ascii
+                    )
                 )
 
 

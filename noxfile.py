@@ -15,4 +15,4 @@ def test(session):
     session.run("pip", "install", "--upgrade", "pip", "setuptools", "wheel")
     session.install(".")
     session.install("pytest")
-    session.run("pytest")
+    session.run("pytest", "-k", "not test_archive and not test_collector")

@@ -4,6 +4,7 @@ Author: Boyd Nguyen <thaihoang.nguyen@qut.edu.au>
 """
 from __future__ import annotations
 
+import json
 import logging
 import sys
 from json.decoder import JSONDecodeError
@@ -18,6 +19,7 @@ import youte.database as database
 import youte.parser as parser
 from youte._logging import MultiFormatter
 from youte.collector import Youte
+from youte.common import Resources
 from youte.config import YouteConfig
 from youte.exceptions import ValueAlreadyExists
 from youte.utilities import export_file, retrieve_ids_from_file, validate_date_string
@@ -385,6 +387,13 @@ def search(
     help="Get all comments for one or a list of videos",
     is_flag=True,
 )
+@click.option(
+    "-r",
+    "--include-replies",
+    help="Also retrieve replies for threads with replies",
+    is_flag=True,
+    default=False,
+)
 @click_log.simple_verbosity_option(logger, "--verbosity")
 def comments(
     items: list[str],
@@ -403,6 +412,7 @@ def comments(
     format_: Literal["json", "csv"],
     max_results: int,
     metadata: bool,
+    include_replies: bool,
 ) -> None:
     """Get YouTube comment threads (top-level comments)
 
@@ -450,6 +460,14 @@ def comments(
             include_meta=metadata,
         )
     ]
+
+    if include_replies:
+        comments = parser.parse_comments(results)  # type: ignore
+        thread_ids = [c.id for c in comments.items if c.total_reply_count > 0]
+        results_replies = [
+            r for r in yob.get_thread_replies(thread_ids, include_meta=metadata)
+        ]
+        results.extend(results_replies)
 
     export_file(
         results, outfile, file_format=output_format, pretty=pretty, ensure_ascii=True
@@ -648,98 +666,6 @@ def channels(
             parser.parse_channels(results).to_json(tidy_to, pretty=pretty)
 
 
-@youte.command(deprecated=True)
-@click.argument("items", nargs=-1, required=False)
-@output_options
-@tidy_options
-@default_options
-@click.option(
-    "-f", "--file-path", type=click.Path(), help="Get IDs from file", default=None
-)
-@click.option(
-    "--safe-search",
-    type=click.Choice(["none", "moderate", "strict"], case_sensitive=False),
-    help="Include or exclude restricted content",
-    default="none",
-    show_default=True,
-)
-@click.option(
-    "--region",
-    type=click.STRING,
-    help="Specify region the videos can be viewed in (ISO 3166-1 alpha-2 country code)",
-)
-@click.option(
-    "--lang",
-    help="Return results most relevant to a language (ISO 639-1 two-letter code)",
-)
-@click.option(
-    "--max-results",
-    type=click.IntRange(0, 50),
-    help="Maximum number of results returned per page",
-    default=50,
-    show_default=True,
-)
-@click.option(
-    "--max-pages",
-    "-m",
-    type=click.INT,
-    help="Maximum number of result pages to retrieve",
-)
-@click_log.simple_verbosity_option(logger, "--verbosity")
-def related_to(
-    items: list[str],
-    outfile: Path,
-    output_format: Literal["json", "jsonl"],
-    pretty: bool,
-    safe_search: Literal["none", "moderate", "strict"],
-    region: str,
-    lang: str,
-    file_path: str,
-    name: str,
-    key: str,
-    max_results: int,
-    max_pages: int,
-    tidy_to: Path,
-    format_: Literal["json", "csv"],
-    metadata: bool,
-):
-    """Get videos related to a video
-
-    Retrieve a list of videos related to a video using video id. If multiple ids are
-    specified, this will iterate over them and retrieve related videos for each of the
-    videos separately.
-
-    ITEMS: ID(s) of videos as provided by YouTube
-    """
-    api_key = key if key else _get_api_key(name=name)
-    yob = Youte(api_key=api_key)
-
-    ids = _read_ids(string=items, file=file_path)
-
-    results = [
-        result
-        for result in yob.get_related_videos(
-            video_ids=ids,
-            region=region,
-            relevance_language=lang,
-            safe_search=safe_search,
-            max_results=max_results,
-            max_pages_retrieved=max_pages,
-            include_meta=metadata,
-        )
-    ]
-
-    export_file(
-        results, outfile, file_format=output_format, pretty=pretty, ensure_ascii=True
-    )
-
-    if tidy_to:
-        if format_ == "csv":
-            parser.parse_searches(results).to_csv(tidy_to)
-        elif format_ == "json":
-            parser.parse_searches(results).to_json(tidy_to)
-
-
 @youte.command()
 @click.argument("region_code", default="us")
 @output_options
@@ -793,7 +719,7 @@ def chart(
 
     export_file(
         results, outfile, file_format=output_format, pretty=pretty, ensure_ascii=True
-    )
+    )  # type: ignore
 
     if tidy_to:
         if format_ == "csv":
@@ -1077,6 +1003,71 @@ def full_archive(
             database.populate_comments(engine, [_replies])
 
     click.secho(f"ARCHIVING COMPLETED! Data is stored in {out_db}", fg="green")
+
+
+@youte.command()
+@click.argument("input", type=click.Path())
+@click.option("-o", "--output", type=click.Path(), help="Name of CSV output file")
+@click.option(
+    "-t",
+    "--type",
+    "type_",
+    type=click.Choice(["auto", "comment", "video", "channel", "search"]),
+    default="auto",
+    show_default=True,
+    help="Specify the type of resources in the input.",
+)
+@click_log.simple_verbosity_option(logger, "--verbosity")
+def parse(
+    input: str | Path,
+    output: str | Path,
+    type_: Literal["auto", "comment", "video", "channel", "search"],
+):
+    """Parse raw output JSON from youte to CSV format.
+
+    INPUT: Input JSON file. Have to be JSON, not JSONL.
+
+    This function automatically detects YouTube resource type in the JSON and
+    assumes all items in the JSON are of the same type.
+    """
+    parsed: None | Resources = None
+    with open(input) as f:
+        try:
+            raw = json.loads(f.read())
+        except JSONDecodeError:
+            logger.error("Invalid JSON. Is it a JSON file?")
+            raise click.Abort()
+
+    if type_ == "auto":
+        type_, actual_type = _return_ytb_type(raw)  # type: ignore
+        logger.info(
+            f"Resource type '{type_}' detected for '{actual_type}' objects in JSON."
+        )
+
+    if type_ == "search":
+        parsed = parser.parse_searches(raw)
+    elif type_ == "video":
+        parsed = parser.parse_videos(raw)
+    elif type_ == "comment":
+        parsed = parser.parse_comments(raw)
+    elif type_ == "channel":
+        parsed = parser.parse_channels(raw)
+
+    if parsed:
+        parsed.to_csv(output)
+    else:
+        raise click.ClickException("There was error parsing data.")
+
+
+def _return_ytb_type(obj: list[dict]) -> tuple | None:
+    ACCEPTED_TYPES = ("search", "comment", "video", "channel")
+    kind = obj[0]["kind"]
+
+    for k in ACCEPTED_TYPES:
+        if k in kind:
+            return (k, kind)
+
+    return None
 
 
 @youte.group()

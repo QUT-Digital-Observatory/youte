@@ -4,6 +4,7 @@ Author: Boyd Nguyen <thaihoang.nguyen@qut.edu.au>
 """
 from __future__ import annotations
 
+import json
 import logging
 import sys
 from json.decoder import JSONDecodeError
@@ -18,6 +19,7 @@ import youte.database as database
 import youte.parser as parser
 from youte._logging import MultiFormatter
 from youte.collector import Youte
+from youte.common import Resources
 from youte.config import YouteConfig
 from youte.exceptions import ValueAlreadyExists
 from youte.utilities import export_file, retrieve_ids_from_file, validate_date_string
@@ -1001,6 +1003,71 @@ def full_archive(
             database.populate_comments(engine, [_replies])
 
     click.secho(f"ARCHIVING COMPLETED! Data is stored in {out_db}", fg="green")
+
+
+@youte.command()
+@click.argument("input", type=click.Path())
+@click.option("-o", "--output", type=click.Path(), help="Name of CSV output file")
+@click.option(
+    "-t",
+    "--type",
+    "type_",
+    type=click.Choice(["auto", "comment", "video", "channel", "search"]),
+    default="auto",
+    show_default=True,
+    help="Specify the type of resources in the input.",
+)
+@click_log.simple_verbosity_option(logger, "--verbosity")
+def parse(
+    input: str | Path,
+    output: str | Path,
+    type_: Literal["auto", "comment", "video", "channel", "search"],
+):
+    """Parse raw output JSON from youte to CSV format.
+
+    INPUT: Input JSON file. Have to be JSON, not JSONL.
+
+    This function automatically detects YouTube resource type in the JSON and
+    assumes all items in the JSON are of the same type.
+    """
+    parsed: None | Resources = None
+    with open(input) as f:
+        try:
+            raw = json.loads(f.read())
+        except JSONDecodeError:
+            logger.error("Invalid JSON. Is it a JSON file?")
+            raise click.Abort()
+
+    if type_ == "auto":
+        type_, actual_type = _return_ytb_type(raw)  # type: ignore
+        logger.info(
+            f"Resource type '{type_}' detected for '{actual_type}' objects in JSON."
+        )
+
+    if type_ == "search":
+        parsed = parser.parse_searches(raw)
+    elif type_ == "video":
+        parsed = parser.parse_videos(raw)
+    elif type_ == "comment":
+        parsed = parser.parse_comments(raw)
+    elif type_ == "channel":
+        parsed = parser.parse_channels(raw)
+
+    if parsed:
+        parsed.to_csv(output)
+    else:
+        raise click.ClickException("There was error parsing data.")
+
+
+def _return_ytb_type(obj: list[dict]) -> tuple | None:
+    ACCEPTED_TYPES = ("search", "comment", "video", "channel")
+    kind = obj[0]["kind"]
+
+    for k in ACCEPTED_TYPES:
+        if k in kind:
+            return (k, kind)
+
+    return None
 
 
 @youte.group()

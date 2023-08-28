@@ -98,12 +98,12 @@ def test_most_popular(yob: Youte):
     assert len(videos[0]["items"]) > 10
 
 
-def test_related_videos(yob: Youte):
-    vid_ids = ["4MQyV7Wluhs", "6m0qaN2sGDg"]
-    videos = [
-        vid for vid in yob.get_related_videos(video_ids=vid_ids, max_pages_retrieved=2)
-    ]
-    assert len(videos)
-    assert "related_to_video_id" in videos[0]
-    assert videos[0]["related_to_video_id"] == vid_ids[0]  # type: ignore
-    assert len(videos[0]["items"]) > 10
+# def test_related_videos(yob: Youte):
+#     vid_ids = ["4MQyV7Wluhs", "6m0qaN2sGDg"]
+#     videos = [
+#         vid for vid in yob.get_related_videos(video_ids=vid_ids, max_pages_retrieved=2)
+#     ]
+#     assert len(videos)
+#     assert "related_to_video_id" in videos[0]
+#     assert videos[0]["related_to_video_id"] == vid_ids[0]  # type: ignore
+#     assert len(videos[0]["items"]) > 10

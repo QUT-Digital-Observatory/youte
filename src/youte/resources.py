@@ -3,8 +3,6 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel
-
 from youte.common import Resources, YouteClass
 
 
@@ -16,8 +14,8 @@ class Search(YouteClass):
     description: str
     channel_id: str
     thumbnail_url: str
-    thumbnail_width: int
-    thumbnail_height: int
+    thumbnail_width: Optional[int] = None
+    thumbnail_height: Optional[int] = None
     channel_title: str
     live_broadcast_content: str
     meta: dict

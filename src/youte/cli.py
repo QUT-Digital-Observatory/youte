@@ -2,6 +2,7 @@
 Copyright: Digital Observatory 2022 <digitalobservatory@qut.edu.au>
 Author: Boyd Nguyen <thaihoang.nguyen@qut.edu.au>
 """
+
 from __future__ import annotations
 
 import json
@@ -75,6 +76,9 @@ TIDY_OPTIONS = [
         default="csv",
         help="Format data is parsed into. Can be 'json', 'jsonl', or 'csv'",
         show_default=True,
+    ),
+    click.option(
+        "--encoding", default="utf-8-sig", help="Encoding for CSV", show_default=True
     ),
 ]
 
@@ -293,6 +297,7 @@ def search(
     max_pages: int,
     max_results: int,
     metadata: bool,
+    encoding: str,
 ) -> None:
     """Do a YouTube search
 
@@ -340,7 +345,7 @@ def search(
 
     if tidy_to:
         if format_ == "csv":
-            parser.parse_searches(results).to_csv(tidy_to)
+            parser.parse_searches(results).to_csv(tidy_to, encoding=encoding)
         elif format_ == "json":
             parser.parse_searches(results).to_json(tidy_to)
 
@@ -413,6 +418,7 @@ def comments(
     max_results: int,
     metadata: bool,
     include_replies: bool,
+    encoding: str,
 ) -> None:
     """Get YouTube comment threads (top-level comments)
 
@@ -475,7 +481,7 @@ def comments(
 
     if tidy_to:
         if format_ == "csv":
-            parser.parse_comments(results).to_csv(tidy_to)
+            parser.parse_comments(results).to_csv(tidy_to, encoding=encoding)
         elif format_ == "json":
             parser.parse_comments(results).to_json(tidy_to, pretty=pretty)
 
@@ -514,6 +520,7 @@ def replies(
     format_: Literal["json", "csv"],
     max_results: int,
     metadata: bool,
+    encoding: str,
 ) -> None:
     """Get replies to comment threads
 
@@ -543,7 +550,7 @@ def replies(
 
     if tidy_to:
         if format_ == "csv":
-            parser.parse_comments(results).to_csv(tidy_to)
+            parser.parse_comments(results).to_csv(tidy_to, encoding=encoding)
         elif format_ == "json":
             parser.parse_comments(results).to_json(tidy_to, pretty=pretty)
 
@@ -574,6 +581,7 @@ def videos(
     format_: Literal["json", "csv"],
     max_results: int,
     metadata: bool,
+    encoding: str,
 ) -> None:
     """Retrieve video metadata
 
@@ -602,7 +610,7 @@ def videos(
 
     if tidy_to:
         if format_ == "csv":
-            parser.parse_videos(results).to_csv(tidy_to)
+            parser.parse_videos(results).to_csv(tidy_to, encoding=encoding)
         elif format_ == "json":
             parser.parse_videos(results).to_json(tidy_to, pretty=pretty)
 
@@ -633,6 +641,7 @@ def channels(
     format_: Literal["json", "csv"],
     max_results: int,
     metadata: bool,
+    encoding: str,
 ) -> None:
     """Retrieve channel metadata
 
@@ -661,7 +670,7 @@ def channels(
 
     if tidy_to:
         if format_ == "csv":
-            parser.parse_channels(results).to_csv(tidy_to)
+            parser.parse_channels(results).to_csv(tidy_to, encoding=encoding)
         elif format_ == "json":
             parser.parse_channels(results).to_json(tidy_to, pretty=pretty)
 
@@ -695,6 +704,7 @@ def chart(
     format_: Literal["json", "jsonl", "csv"],
     max_results: int,
     metadata: bool,
+    encoding: str,
 ):
     """Return the most popular videos for a region and video category
 
@@ -718,12 +728,12 @@ def chart(
     ]
 
     export_file(
-        results, outfile, file_format=output_format, pretty=pretty, ensure_ascii=True
-    )  # type: ignore
+        results, outfile, file_format=output_format, pretty=pretty, ensure_ascii=True  # type: ignore
+    )
 
     if tidy_to:
         if format_ == "csv":
-            parser.parse_videos(results).to_csv(tidy_to)
+            parser.parse_videos(results).to_csv(tidy_to, encoding=encoding)
         elif format_ == "json":
             parser.parse_videos(results).to_json(tidy_to, pretty=pretty)
 
@@ -1017,11 +1027,15 @@ def full_archive(
     show_default=True,
     help="Specify the type of resources in the input.",
 )
+@click.option(
+    "--encoding", default="utf-8-sig", help="Encoding for CSV", show_default=True
+)
 @click_log.simple_verbosity_option(logger, "--verbosity")
 def parse(
     input: str | Path,
     output: str | Path,
     type_: Literal["auto", "comment", "video", "channel", "search"],
+    encoding: str,
 ):
     """Parse raw output JSON from youte to CSV format.
 
@@ -1054,7 +1068,7 @@ def parse(
         parsed = parser.parse_channels(raw)
 
     if parsed:
-        parsed.to_csv(output)
+        parsed.to_csv(output, encoding=encoding)
     else:
         raise click.ClickException("There was error parsing data.")
 

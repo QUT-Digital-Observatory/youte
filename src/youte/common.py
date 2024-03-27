@@ -37,7 +37,7 @@ class Resources:
                     )
                 )
 
-    def to_csv(self, filepath: Path | str, encoding: str = "utf-8") -> None:
+    def to_csv(self, filepath: Path | str, encoding: str = "utf-8-sig") -> None:
         with open(filepath, "w", newline="", encoding=encoding) as csvfile:
             fieldnames = _flatten_json(dict(self.items[0])).keys()
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)

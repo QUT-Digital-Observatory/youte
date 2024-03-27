@@ -260,26 +260,34 @@ def _parse_video(input_: VideoChannelResult) -> Iterator[Video]:
             view_count=statistics.get("viewCount"),
             like_count=statistics.get("likeCount"),
             comment_count=statistics.get("commentCount"),
-            topic_categories=topic_details["topicCategories"]
-            if topic_details
-            else None,
-            live_streaming_start_actual=_parse_rfc3339(live_stream["actualStartTime"])
-            if "actualStartTime" in live_stream
-            else None,
-            live_streaming_end_actual=_parse_rfc3339(live_stream["actualEndTime"])
-            if "actualEndTime" in live_stream
-            else None,
-            live_streaming_start_scheduled=_parse_rfc3339(
-                live_stream["scheduledStartTime"]
-            )
-            if "scheduledStartTime" in live_stream
-            else None,
-            live_streaming_end_scheduled=_parse_rfc3339(live_stream["scheduledEndTime"])
-            if "scheduledEndTime" in live_stream
-            else None,
-            live_streaming_concurrent_viewers=int(live_stream["concurrentViewers"])
-            if "concurrentViewers" in live_stream
-            else None,
+            topic_categories=(
+                topic_details["topicCategories"] if topic_details else None
+            ),
+            live_streaming_start_actual=(
+                _parse_rfc3339(live_stream["actualStartTime"])
+                if "actualStartTime" in live_stream
+                else None
+            ),
+            live_streaming_end_actual=(
+                _parse_rfc3339(live_stream["actualEndTime"])
+                if "actualEndTime" in live_stream
+                else None
+            ),
+            live_streaming_start_scheduled=(
+                _parse_rfc3339(live_stream["scheduledStartTime"])
+                if "scheduledStartTime" in live_stream
+                else None
+            ),
+            live_streaming_end_scheduled=(
+                _parse_rfc3339(live_stream["scheduledEndTime"])
+                if "scheduledEndTime" in live_stream
+                else None
+            ),
+            live_streaming_concurrent_viewers=(
+                int(live_stream["concurrentViewers"])
+                if "concurrentViewers" in live_stream
+                else None
+            ),
             meta=meta,
         )
         yield search
@@ -309,7 +317,7 @@ def _parse_channel(input_: VideoChannelResult) -> Iterator[Channel]:
                 id=item["id"],
                 title=snippet["title"],
                 description=snippet["description"],
-                custom_url=snippet["customUrl"],
+                custom_url=snippet.get("customUrl"),
                 published_at=_parse_rfc3339(snippet["publishedAt"]),
                 thumbnail_url=snippet["thumbnails"]["high"]["url"],
                 thumbnail_height=snippet["thumbnails"]["high"]["height"],
@@ -322,9 +330,9 @@ def _parse_channel(input_: VideoChannelResult) -> Iterator[Channel]:
                 subscriber_count=statistics["subscriberCount"],
                 video_count=statistics["videoCount"],
                 hidden_subscriber_count=statistics["hiddenSubscriberCount"],
-                topic_categories=topic_details["topicCategories"]
-                if topic_details
-                else None,
+                topic_categories=(
+                    topic_details["topicCategories"] if topic_details else None
+                ),
                 privacy_status=status["privacyStatus"],
                 is_linked=status["isLinked"],
                 made_for_kids=status.get("madeForKids"),
@@ -368,9 +376,11 @@ def _parse_comment(input_: StandardResult) -> Iterable[Comment]:
             video_id=snippet.get("videoId"),
             author_display_name=snippet["authorDisplayName"],
             author_profile_image_url=snippet["authorProfileImageUrl"],
-            author_channel_id=snippet["authorChannelId"]["value"]
-            if "authorChannelId" in snippet
-            else None,
+            author_channel_id=(
+                snippet["authorChannelId"]["value"]
+                if "authorChannelId" in snippet
+                else None
+            ),
             author_channel_url=snippet["authorChannelUrl"],
             text_display=snippet["textDisplay"],
             text_original=snippet["textOriginal"],

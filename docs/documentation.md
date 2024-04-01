@@ -120,10 +120,16 @@ youte search <search-terms> -m 5
 
 ### Tidy data
 
-Raw JSONs from YouTube API contain query metadata and nested fields. You can tidy these data into a CSV or a flat JSON using `--tidy-to`. The default format that youte will tidy data into will be CSV.
+Raw JSONs from YouTube API contain request metadata and nested fields. You can tidy these data into a CSV or a flat JSON using `--tidy-to`. The default format that youte will tidy raw JSON into will be CSV.
 
 ```bash
 youte search <search-terms> --tidy-to <file.csv>
+```
+
+You can specify the encoding for the CSV. By default, `youte` uses `utf-8-sig` for compatibility with Excel readers. To change this, use the `--encoding` argument.
+
+```bash
+youte search <search-terms> --tidy-to <file.csv> --encoding "utf-8"
 ```
 
 Specify `--format json` if you want to tidy raw data into an array of flat JSON objects.
@@ -132,7 +138,7 @@ Specify `--format json` if you want to tidy raw data into an array of flat JSON 
 youte search <search-terms> --tidy-to <file-name.json> --format json
 ```
 
-`--tidy-to` option is available for and works the same across all `youte` commands that retrieve data.
+`--tidy-to` option is available for all `youte` commands that retrieve data, and works the same way.
 
 ### Advanced search
 

@@ -126,6 +126,12 @@ Raw JSONs from YouTube API contain request metadata and nested fields. You can t
 youte search <search-terms> --tidy-to <file.csv>
 ```
 
+You can specify the encoding for the CSV. By default, `youte` uses `utf-8-sig` for compatibility with Excel readers. To change this, use the `--encoding` argument.
+
+```bash
+youte search <search-terms> --tidy-to <file.csv> --encoding "utf-8"
+```
+
 Specify `--format json` if you want to tidy raw data into an array of flat JSON objects.
 
 ```bash
@@ -276,28 +282,6 @@ While `youte comments` only retrieve top-level comment threads, if those threads
 youte replies <ids>... --outfile <file.json>
 ```
 
-## related-to
-
-`related-to` retrieves videos related to a video.
-
-```shell
-youte related-to <video-ids>... -o <file.json>
-```
-
-If multiple video IDs are inputted, youte will iterate through each video ID separately, retrieving all related videos to each video, one by one.
-
-Other options include:
-
-```{.bash .no-copy}
-  --safe-search [none|moderate|strict]
-                                  Include or exclude restricted content
-                                  [default: none]
-  --region TEXT                   Specify region the videos can be viewed in
-                                  (ISO 3166-1 alpha-2 country code)
-  --lang TEXT                     Return results most relevant to a language
-                                  (ISO 639-1 two-letter code)
-```
-
 ## chart
 
 `youte chart` retrieves the most popular videos in a region, specified by [ISO 3166-1 alpha-2 country codes](https://www.iso.org/obp/ui/#search). If no argument or option is given, it retrieves the most popular videos in the United States.
@@ -338,6 +322,30 @@ youte dehydrate <file-name.json>
 ```{.shell .no-copy}
 Options:
   -o, --output FILENAME  Output text file to store IDs in
+```
+
+## related-to (deprecated)
+
+*Note.* **From August 7, 2023, this endpoint was deprecated by YouTube. This command is no longer usable.**
+
+`youte related-to` retrieves a list of videos related to a video.
+
+```shell
+youte related-to <video-ids>... -o <file.json>
+```
+
+You can pass one or many video IDs. If multiple video IDs are inputted, youte will iterate through those video IDs, retrieving all related videos to each video separately. The end result contains both the related videos and the id of the video that they are related to.
+
+Other options include:
+
+```{.bash .no-copy}
+  --safe-search [none|moderate|strict]
+                                  Include or exclude restricted content
+                                  [default: none]
+  --region TEXT                   Specify region the videos can be viewed in
+                                  (ISO 3166-1 alpha-2 country code)
+  --lang TEXT                     Return results most relevant to a language
+                                  (ISO 639-1 two-letter code)
 ```
 
 ## YouTube API Quota system and youte handling of quota 

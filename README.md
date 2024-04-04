@@ -9,22 +9,7 @@
 
 ![](docs/images/youte_thumbnail.png)
 
-## Changes from youte 1.3.0
-
-Several major changes are made in youte 2.0. To better correspond with YouTube API endpoints and avoid confusion, some commands have been changed.
-
-- `youte hydrate` is now broken down to `youte videos` and `youte channels`.
-- `youte get-comments` is now `youte comments` and `youte replies`.
-- `youte most-popular` is now `youte chart`.
-- `youte get-related` is now `youte related-to`.
-
-Furthermore:
-
-- Resuming search is no longer available. Instead, you can set a limit on the number of search pages returned to avoid exhausting your API quota.
-- All youte commands that retrieve data from YouTube API now won't print results to the shell, but store them in a specified json or jsonl file. This is to avoid clogging up the shell.
-- You can now tidy data into a CSV or a flat JSON array.
-
-Big thanks to @Lingomat (Mat Bettinson) for code review and suggestions.
+Big thanks to [@Lingomat](https://github.com/Lingomat) (Mat Bettinson) for code review and suggestions.
 
 ## Installation
 
@@ -244,7 +229,23 @@ This option is often used in combination with `youte dehydrate`, which retrieves
 
 ## channels
 
-`youte channels` works the same as `youte videos`, except it retrieves channel metadata given channel ids.
+`youte channels` works the same as `youte videos`, except it retrieves channel metadata from channel ids.
+
+You can either hydrate channels by channel IDs, or *handles*, i.e. @stanfordgsb. To pass handles, use the option `--handles` followed by a comma separated list of handles, each prefererably prepended by `@`. For example:
+
+```shell
+youte channels --handles @stanfordgsb,@TED,@TEDEd -o <file.json>
+```
+
+To use a file containing handles, pass `--handle-file`.
+
+You can hydrate both channel IDs and handles in one command:
+
+```shell
+youte channels -f <id-file.csv> --handles @stanfordgsb,@TED,@TEDEd -o <file.json>
+```
+
+This will hydrate both the channel IDs in the file and the handles specified in the terminal.
 
 ## comments
 
@@ -360,4 +361,3 @@ For example:
 Free accounts get an API quota cap of 10,000 units per project per day, which resets at midnight Pacific Time.
 
 At present, you can only check your quota usage on the [Quotas](https://console.developers.google.com/iam-admin/quotas) page in the API Console. It is not possible to monitor quota usage via metadata returned in the API response. `youte` does not monitor quota usage.
-

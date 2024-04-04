@@ -246,6 +246,22 @@ This option is often used in combination with `youte dehydrate`, which retrieves
 
 `youte channels` works the same as `youte videos`, except it retrieves channel metadata from channel ids.
 
+You can either hydrate channels by channel IDs, or *handles*, i.e. @stanfordgsb. To pass handles, use the option `--handles` followed by a comma separated list of handles, each prefererably prepended by `@`. For example:
+
+```shell
+youte channels --handles @stanfordgsb,@TED,@TEDEd -o <file.json>
+```
+
+To use a file containing handles, pass `--handle-file`.
+
+You can hydrate both channel IDs and handles in one command:
+
+```shell
+youte channels -f <id-file.csv> --handles @stanfordgsb,@TED,@TEDEd -o <file.json>
+```
+
+This will hydrate both the channel IDs in the file and the handles specified in the terminal.
+
 ## comments
 
 `youte comments` retrieves top-level comments (comment threads) on videos or channels. It takes in a list of video or channel ids, followed by a flag indicating the type of these ids (i.e. videos or channels). Only one type of ids should be specified.
@@ -447,7 +463,7 @@ Results returned from the `search()` are standard Python dictionaries, so you ca
 Each resource type has its corresponding parser function. (A potential improvement in the future is to have one all-encompassing parser function that detects resource type and parses data accordingly.) The table below lists out the resulting resource type from each `Youte` methods and its corresponding parser function.
 
 | `Youte` method         | Resulting resource type | Parser function | Object returned from parser function |
-|------------------------|-------------------------|-----------------|--------------------------------------|
+| ---------------------- | ----------------------- | --------------- | ------------------------------------ |
 | search()               | search                  | parse_searches  | `Searches`                           |
 | get_video_metadata()   | video                   | parse_videos    | `Videos`                             |
 | get_channel_metadata() | channel                 | parse_channels  | `Channels`                           |

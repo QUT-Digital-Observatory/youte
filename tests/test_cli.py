@@ -296,6 +296,104 @@ def test_cli_channels(runner, outfile_json, outfile_csv):
     os.remove(outfile_json)
 
 
+def test_cli_channels_handle(runner, outfile_json, outfile_csv):
+    results = runner.invoke(
+        youte,
+        [
+            "channels",
+            "--handles",
+            "@NextNewsNetwork",
+            "-o",
+            outfile_json,
+            "--key",
+            API_KEY,
+        ],
+    )
+    assert results.exit_code == 0
+
+    with open(outfile_json, "r") as file:
+        r: list[dict] = json.loads(file.read())
+        assert len(r) == 1
+        for i in r:
+            assert i["items"]
+        assert r[0]["_youte"]
+
+    runner.invoke(
+        youte,
+        ["parse", outfile_json, "--output", outfile_csv],
+    )
+    assert os.path.exists(outfile_csv)
+    assert _check_csv(outfile_csv)
+
+    os.remove(outfile_json)
+
+
+def test_cli_channels_handles(runner, outfile_json, outfile_csv):
+    results = runner.invoke(
+        youte,
+        [
+            "channels",
+            "--handles",
+            "@NextNewsNetwork,@TurningPointUSA,@BlazeTV,@msnbc,@CNN,@Vox",
+            "-o",
+            outfile_json,
+            "--key",
+            API_KEY,
+        ],
+    )
+    assert results.exit_code == 0
+
+    with open(outfile_json, "r") as file:
+        r: list[dict] = json.loads(file.read())
+        assert len(r) == 6
+        for i in r:
+            assert i["items"]
+        assert r[0]["_youte"]
+
+    runner.invoke(
+        youte,
+        ["parse", outfile_json, "--output", outfile_csv],
+    )
+    assert os.path.exists(outfile_csv)
+    assert _check_csv(outfile_csv)
+
+    os.remove(outfile_json)
+
+
+def test_cli_channels_both(runner, outfile_json, outfile_csv):
+    results = runner.invoke(
+        youte,
+        [
+            "channels",
+            "-f",
+            Path("tests") / "channel_ids.csv",
+            "--handles",
+            "@NextNewsNetwork,@TurningPointUSA,@BlazeTV,@msnbc,@CNN,@Vox",
+            "-o",
+            outfile_json,
+            "--key",
+            API_KEY,
+        ],
+    )
+    assert results.exit_code == 0
+
+    with open(outfile_json, "r") as file:
+        r: list[dict] = json.loads(file.read())
+        assert len(r) > 6
+        for i in r:
+            assert i["items"]
+        assert r[0]["_youte"]
+
+    runner.invoke(
+        youte,
+        ["parse", outfile_json, "--output", outfile_csv],
+    )
+    assert os.path.exists(outfile_csv)
+    assert _check_csv(outfile_csv)
+
+    os.remove(outfile_json)
+
+
 # TEST comments COMMAND
 
 

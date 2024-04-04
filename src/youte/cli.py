@@ -24,6 +24,7 @@ from youte.common import Resources
 from youte.config import YouteConfig
 from youte.exceptions import ValueAlreadyExists
 from youte.utilities import export_file, retrieve_ids_from_file, validate_date_string
+from youte.version import user_agent, version
 
 # Logging
 
@@ -143,7 +144,7 @@ def _check_file_overwrite(ctx, param, value: str) -> Path:
 
 # CLI argument set up:
 @click.group()
-@click.version_option()
+@click.version_option(version=user_agent)
 def youte():
     """
     Utility to collect and tidy YouTube meta-data and comments via YouTube API.
@@ -622,6 +623,13 @@ def videos(
 @default_options
 @click.option("-f", "--file-path", help="Get IDs from file", default=None)
 @click.option(
+    "--handles",
+    required=False,
+    default=None,
+    help="A comma-separated list of handles, each prepended by '@'",
+)
+@click.option("--handle-file", help="Get handles from file", default=None)
+@click.option(
     "--max-results",
     type=click.IntRange(0, 50),
     help="Maximum number of results returned per page",
@@ -631,10 +639,12 @@ def videos(
 @click_log.simple_verbosity_option(logger, "--verbosity")
 def channels(
     items: list[str],
+    handles: list[str],
     outfile: Path,
     output_format: Literal["json", "jsonl"],
     pretty: bool,
     file_path: Path,
+    handle_file: Path,
     name: str,
     key: str,
     tidy_to: Path,
@@ -656,11 +666,12 @@ def channels(
     yob = Youte(api_key=api_key)
 
     ids = _read_ids(string=items, file=file_path)
+    handles = _read_ids(string=handles, file=handle_file)
 
     results = [
         result
         for result in yob.get_channel_metadata(
-            ids=ids, max_results=max_results, include_meta=metadata
+            ids=ids, handles=handles, max_results=max_results, include_meta=metadata
         )
     ]
 
@@ -1202,11 +1213,16 @@ def _set_up_config(filename=_get_config_path()) -> YouteConfig:
     return config_file
 
 
-def _read_ids(string: list[str] = None, file: str | Path = None) -> list[str]:
-    if not (string or file):
-        raise click.BadParameter("No ids are specified.")
+def _read_ids(
+    string: list[str] | str | None = None,
+    file: str | Path | None = None,
+) -> list[str] | None:
+    ids = None
     if string:
-        ids = list(string)
+        if isinstance(string, list):
+            ids = list(string)
+        elif isinstance(string, str):
+            ids = string.split(",")
     if file:
         with open(file, mode="r") as f:
             ids = [row.rstrip() for row in f.readlines()]

@@ -36,14 +36,35 @@ def test_channel_hydrate_ids(yob):
     assert len(channels[0]["items"]) == 2
 
 
-# def test_channel_hydrate_username(yob):
-#     usernames = ["@brilliantclassics", "@TED"]
-#     channels = [ch
-#                 for ch in
-#                 yob.get_channel_metadata(usernames=usernames)]
-#     print(channels)
-#     assert len(channels)
-#     assert len(channels[0]["items"]) == 2
+def test_channel_hydrate_handles(yob):
+    handles = [
+        "@NextNewsNetwork",
+        "@TurningPointUSA",
+        "@BlazeTV",
+        "@msnbc",
+        "@CNN",
+        "@Vox",
+    ]
+    channels = [ch for ch in yob.get_channel_metadata(handles=handles)]
+    assert len(channels) > 4
+    for el in channels:
+        assert el["items"]
+
+
+def test_channel_hydrate_both(yob):
+    ids = ["UC_NN7u1HKTQR6vurmS9iQ1A", "UCMhRG26kBpMp3GAZv5Iv7sw"]
+    handles = [
+        "@NextNewsNetwork",
+        "@TurningPointUSA",
+        "@BlazeTV",
+        "@msnbc",
+        "@CNN",
+        "@Vox",
+    ]
+    channels = [ch for ch in yob.get_channel_metadata(ids=ids, handles=handles)]
+    assert len(channels) == 7
+    for el in channels:
+        assert el["items"]
 
 
 def test_comments_by_videos(yob):

@@ -220,7 +220,8 @@ class Youte:
 
     def get_channel_metadata(
         self,
-        ids: list[str],
+        ids: Optional[list[str]] = None,
+        handles: Optional[list[str]] = None,
         part: Optional[list[str]] = None,
         max_results: int = 50,
         include_meta: bool = True,
@@ -251,7 +252,18 @@ class Youte:
             TypeError: If the value passed to ids is not a list,
                 a TypeError will be raised.
         """
+
+        if not (ids or handles):
+            raise ValueError("ids or handles must be specified")
+
+        if ids and not isinstance(ids, list):
+            raise TypeError(f"ids must be a list, got type {type(ids)}")
+
+        if handles and not isinstance(handles, list):
+            raise TypeError(f"handles must be a list, got type {type(handles)}")
+
         url: str = r"https://www.googleapis.com/youtube/v3/channels"
+
         if part is None:
             part = [
                 "snippet",
@@ -268,29 +280,45 @@ class Youte:
             "key": self.api_key,
         }
 
-        if ids and not isinstance(ids, list):
-            raise TypeError("ids and username must be a list")
+        if ids:
+            total_batches: int = int(len(ids) / 50)  # logging purpose only
 
-        total_batches: int = int(len(ids) / 50)  # logging purpose only
+            while ids:
+                ids = list(set(ids))
+                if len(ids) <= 50:
+                    ids_string = ",".join(ids)
+                    ids = []
+                else:
+                    batch = random.sample(ids, k=50)
+                    ids_string = ",".join(batch)
+                    for elm in batch:
+                        ids.remove(elm)
 
-        while ids:
-            ids = list(set(ids))
-            if len(ids) <= 50:
-                ids_string = ",".join(ids)
-                ids = []
-            else:
-                batch = random.sample(ids, k=50)
-                ids_string = ",".join(batch)
-                for elm in batch:
-                    ids.remove(elm)
+                params["id"] = ids_string
+                logger.info(
+                    f"Retrieving channel metadata: {total_batches} pages remaining"
+                )
+                logger.debug(f"Retrieving metadata for channels: {params['id']}")
+                total_batches -= 1
+                yield from _paginate_results(
+                    url=url, include_meta=include_meta, meta=kwargs, **params
+                )
 
-            params["id"] = ids_string
-            logger.info(f"Retrieving channel metadata: {total_batches} pages remaining")
-            logger.debug(f"Retrieving metadata for channels: {params['id']}")
-            total_batches -= 1
-            yield from _paginate_results(
-                url=url, include_meta=include_meta, meta=kwargs, **params
-            )
+        if handles:
+            params.pop("id", None)
+
+            i = 1
+            for handle in handles:
+
+                params["forHandle"] = handle
+                logger.info(
+                    f"{i}/{len(handles)}: Retrieving metadata for handle {handle}"
+                )
+                logger.debug(f"Query {url}: {params}")
+                i += 1
+                yield from _paginate_results(
+                    url=url, include_meta=include_meta, meta=kwargs, **params
+                )
 
     def get_comment_threads(
         self,

@@ -24,6 +24,7 @@ from youte.common import Resources
 from youte.config import YouteConfig
 from youte.exceptions import ValueAlreadyExists
 from youte.utilities import export_file, retrieve_ids_from_file, validate_date_string
+from youte.version import user_agent, version
 
 # Logging
 
@@ -143,7 +144,7 @@ def _check_file_overwrite(ctx, param, value: str) -> Path:
 
 # CLI argument set up:
 @click.group()
-@click.version_option()
+@click.version_option(version=user_agent)
 def youte():
     """
     Utility to collect and tidy YouTube meta-data and comments via YouTube API.

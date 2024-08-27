@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 here = pathlib.Path(__file__).parent.resolve()
 
-__version__ = "2.6.0"
+__version__ = "2.6.1"
 
 # Get the long description from the README file
 long_description = (here / "README.md").read_text(encoding="utf-8")

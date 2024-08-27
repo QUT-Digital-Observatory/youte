@@ -4,7 +4,7 @@ import logging
 import random
 import warnings
 from datetime import datetime, timedelta
-from typing import Iterator, Literal, Optional
+from typing import Iterator, Literal, Optional, Sequence
 
 import requests
 from dateutil import tz
@@ -148,7 +148,7 @@ class Youte:
 
     def get_video_metadata(
         self,
-        ids: list[str],
+        ids: Sequence[str],
         part: Optional[list[str]] = None,
         max_results: int = 50,
         include_meta: bool = True,
@@ -194,8 +194,8 @@ class Youte:
             "key": self.api_key,
         }
 
-        if not isinstance(ids, list):
-            raise TypeError("ids must be a list")
+        if not isinstance(ids, (list, tuple)):
+            raise TypeError(f"ids must be a list or tuple, got type {type(ids)}")
 
         ids: list[str] = list(set(ids))
 
@@ -220,7 +220,7 @@ class Youte:
 
     def get_channel_metadata(
         self,
-        ids: Optional[list[str]] = None,
+        ids: Optional[Sequence[str]] = None,
         handles: Optional[list[str]] = None,
         part: Optional[list[str]] = None,
         max_results: int = 50,
@@ -256,10 +256,10 @@ class Youte:
         if not (ids or handles):
             raise ValueError("ids or handles must be specified")
 
-        if ids and not isinstance(ids, list):
-            raise TypeError(f"ids must be a list, got type {type(ids)}")
+        if ids and not isinstance(ids, (list, tuple)):
+            raise TypeError(f"ids must be a list or tuple, got type {type(ids)}")
 
-        if handles and not isinstance(handles, list):
+        if handles and not isinstance(handles, (list, tuple)):
             raise TypeError(f"handles must be a list, got type {type(handles)}")
 
         url: str = r"https://www.googleapis.com/youtube/v3/channels"
@@ -322,9 +322,9 @@ class Youte:
 
     def get_comment_threads(
         self,
-        video_ids: Optional[list[str]] = None,
-        related_channel_ids: Optional[list[str]] = None,
-        comment_ids: Optional[list[str]] = None,
+        video_ids: Optional[Sequence[str]] = None,
+        related_channel_ids: Optional[Sequence[str]] = None,
+        comment_ids: Optional[Sequence[str]] = None,
         order: Literal["time", "relevance"] = "time",
         search_terms: Optional[str] = None,
         text_format: Literal["html", "plainText"] = "html",
@@ -453,7 +453,7 @@ class Youte:
 
     def get_thread_replies(
         self,
-        thread_ids: list[str],
+        thread_ids: Sequence[str],
         text_format: Literal["html", "plainText"] = "html",
         max_results: int = 100,
         include_meta: bool = True,
@@ -489,8 +489,10 @@ class Youte:
             "key": self.api_key,
         }
 
-        if thread_ids and not isinstance(thread_ids, list):
-            raise TypeError("thread_ids must be a list")
+        if thread_ids and not isinstance(thread_ids, (list, tuple)):
+            raise TypeError(
+                f"thread_ids must be a list or tuple, got type {type(thread_ids)}"
+            )
 
         thread_ids = list(set(thread_ids))
         i: int = 1  # logging purpose only

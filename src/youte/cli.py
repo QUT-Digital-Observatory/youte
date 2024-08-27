@@ -10,7 +10,7 @@ import logging
 import sys
 from json.decoder import JSONDecodeError
 from pathlib import Path
-from typing import IO, Callable, Literal
+from typing import IO, Callable, Literal, Sequence
 from warnings import simplefilter
 
 import click
@@ -1214,12 +1214,12 @@ def _set_up_config(filename=_get_config_path()) -> YouteConfig:
 
 
 def _read_ids(
-    string: list[str] | str | None = None,
+    string: Sequence[str] | str | None = None,
     file: str | Path | None = None,
-) -> list[str] | None:
+) -> Sequence[str] | None:
     ids = None
     if string:
-        if isinstance(string, list):
+        if isinstance(string, (list, tuple)):
             ids = list(string)
         elif isinstance(string, str):
             ids = string.split(",")

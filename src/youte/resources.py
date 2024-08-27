@@ -48,7 +48,7 @@ class Video(YouteClass):
     localized_description: str
     default_language: Optional[str]
     default_audio_language: Optional[str]
-    duration: str
+    duration: Optional[str]
     dimension: str
     definition: Literal["hd", "sd"]
     caption: bool

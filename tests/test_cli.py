@@ -71,13 +71,11 @@ def outfile_csv() -> str:
 
 
 def _check_csv(csvfile: str | Path) -> bool:
-    with open(csvfile, "r") as file:
+    with open(csvfile, "r", encoding="utf-8-sig") as file:
         f = csv.reader(file)
 
         headers = next(f)
         rows = list(f)
-        print(headers)
-        print(rows)
 
         assert "id" in headers
         assert len(rows) >= 1
@@ -438,39 +436,6 @@ def test_cli_dehydrate(runner):
     results = runner.invoke(youte, ["dehydrate", "tests/search_results.jsonl"])  # type: ignore
     assert results.exit_code == 0
     assert "AYdQvnWtEHU" in results.output
-
-
-# TEST related-to COMMAND
-
-
-# @pytest.fixture()
-# def related_args(outfile_json) -> list:
-#     return ["related-to", "-o", outfile_json, "--key", API_KEY]
-
-
-# @pytest.fixture()
-# def related_params(related_args) -> dict:
-#     return {
-#         "one-id": related_args + ["f3m_WqxhL4o"],
-#         "multi-ids": related_args + ["f3m_WqxhL4o", "17yO5AssjAI"],
-#         "from-file": related_args + ["-f", Path("tests") / "related_ids.csv"],
-#     }
-
-
-# @pytest.mark.parametrize("command", ["one-id", "multi-ids", "from-file"])
-# def test_cli_related(runner, related_params, command, outfile_json):
-#     results = runner.invoke(youte, related_params[command])  # type: ignore
-#     assert results.exit_code == 0
-
-#     with open(outfile_json, "r") as file:
-#         r: list[dict] = json.loads(file.read())
-#         assert len(r[0]["items"]) >= 10
-#         assert r[0]["_youte"]
-
-#     os.remove(outfile_json)
-
-
-# TEST chart COMMAND
 
 
 @pytest.mark.parametrize("country", ["au", "vn"])

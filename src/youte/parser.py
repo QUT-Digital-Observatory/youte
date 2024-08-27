@@ -245,7 +245,7 @@ def _parse_video(input_: VideoChannelResult) -> Iterator[Video]:
             localized_description=snippet["localized"]["description"],
             default_audio_language=snippet.get("defaultAudioLanguage"),
             default_language=snippet.get("defaultLanguage"),
-            duration=content_details["duration"],
+            duration=content_details.get("duration"),
             dimension=content_details["dimension"],
             definition=content_details["definition"],
             caption=True if content_details["caption"] is True else False,
